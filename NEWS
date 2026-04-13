@@ -1,8 +1,44 @@
+multiScaleR 0.6.6
+---------
+* Added an optional custom refit hook for model classes that cannot use default model updates
+* Improved internal model refitting and log-likelihood dispatch for broader model support
+
+multiScaleR 0.6.5
+---------
+* Added structured optimization diagnostics and a `diagnostics()` accessor
+* Fixed complete-case alignment in multiscale optimization inputs
+* Updated vignettes and restored `multiScale_optim()` export handling
+
+multiScaleR 0.6.4
+---------
+* Added sigma profiling and plot methods
+* Expanded plotting tests and updated vignettes
+* Streamlined GitHub Actions checks on direct pushes
+
+multiScaleR 0.6.3
+---------
+* Made profile-likelihood CIs optional in `summary`
+* Updated vignettes and compressed example data
+
+multiScaleR 0.6.2
+---------
+* Expanded test coverage
+* Improved error messaging
+
+multiScaleR 0.6.1
+---------
+* Fixed test error
+
+multiScaleR 0.6.0
+---------
+* Added unit testing
+
 multiScaleR 0.5.0
 ---------
 * Updated handling of edge and NA values in `kernel_scale.raster`
 * Updated `kernel_scale.raster` to create 'dummy' layers for site effect variables
 * Added vignette on spatial projections
+* Submitted to CRAN
 
 multiScaleR 0.4.6
 ---------

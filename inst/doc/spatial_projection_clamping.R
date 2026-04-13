@@ -13,6 +13,14 @@ library(multiScaleR)
 library(terra)
 library(MASS)
 
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.align = "center",
+  message = FALSE,
+  warning = FALSE
+)
+
 ## ----simulate-landscape-------------------------------------------------------
 set.seed(321)
 
@@ -106,7 +114,7 @@ mod <- glm(counts ~ bin1 + bin2, family = poisson(), data = dat)
 
 ## ----model-summary------------------------------------------------------------
 # Optimize scales of effect
-opt_mod <- multiScale_optim(
+opt_mod <- multiScaleR::multiScale_optim(
   fitted_mod = mod,
   kernel_inputs = kernel_inputs
 )

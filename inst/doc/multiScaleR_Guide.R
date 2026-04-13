@@ -102,6 +102,9 @@ summary(mod0)
 ## -----------------------------------------------------------------------------
 summary(opt1)
 
+## ----eval=FALSE---------------------------------------------------------------
+# summary(opt2, profile = TRUE)
+
 ## ----opt2---------------------------------------------------------------------
 ## New model
 mod0_2 <- glm(counts ~ site + land1 + land2,
@@ -116,6 +119,9 @@ mod0_2 <- glm(counts ~ site + land1 + land2,
 ## -----------------------------------------------------------------------------
 summary(opt2)
 
+## ----eval=FALSE---------------------------------------------------------------
+# summary(opt2, profile = TRUE)
+
 ## -----------------------------------------------------------------------------
 ## Kernel function
 plot(opt2)
@@ -126,32 +132,39 @@ plot(opt2, prob = 0.99)
 ## -----------------------------------------------------------------------------
 plot_marginal_effects(opt2)
 
+## ----sigma-profile, fig.cap = "AICc profile across sigma for each spatial covariate. The red dashed line marks the optimized sigma."----
+prof2 <- profile_sigma(opt2, n_pts = 15, verbose = FALSE)
+plot(prof2)
+
 ## ----kernel_raster------------------------------------------------------------
 rast_opt <- kernel_scale.raster(raster_stack = land_rast,
                                 multiScaleR = opt2)
 plot(rast_opt)
 
-## ----other_kernel-------------------------------------------------------------
-## Negative Exponential
-exp_inputs <- kernel_prep(pts = pts,
-                          raster_stack = land_rast,
-                          max_D = 1700,
-                          kernel = 'exp',
-                          verbose = FALSE)
-
-## Exponential Power
-expow_inputs <- kernel_prep(pts = pts,
-                            raster_stack = land_rast,
-                            max_D = 1700,
-                            kernel = 'expow',
-                            verbose = FALSE)
-
-## Fixed width buffer
-fixed_inputs <- kernel_prep(pts = pts,
-                            raster_stack = land_rast,
-                            max_D = 1700,
-                            kernel = 'fixed',
-                            verbose = FALSE)
+## ----other_kernel, eval=FALSE-------------------------------------------------
+# ## Negative Exponential
+# ## Note: these kernel_prep objects are pre-loaded in the setup chunk.
+# ## eval=FALSE keeps the vignette from re-running these computationally
+# ## intensive calls during knitting.
+# exp_inputs <- kernel_prep(pts = pts,
+#                           raster_stack = land_rast,
+#                           max_D = 1700,
+#                           kernel = 'exp',
+#                           verbose = FALSE)
+# 
+# ## Exponential Power
+# expow_inputs <- kernel_prep(pts = pts,
+#                             raster_stack = land_rast,
+#                             max_D = 1700,
+#                             kernel = 'expow',
+#                             verbose = FALSE)
+# 
+# ## Fixed width buffer
+# fixed_inputs <- kernel_prep(pts = pts,
+#                             raster_stack = land_rast,
+#                             max_D = 1700,
+#                             kernel = 'fixed',
+#                             verbose = FALSE)
 
 ## ----eval=FALSE---------------------------------------------------------------
 # opt_exp <- multiScale_optim(fitted_mod = mod0_2,

@@ -22,7 +22,7 @@
 #' @export
 #' @importFrom unmarked coef predict
 #' @importFrom insight get_parameters link_inverse find_predictors get_predicted
-#' @importFrom ggplot2 ggplot aes geom_ribbon geom_line xlab ylab
+#' @importFrom ggplot2 ggplot aes geom_ribbon geom_line xlab ylab labs
 #' @importFrom cowplot theme_cowplot
 #' @importFrom utils globalVariables
 
@@ -31,6 +31,21 @@ plot_marginal_effects <- function(x,
                                   length.out = 100,
                                   type = "state",
                                   link = FALSE) {
+  if(!inherits(x, "multiScaleR")){
+    stop("`x` must be a fitted `multiScaleR` object.")
+  }
+  validate_character_scalar(ylab, "ylab")
+  validate_scalar_numeric(length.out, "length.out", integerish = TRUE, positive = TRUE)
+  validate_scalar_logical(link, "link")
+
+  if(is.null(x$opt_mod)){
+    stop("`x` must contain an `opt_mod` fitted model.")
+  }
+  if(!is.list(x$scl_params) ||
+     !all(c("mean", "sd") %in% names(x$scl_params))){
+    stop("`x` must contain `scl_params` with `mean` and `sd` elements.")
+  }
+
   mod <- x$opt_mod
   scl <- x$scl_params
   namespace(mod)
@@ -38,6 +53,12 @@ plot_marginal_effects <- function(x,
   if(inherits(mod, "glm")){
     link <- TRUE
   }
+
+  # These are populated for non-unmarked models; used when building plot subtitles
+  poly_terms  <- character(0)
+  poly_vars   <- character(0)
+  inter_terms <- character(0)
+  inter_vars  <- character(0)
 
   # Extract variables from fitted model
   if (any(grepl("^unmarked", class(mod)))) {
@@ -47,11 +68,13 @@ plot_marginal_effects <- function(x,
 
     # Subset the vector up to (but not including) the second "Int"
     vars <- vars[1:(second_int_index - 1)]
-    c_vars <- vars <- vars[!grepl("I\\(", vars)]  # `grepl` checks for "I(" in each term
+    # Strip I() terms: unmarked stores them as coefficient names; prediction handles
+    # them automatically from the base variable column in newdata
+    c_vars <- vars <- vars[!grepl("I\\(", vars)]
     dat <- mod@data@siteCovs
     dat_ns <- dat[which(names(scl$mean) %in% vars)]
 
-    if(is.null(type)){
+    if(is.null(type) || !type %in% c("lambda", "state")){
       stop("`type` must be specified as either 'lambda' or 'state'.")
     }
 
@@ -64,113 +87,214 @@ plot_marginal_effects <- function(x,
         x_unscaled <- (x_seq * scl$sd[v]) + scl$mean[v]
       }
 
-      # Construct newdata with v varying, others at mean
+      # Construct newdata with v varying, others at zero (all unmarked covariates
+      # are kernel-scaled with mean = 0, so this is equivalent to holding at mean)
       newdata <- as.data.frame(matrix(rep(0, each = length.out * length(vars)), ncol = length(vars)))
       names(newdata) <- vars
       newdata[[v]] <- x_seq
 
-      preds <- predict(mod, newdata, type = type)
+      preds <- tryCatch(
+        predict(mod, newdata, type = type),
+        error = function(e) {
+          stop(
+            sprintf("Failed to compute marginal effects for covariate '%s': %s", v, e$message),
+            call. = FALSE
+          )
+        }
+      )
 
       fit <- preds$Predicted
       se <- preds$SE
       lwr <- preds$lower
       upr <- preds$upper
 
-      data.frame(
-        x = x_unscaled,
-        fit = fit,
-        lwr = lwr,
-        upr = upr,
-        variable = v
-      )
+      data.frame(x = x_unscaled, fit = fit, lwr = lwr, upr = upr, variable = v)
     })
+
   } else {
-    # vars <- names(coef(mod))[-1]
     c_vars <- find_predictors(mod)[[1]]
     vars <- unlist(find_predictors(mod))
+    dat_all <- get_data(mod)
+    if(is.null(dat_all)){
+      dat_all <- extract_model_data(mod)
+    }
+    if(is.null(dat_all)){
+      stop("Could not recover the original model data needed to plot marginal effects.")
+    }
+
+    # Parse formula term labels to detect I() polynomial and interaction terms.
+    # predict() handles I(x^2) automatically when newdata contains the base column,
+    # so no special prediction logic is needed. Detection is used only for plot
+    # annotations and the interaction warning below.
+    fterms <- tryCatch(
+      attr(stats::terms(formula(mod)), "term.labels"),
+      error = function(e) character(0)
+    )
+    poly_terms  <- fterms[grepl("^I\\(", fterms)]
+    inter_terms <- fterms[grepl(":", fterms, fixed = TRUE)]
+
+    # Which base variables appear inside an I() term?
+    poly_vars <- c_vars[sapply(c_vars, function(v) {
+      length(poly_terms) > 0 &&
+        any(grepl(paste0("\\b", v, "\\b"), poly_terms))
+    })]
+
+    # Which base variables appear in at least one interaction term?
+    inter_vars <- if(length(inter_terms) > 0) {
+      c_vars[sapply(c_vars, function(v) {
+        any(grepl(paste0("\\b", v, "\\b"), inter_terms))
+      })]
+    } else character(0)
+
+    if(length(inter_terms) > 0) {
+      message(
+        "Interaction term(s) detected: ", paste(inter_terms, collapse = ", "), ".\n",
+        "Each panel shows the effect of that variable holding all others at their ",
+        "sample mean. This represents one conditional slice of the interaction ",
+        "surface and may not capture the full effect of each variable."
+      )
+    }
+
+    # Compute sample means of all predictor columns so non-varied covariates are
+    # held at their actual mean rather than zero. For kernel-scaled variables the
+    # mean is already zero; for unscaled site covariates this is the true mean.
+    available_vars <- vars[vars %in% names(dat_all)]
+    pred_means <- stats::setNames(rep(0, length(vars)), vars)
+    if(length(available_vars) > 0) {
+      pred_means[available_vars] <- colMeans(
+        dat_all[, available_vars, drop = FALSE], na.rm = TRUE
+      )
+    }
 
     plot_list <- lapply(c_vars, function(v) {
       if(!v %in% names(scl$mean)){
-        dat <- get_data(mod)[,-1]
+        dat <- dat_all[, -1, drop = FALSE]
         dat_ns <- dat[!vars %in% names(scl$mean)]
         x_unscaled <- x_seq <- seq(min(dat_ns[v]), max(dat_ns[v]), length.out = length.out)
       } else {
-        min <- suppressWarnings(apply(get_data(mod), 2, min)[-1])
-        max <- suppressWarnings(apply(get_data(mod), 2, max)[-1])
-        x_seq <- seq(min[v], max[v], length.out = length.out)
+        rng_min <- suppressWarnings(apply(dat_all, 2, min)[-1])
+        rng_max <- suppressWarnings(apply(dat_all, 2, max)[-1])
+        x_seq <- seq(rng_min[v], rng_max[v], length.out = length.out)
         x_unscaled <- (x_seq * scl$sd[v]) + scl$mean[v]
       }
 
-      # Construct newdata with v varying, others at mean
-      newdata <- as.data.frame(matrix(rep(0, each = length.out * length(vars)), ncol = length(vars)))
+      # Construct newdata: focal variable sweeps its range; all others at sample mean.
+      # R's predict() evaluates I(x^2), log(x), etc. from the base column, so
+      # newdata only needs to contain the base variable names.
+      newdata <- as.data.frame(
+        matrix(rep(pred_means, each = length.out), nrow = length.out, byrow = FALSE)
+      )
       names(newdata) <- vars
       newdata[[v]] <- x_seq
 
-
-      # preds <- safe_predict(mod, newdata = newdata)
       if(inherits(mod, "HLfit")){
-        preds_ <- predict(mod, newdata = newdata, variances = list(respVar = TRUE), re.form = NA)
+        preds_ <- tryCatch(
+          predict(mod, newdata = newdata, variances = list(respVar = TRUE), re.form = NA),
+          error = function(e) {
+            stop(
+              sprintf("Failed to compute marginal effects for covariate '%s': %s", v, e$message),
+              call. = FALSE
+            )
+          }
+        )
         preds <- list(preds = as.vector(preds_),
                       se = sqrt(attr(preds_, "fixefVar")))
       } else if(inherits(mod, "zeroinfl")) {
-        preds <- as.data.frame(get_predicted(mod, data = newdata))
+        preds <- tryCatch(
+          as.data.frame(get_predicted(mod, data = newdata)),
+          error = function(e) {
+            stop(
+              sprintf("Failed to compute marginal effects for covariate '%s': %s", v, e$message),
+              call. = FALSE
+            )
+          }
+        )
       } else {
-        preds <- predict(mod, newdata = newdata, se.fit = T)
+        preds <- tryCatch(
+          predict(mod, newdata = newdata, se.fit = TRUE),
+          error = function(e) {
+            stop(
+              sprintf("Failed to compute marginal effects for covariate '%s': %s", v, e$message),
+              call. = FALSE
+            )
+          }
+        )
       }
 
       if(inherits(mod, "zeroinfl")) {
         fit_ <- preds$Predicted
-        lwr <- preds$CI_low
-        upr <- preds$CI_high
+        lwr  <- preds$CI_low
+        upr  <- preds$CI_high
+        if(is.null(lwr) && is.null(upr)) lwr <- upr <- NA
 
-        if(is.null(lwr) && is.null(upr)){
-          lwr <- upr <- NA
-        }
       } else if(!is.null(link_inverse(mod)) && link){
-        if(!inherits(preds,'list') || (is.list(preds) && length(preds) == 1)){
-          fit_ <- link_inverse(mod)(as.data.frame(preds)[,1])
-          lwr <- upr <- NA
+        if(!inherits(preds, 'list') || (is.list(preds) && length(preds) == 1)){
+          fit_ <- link_inverse(mod)(as.data.frame(preds)[, 1])
+          lwr  <- upr <- NA
         } else {
           fit_ <- link_inverse(mod)(preds[[1]])
-          lwr <- link_inverse(mod)(preds[[1]] + qnorm(0.025)*preds[[2]])
-          upr <- link_inverse(mod)(preds[[1]] + qnorm(0.975)*preds[[2]])
+          lwr  <- link_inverse(mod)(preds[[1]] + qnorm(0.025) * preds[[2]])
+          upr  <- link_inverse(mod)(preds[[1]] + qnorm(0.975) * preds[[2]])
         }
 
       } else {
-        if(!inherits(preds,'list') || (is.list(preds) && length(preds) == 1)){
+        if(!inherits(preds, 'list') || (is.list(preds) && length(preds) == 1)){
           fit_ <- as.data.frame(preds)[[1]]
-          lwr <- upr <- NA
+          lwr  <- upr <- NA
         } else {
-          fit_ <- (preds[[1]])
-          lwr <- (preds[[1]] + qnorm(0.025)*preds[[2]])
-          upr <- (preds[[1]] + qnorm(0.975)*preds[[2]])
+          fit_ <- preds[[1]]
+          lwr  <- preds[[1]] + qnorm(0.025) * preds[[2]]
+          upr  <- preds[[1]] + qnorm(0.975) * preds[[2]]
         }
       }
 
-
-      data.frame(
-        x = x_unscaled,
-        fit = fit_,
-        lwr = lwr,
-        upr = upr,
-        variable = v
-      )
+      data.frame(x = x_unscaled, fit = fit_, lwr = lwr, upr = upr, variable = v)
     })
   }
 
   names(plot_list) <- c_vars
 
-  # Build ggplots
-  gg_list <- lapply(plot_list, function(df) {
+  # Build ggplots, adding subtitles for polynomial and interaction terms
+  gg_list <- lapply(c_vars, function(v) {
+    df <- plot_list[[v]]
+
+    subtitle_parts <- character(0)
+
+    # Note any I() terms involving this variable
+    if(v %in% poly_vars) {
+      rel_poly <- poly_terms[sapply(poly_terms, function(pt) {
+        grepl(paste0("\\b", v, "\\b"), pt)
+      })]
+      subtitle_parts <- c(subtitle_parts,
+                          paste0("Includes: ", paste(rel_poly, collapse = ", ")))
+    }
+
+    # Note the mean-conditioning for interaction terms
+    if(v %in% inter_vars) {
+      partner_terms <- inter_terms[sapply(inter_terms, function(t) {
+        v %in% strsplit(t, ":")[[1]]
+      })]
+      others <- unique(unlist(lapply(
+        strsplit(partner_terms, ":"),
+        function(parts) parts[parts != v]
+      )))
+      subtitle_parts <- c(subtitle_parts,
+                          paste0("At mean of: ", paste(others, collapse = ", ")))
+    }
+
+    subtitle <- if(length(subtitle_parts) > 0) paste(subtitle_parts, collapse = "; ") else NULL
+
     p <- ggplot(df, aes(x = x, y = fit)) +
       geom_line(linewidth = 1) +
       xlab(df$variable[1]) +
       ylab(ylab) +
       theme_cowplot()
 
-    if (!all(is.na(df$lwr)) && !all(is.na(df$upr))) {
+    if(!is.null(subtitle))
+      p <- p + labs(subtitle = subtitle)
+
+    if(!all(is.na(df$lwr)) && !all(is.na(df$upr)))
       p <- p + geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.25)
-    }
 
     p
   })

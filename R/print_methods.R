@@ -1,3 +1,33 @@
+#' @keywords internal
+#' @noRd
+format_max_distance_warning <- function(diagnostics) {
+  if (is.null(diagnostics) || is.null(diagnostics$max_distance)) {
+    return(list(
+      headline = "The estimated scale of effect extends beyond the maximum distance specified.",
+      suggested_max_D = NA_real_
+    ))
+  }
+
+  diag <- diagnostics$max_distance
+
+  if (!isTRUE(diag$triggered)) {
+    return(list(
+      headline = "The estimated scale of effect extends beyond the maximum distance specified.",
+      suggested_max_D = diag$suggested_max_D
+    ))
+  }
+
+  vars <- paste(diag$variables, collapse = ", ")
+  list(
+    headline = paste0(
+      "The estimated scale of effect approaches or exceeds the current search extent",
+      if (nzchar(vars)) paste0(" for: ", vars) else "",
+      "."
+    ),
+    suggested_max_D = diag$suggested_max_D
+  )
+}
+
 #' @title Print method for summary_multiScaleR
 #' @description Print method for objects of class \code{summary_multiScaleR}.
 #' @param x A \code{summary_multiScaleR} object
@@ -14,6 +44,11 @@ print.summary_multiScaleR <- function(x, ...){
 
   cat("\n\n***** Optimized Scale of Effect -- Sigma *****\n\n")
   print(x$opt_scale)
+  scale_ci_method <- attr(x$opt_scale, "interval_method")
+  if (!is.null(scale_ci_method) && any(scale_ci_method != "wald")) {
+    cat("\nProfile-likelihood confidence limits were used for `sigma` where available;\n")
+    cat("reported standard errors remain Hessian-based approximations.\n")
+  }
   cat("\n\n  ==================================== ")
 
   if(!is.null(x$opt_shape)){
@@ -41,9 +76,16 @@ print.summary_multiScaleR <- function(x, ...){
 
 
   if(1 %in% x$warn_message){
+    msg <- format_max_distance_warning(x$diagnostics)
+    suggest_txt <- if (is.finite(msg$suggested_max_D)) {
+      paste0(" to >= ", round(msg$suggested_max_D, 2))
+    } else {
+      ""
+    }
     cat(red("\n WARNING!!!\n",
-            "The estimated scale of effect extends beyond the maximum distance specified.\n",
-            "Consider increasing " %+% blue$bold("max_D") %+% " in `kernel_prep` to ensure accurate estimation of scale.\n\n"))
+            msg$headline, "\n",
+            "Consider increasing " %+% blue$bold("max_D") %+% " in `kernel_prep`" %+%
+              suggest_txt %+% " to ensure accurate estimation of scale.\n\n"))
   }
 
   if(2 %in% x$warn_message){
@@ -65,12 +107,16 @@ print.summary_multiScaleR <- function(x, ...){
 #' Summarizes output from \code{multiScale_optim}.
 #'
 #' @param object An object of class \code{multiScaleR}.
+#' @param profile Logical. If \code{TRUE}, use profile-likelihood confidence
+#'   limits for `sigma` when feasible. Defaults to \code{FALSE} so summaries
+#'   remain fast; profile results are cached for repeated calls on the same
+#'   fitted object during the current R session.
 #' @param ... Optional arguments passed to the method (e.g., \code{prob} for cumulative kernel weight threshold).
 #'
-#' @return An object of class \code{summary_multiScaleR}.
+#' @return An object of class \code{summary_multiScaleR}. Confidence limits for `sigma` default to the package's existing Wald-style limits. If \code{profile = TRUE}, profile likelihood is used when feasible; if profiling fails, the summary falls back to Wald-style limits.
 #' @export
 #' @method summary multiScaleR
-summary.multiScaleR <- function(object,...){
+summary.multiScaleR <- function(object, profile = FALSE, ...){
 
   param_list <- list(...)
 
@@ -87,10 +133,11 @@ summary.multiScaleR <- function(object,...){
     names <- all.vars(formula(object$opt_mod)[-2])
   }
 
-  tab_scale <- ci_func(object$scale_est,
-                       df = df,
-                       min_D = object$min_D,
-                       names = row.names(object$scale_est))
+  tab_scale <- scale_ci_table(object = object,
+                              df = df,
+                              min_D = object$min_D,
+                              names = row.names(object$scale_est),
+                              profile = profile)
 
   if(length(param_list) >= 1){
     if('prob' %in% names(param_list)){
@@ -103,6 +150,9 @@ summary.multiScaleR <- function(object,...){
   ## DEBUG
   # browser()
 
+  object_profile <- object
+  object_profile$profile_scale_est <- tab_scale
+
   if(!is.null(object$shape_est)){
     tab_shape <- ci_func(object$shape_est,
                          df = df,
@@ -111,19 +161,21 @@ summary.multiScaleR <- function(object,...){
 
     out <- list(opt_scale = tab_scale,
                 opt_shape = tab_shape,
-                opt_dist = kernel_dist(object, prob = prob),
+                opt_dist = kernel_dist(object_profile, prob = prob),
                 fitted_mod = object$opt_mod,
                 prob = prob,
                 kernel = object$kernel_inputs$kernel,
+                diagnostics = object$diagnostics,
                 warn_message = object$warn_message,
                 call = object$call)
   } else {
     out <- list(opt_scale = tab_scale,
                 opt_shape = NULL,
-                opt_dist = kernel_dist(object, prob = prob),
+                opt_dist = kernel_dist(object_profile, prob = prob),
                 fitted_mod = object$opt_mod,
                 prob = prob,
                 kernel = object$kernel_inputs$kernel,
+                diagnostics = object$diagnostics,
                 warn_message = object$warn_message,
                 call = object$call)
   }
@@ -169,9 +221,16 @@ print.multiScaleR <- function(x, ...){
   # Warning Messages --------------------------------------------------------
 
   if(1 %in% x$warn_message){
+    msg <- format_max_distance_warning(x$diagnostics)
+    suggest_txt <- if (is.finite(msg$suggested_max_D)) {
+      paste0(" to >= ", round(msg$suggested_max_D, 2))
+    } else {
+      ""
+    }
     cat(red("\n WARNING!!!\n",
-            "The estimated scale of effect extends beyond the maximum distance specified.\n",
-            "Consider increasing " %+% blue$bold("max_D") %+% " in `kernel_prep` to ensure accurate estimation of scale.\n\n"))
+            msg$headline, "\n",
+            "Consider increasing " %+% blue$bold("max_D") %+% " in `kernel_prep`" %+%
+              suggest_txt %+% " to ensure accurate estimation of scale.\n\n"))
   }
 
   if(2 %in% x$warn_message){

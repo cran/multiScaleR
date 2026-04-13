@@ -1,3 +1,46 @@
+.empty_diagnostics <- function() {
+  list(
+    max_distance = NULL,
+    sigma_precision = NULL,
+    shape_precision = NULL
+  )
+}
+
+
+.max_distance_diagnostic <- function(scale_D, max_D) {
+  est_D <- scale_D[, 1]
+  ratio <- max_D / est_D
+  triggered <- ratio < 2
+
+  list(
+    code = "max_distance",
+    triggered = any(triggered, na.rm = TRUE),
+    threshold_ratio = 2,
+    variables = names(est_D)[which(triggered)],
+    effective_distance = est_D,
+    max_D = max_D,
+    ratio = ratio,
+    suggested_max_D = max(est_D * 2, na.rm = TRUE)
+  )
+}
+
+
+.precision_diagnostic <- function(est, code) {
+  ratio <- est[, 2] / est[, 1]
+  triggered <- ratio >= 0.5
+
+  list(
+    code = code,
+    triggered = any(triggered, na.rm = TRUE),
+    threshold_ratio = 0.5,
+    variables = row.names(est)[which(triggered)],
+    estimate = est[, 1],
+    se = est[, 2],
+    se_to_mean = ratio
+  )
+}
+
+
 #' @title Multiscale optimization
 #' @description Function to conduct multiscale optimization
 #' @param fitted_mod Model object of class glm, lm, gls, or unmarked
@@ -7,12 +50,49 @@
 #' @param n_cores If attempting to optimize in parallel, the number of cores to use. Default: NULL
 #' @param PSOCK Logical. If attempting to optimize in parallel on a Windows machine, a PSOCK cluster will be created. If using a Unix OS a FORK cluster will be created. You can force a Unix system to create a PSOCK cluster by setting to TRUE. Default: FALSE
 #' @param verbose Logical. Print status of optimization to the console. Default: TRUE
+#' @param refit_fn Optional function used to refit `fitted_mod` during optimization. If provided, it must accept named arguments `model`, `data`, and `context`, and return a fitted model object with a usable log-likelihood. See Details.
 #' @return Returns a list of class `multiScaleR` containing scale estimates, shape estimates (if using kernel = 'expow'), optimization results, and the final optimized model.
-#' @details Identifies the kernel scale, and uncertainty of that scale, for each raster within the context of the fitted model provided.
+#' @details Identifies the kernel scale, and uncertainty of that scale, for each raster within the context of the fitted model provided. Summary methods use profile-likelihood confidence intervals for `sigma` when feasible, while reported standard errors remain Hessian-based approximations from the outer optimization.
 #'
 #' To ensure that fitted model function calls are properly parallelized, fit models directly from the packages. For example, fit a negative binomial distribution from the MASS package as `fitted_mod <- MASS::glm.nb(y ~ x, data = df)`
 #'
 #' There may situations when using `unmarked` where sites are sampled across multiple years, but spatial environmental values are relevant for all years. In this situation, you want to join the scaled landscape variables from each site to each observation at a site. This can be achieved by providing a data frame object containing the values (e.g. site names) that will be used to join spatial data to sites. The name of the column in the `join_by` data frame must match a column name in the data used to fit your `unmarked` model.
+#'
+#' During optimization, `multiScale_optim()` repeatedly replaces the scaled
+#' raster covariates in the original model data and refits the model. For most
+#' supported model classes, this is done internally with `stats::update()` for
+#' standard model objects or `unmarked::update()` for `unmarked` models. If a
+#' model class cannot be refit correctly by the default path, pass `refit_fn`.
+#' This function must have the form `function(model, data, context)` and return
+#' a fitted model object. The refitted object must work with `stats::logLik()`
+#' or `insight::get_loglikelihood()`, unless it is an `unmarked` model with a
+#' `negLogLike` slot.
+#'
+#' A minimal custom refit function is:
+#'
+#' \preformatted{
+#' refit_fn <- function(model, data, context) \{
+#'   stats::update(model, data = data)
+#' \}
+#' }
+#'
+#' For models that need to be rebuilt from their original call, use
+#' namespace-qualified model-fitting calls inside `refit_fn` and make sure any
+#' required objects are available to the function:
+#'
+#' \preformatted{
+#' refit_fn <- function(model, data, context) \{
+#'   call <- model$call
+#'   call$data <- quote(data)
+#'   eval(call, envir = list(data = data), enclos = parent.frame())
+#' \}
+#' }
+#'
+#' When using `n_cores` with a PSOCK cluster, `refit_fn` must be serializable
+#' and should avoid hidden dependencies on local workspace objects. Prefer
+#' namespace-qualified calls such as `stats::update()` or `survival::coxph()`.
+#' If the function closes over helper objects, those objects must also serialize
+#' cleanly to worker processes.
 #'
 #' @seealso \code{\link[multiScaleR]{kernel_dist}}
 #' @examples
@@ -91,6 +171,17 @@
 #'
 #' mod_pred <- predict(opt_hab.s_c, opt$opt_mod, type = 'response')
 #' plot(mod_pred)
+#'
+#' ## Custom refit hook for model classes that need explicit control.
+#' ## This example still uses glm(), but the same pattern can be used for
+#' ## classes whose default update path is not sufficient.
+#' refit_glm <- function(model, data, context) {
+#'   stats::update(model, data = data)
+#' }
+#'
+#' opt_custom <- multiScale_optim(fitted_mod = mod,
+#'                                kernel_inputs = kernel_inputs,
+#'                                refit_fn = refit_glm)
 #'}
 #' @rdname multiScale_optim
 #' @export
@@ -99,14 +190,22 @@
 #' @importFrom parallel clusterEvalQ makeCluster setDefaultCluster stopCluster makeForkCluster clusterExport
 #' @importFrom crayon %+% green red bold blue
 #' @importFrom pscl zeroinfl
-
 multiScale_optim <- function(fitted_mod,
                              kernel_inputs,
                              join_by = NULL,
                              par = NULL,
                              n_cores = NULL,
                              PSOCK = FALSE,
-                             verbose = TRUE){
+                             verbose = TRUE,
+                             refit_fn = NULL){
+  if(is.null(fitted_mod)){
+    stop("`fitted_mod` must be a fitted model object.")
+  }
+  validate_scalar_logical(PSOCK, "PSOCK")
+  validate_scalar_logical(verbose, "verbose")
+  if(!is.null(refit_fn) && !is.function(refit_fn)){
+    stop("`refit_fn` must be a function if provided.", call. = FALSE)
+  }
 
   # Check fitted_mod class
   # if (!inherits(fitted_mod, c("glm", "lm", "gls", "unmarked"))) {
@@ -132,6 +231,18 @@ multiScale_optim <- function(fitted_mod,
   if (!is.null(n_cores) && (!is.numeric(n_cores) || n_cores < 1)) {
     stop("n_cores must be a positive integer if provided.")
   }
+  if(!is.null(n_cores) && (length(n_cores) != 1 || is.na(n_cores) || n_cores != as.integer(n_cores))){
+    stop("n_cores must be a positive integer if provided.")
+  }
+  if(!is.list(kernel_inputs$raw_cov) || !is.list(kernel_inputs$d_list) ||
+     length(kernel_inputs$raw_cov) == 0 || length(kernel_inputs$d_list) == 0 ||
+     length(kernel_inputs$raw_cov) != length(kernel_inputs$d_list)){
+    stop("`kernel_inputs$raw_cov` and `kernel_inputs$d_list` must be non-empty lists of equal length.")
+  }
+  validate_scalar_numeric(kernel_inputs$min_D, "kernel_inputs$min_D", positive = TRUE)
+  validate_scalar_numeric(kernel_inputs$max_D, "kernel_inputs$max_D", positive = TRUE)
+  validate_scalar_numeric(kernel_inputs$unit_conv, "kernel_inputs$unit_conv", positive = TRUE)
+  kernel_inputs$kernel <- match.arg(kernel_inputs$kernel, c("gaussian", "exp", "expow", "fixed"))
 
   # Extract variables from fitted model
   if (any(class(fitted_mod) == 'gls')) {
@@ -162,7 +273,6 @@ multiScale_optim <- function(fitted_mod,
 
   # Determine if parallel optimization should be used
   use_parallel <- !is.null(n_cores) && n_cores > 1
-
 
   if(any(class(fitted_mod) == 'gls')){
     mod_class <- 'gls'
@@ -209,6 +319,10 @@ multiScale_optim <- function(fitted_mod,
     stop("\nYou have specified an Exponential Power kernel, which has starting values (`par`), for both the scale of effect and shape. The number of starting values should be 2x the number of covariates in the model. Please correct and run again. \n")
   }
 
+  opt_context <- build_opt_context(fitted_mod = fitted_mod,
+                                   cov_df = kernel_inputs$raw_cov,
+                                   join_by = join_by,
+                                   refit_fn = refit_fn)
 
   if(kernel_inputs$kernel == 'expow'){
     lwr <- c(lwr, rep(0.75, n_covs))
@@ -260,6 +374,7 @@ multiScale_optim <- function(fitted_mod,
         cov_df = kernel_inputs$raw_cov,
         kernel = kernel_inputs$kernel,
         join_by = join_by,
+        opt_context = opt_context,
         control = list(maxit = 1000),
         parallel = list(forward = FALSE, loginfo = TRUE)
       ),
@@ -283,7 +398,10 @@ multiScale_optim <- function(fitted_mod,
         cat("Parallel optimization aborted.\n")
         cat("Try running with `n_cores = 1` to use standard optimization.\n\n")
       }
-      stop("Parallel optimization failed. See message above.")
+      if (!is.null(err_msg)) {
+        stop("Parallel optimization failed: ", conditionMessage(err_msg), call. = FALSE)
+      }
+      stop("Parallel optimization failed due to an unknown error.", call. = FALSE)
     }
 
   } else {
@@ -301,7 +419,8 @@ multiScale_optim <- function(fitted_mod,
         cov_df = kernel_inputs$raw_cov,
         control = list(maxit = 1000),
         kernel = kernel_inputs$kernel,
-        join_by = join_by
+        join_by = join_by,
+        opt_context = opt_context
       ),
       silent = TRUE
     )
@@ -317,7 +436,10 @@ multiScale_optim <- function(fitted_mod,
           cat("Unknown error occurred during standard optimization.\n")
         }
       }
-      stop("Standard optimization failed. See message above.")
+      if (!is.null(err_msg)) {
+        stop("Standard optimization failed: ", conditionMessage(err_msg), call. = FALSE)
+      }
+      stop("Standard optimization failed due to an unknown error.", call. = FALSE)
     }
   }
 
@@ -370,41 +492,43 @@ multiScale_optim <- function(fitted_mod,
                                  cov_df = kernel_inputs$raw_cov,
                                  fitted_mod = fitted_mod,
                                  join_by = join_by,
-                                 mod_return = TRUE)
+                                 mod_return = TRUE,
+                                 opt_context = opt_context)
 
     out <- list(scale_est = scale_est,
                 shape_est = shape_est,
                 optim_results = opt_results,
                 opt_mod = final_mod$mod,
+                fitted_mod_original = fitted_mod,
                 min_D = kernel_inputs$min_D,
-                kernel_inputs = kernel_inputs[-c(2,3)],
+                max_D = kernel_inputs$max_D,
+                kernel_inputs = kernel_inputs[
+                  setdiff(names(kernel_inputs), c("min_D", "max_D"))
+                ],
                 scl_params = final_mod$scl_params,
+                join_by = join_by,
+                opt_context = opt_context,
+                profile_scale_est = NULL,
+                diagnostics = .empty_diagnostics(),
                 warn_message = 0,
                 call = match.call())
 
     class(out) <- 'multiScaleR'
 
     scale_D <- kernel_dist(out)
-    if(dim(scale_D)[1] > 1){
-      est_D <- scale_D[,1]
-      suggest_D <-  max(scale_D[,1] * 2, na.rm = TRUE)
+    max_dist_diag <- .max_distance_diagnostic(scale_D = scale_D,
+                                              max_D = kernel_inputs$max_D)
+    out$diagnostics$max_distance <- max_dist_diag
 
-    } else {
-      est_D <- scale_D[[1]]
-      suggest_D <-  scale_D[[1]] * 2
-
-    }
-
-    # browser()
-
-    if(any((kernel_inputs$max_D / est_D) < 2, na.rm = T)){
+    if (isTRUE(max_dist_diag$triggered)) {
       out$warn_message <- c(out$warn_message, 1)
       cat(red("\n WARNING!!!\n",
               "The estimated scale of effect extends beyond the maximum distance specified.\n",
-              "Consider increasing " %+% blue$bold("max_D") %+% " in `kernel_prep` to >="  %+% green$bold(suggest_D) %+% " to ensure accurate estimation of scale.\n\n"))
+              "Consider increasing " %+% blue$bold("max_D") %+% " in `kernel_prep` to >="  %+% green$bold(max_dist_diag$suggested_max_D) %+% " to ensure accurate estimation of scale.\n\n"))
     }
 
     if(any((scale_est[,1] / scale_est[,2]) < 2, na.rm = T)){
+      out$diagnostics$sigma_precision <- .precision_diagnostic(scale_est, "sigma_precision")
       out$warn_message <- c(out$warn_message, 2)
       cat(red("\n WARNING!!!\n",
               "The standard error of one or more `sigma` estimates is >= 50% of the estimated mean value.\n",
@@ -412,6 +536,7 @@ multiScale_optim <- function(fitted_mod,
     }
 
     if(any((shape_est[,1] / shape_est[,2]) < 2, na.rm = T)){
+      out$diagnostics$shape_precision <- .precision_diagnostic(shape_est, "shape_precision")
       out$warn_message <- c(out$warn_message, 3)
       cat(red("\n WARNING!!!\n",
               "The standard error of one or more `shape` estimates is >= 50% of the estimated mean value.\n",
