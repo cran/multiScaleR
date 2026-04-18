@@ -1,3 +1,31 @@
+multiScaleR 0.6.13
+---------
+* Added a Windows R-devel compatibility shim for Rcpp header compilation
+
+multiScaleR 0.6.12
+---------
+* Forced C++17 compilation for compatibility with CRAN Windows R-devel checks
+
+multiScaleR 0.6.11
+---------
+* Fixed PSOCK optimization for unqualified model calls such as `glm.nb()` after `library(MASS)`
+
+multiScaleR 0.6.10
+---------
+* Preserved original sparse kernel dot-product behavior for complete raster layers
+* Preserved point row identities across `kernel_prep()` outputs used during optimization
+* Ensured PSOCK workers use the same multiScaleR code as the main R session
+* Fixed complete-case row alignment when fitted model frames retain original row names
+
+multiScaleR 0.6.8
+---------
+* Added linear and user-specified sigma grids to `profile_sigma()`
+
+multiScaleR 0.6.7
+---------
+* Fixed singular-Hessian fallback SE values to remain numeric
+* Excluded missing raster cells from sparse kernel weighted averages
+
 multiScaleR 0.6.6
 ---------
 * Added an optional custom refit hook for model classes that cannot use default model updates

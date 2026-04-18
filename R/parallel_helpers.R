@@ -13,6 +13,16 @@
 cluster_prep <- function(model, cl) {
 
   pkg <- extract_namespace(model)
+  if(is.null(pkg)){
+    pkg <- extract_call_function_package(model)
+  }
+
+  msr_path <- normalizePath(getNamespaceInfo("multiScaleR", "path"),
+                            winslash = "/", mustWork = FALSE)
+  msr_system_path <- normalizePath(system.file(package = "multiScaleR"),
+                                   winslash = "/", mustWork = FALSE)
+  msr_version <- as.character(utils::packageVersion("multiScaleR"))
+  msr_load_all <- nzchar(msr_system_path) && !identical(msr_path, msr_system_path)
 
   if(is.null(pkg)){
     model_classes <- class(model)
@@ -50,14 +60,69 @@ cluster_prep <- function(model, cl) {
     }
   }
 
-  # Export pkg to workers
-  clusterExport(cl, varlist = "pkg", envir = environment())
+  # Export package metadata to workers
+  clusterExport(cl,
+                varlist = c("pkg", "msr_path", "msr_version", "msr_load_all"),
+                envir = environment())
 
-  # Load required packages on each worker
-  clusterEvalQ(cl, {
-    library(pkg, character.only = TRUE)
-    library("multiScaleR")
+  # Load required packages on each worker. In development sessions, the master
+  # process may be using pkgload/devtools from a source tree; PSOCK workers must
+  # use that same source tree rather than silently loading an older installed
+  # multiScaleR from .libPaths().
+  worker_info <- clusterEvalQ(cl, {
+    if (!is.null(pkg) && !identical(pkg, "multiScaleR")) {
+      library(pkg, character.only = TRUE)
+    }
+
+    if (isTRUE(msr_load_all)) {
+      if (!requireNamespace("pkgload", quietly = TRUE)) {
+        stop(
+          paste0(
+            "PSOCK workers need the `pkgload` package to load the same ",
+            "development copy of multiScaleR as the main R session. ",
+            "Install `pkgload`, reinstall multiScaleR, or use `n_cores = 1`."
+          ),
+          call. = FALSE
+        )
+      }
+      pkgload::load_all(msr_path, quiet = TRUE)
+    } else {
+      library("multiScaleR")
+    }
+
+    list(
+      version = as.character(utils::packageVersion("multiScaleR")),
+      path = normalizePath(getNamespaceInfo("multiScaleR", "path"),
+                           winslash = "/", mustWork = FALSE)
+    )
   })
+
+  worker_versions <- vapply(worker_info, `[[`, character(1), "version")
+  if (any(worker_versions != msr_version)) {
+    stop(
+      paste0(
+        "PSOCK workers loaded multiScaleR version(s) ",
+        paste(unique(worker_versions), collapse = ", "),
+        " but the main R session is using version ", msr_version, ". ",
+        "Reinstall multiScaleR or use `n_cores = 1`."
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (isTRUE(msr_load_all)) {
+    worker_paths <- vapply(worker_info, `[[`, character(1), "path")
+    if (any(worker_paths != msr_path)) {
+      stop(
+        paste0(
+          "PSOCK workers did not load the same development copy of multiScaleR ",
+          "as the main R session. Use `n_cores = 1` or reinstall/load the ",
+          "package consistently before running in parallel."
+        ),
+        call. = FALSE
+      )
+    }
+  }
 
   invisible(pkg)
 }
@@ -89,4 +154,54 @@ extract_namespace <- function(x) {
     fc <- paste(fc, collapse = "")  # ensure single string
     if (grepl("::", fc)) sub("::.*", "", fc) else NULL
   }
+}
+
+
+extract_call_function_package <- function(x) {
+  fc <- tryCatch(
+    get_call(x),
+    error = function(e) NULL
+  )
+
+  if (is.null(fc) || !is.call(fc)) {
+    return(NULL)
+  }
+
+  fit_fun <- fc[[1]]
+  if (is.call(fit_fun) && identical(fit_fun[[1]], as.name("::"))) {
+    return(as.character(fit_fun[[2]]))
+  }
+
+  if (!is.symbol(fit_fun)) {
+    return(NULL)
+  }
+
+  fit_fun <- as.character(fit_fun)
+
+  attached <- tryCatch(
+    utils::find(fit_fun, mode = "function"),
+    error = function(e) character()
+  )
+  attached <- attached[grepl("^package:", attached)]
+  attached <- sub("^package:", "", attached)
+  attached <- attached[attached %in% loadedNamespaces()]
+  if (length(attached) > 0) {
+    return(attached[[1]])
+  }
+
+  loaded <- loadedNamespaces()
+  has_fun <- vapply(
+    loaded,
+    function(ns) {
+      exists(fit_fun, envir = asNamespace(ns), mode = "function",
+             inherits = FALSE)
+    },
+    logical(1)
+  )
+  loaded <- loaded[has_fun]
+  if (length(loaded) > 0) {
+    return(loaded[[1]])
+  }
+
+  NULL
 }

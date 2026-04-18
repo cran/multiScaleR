@@ -31,17 +31,44 @@ test_that("build_opt_context stores complete-case indices from model data", {
   expect_equal(ctx$data_template$y, c(1, 3))
 })
 
-test_that("kernel_scale_fn subsets covariate inputs to model complete cases", {
+test_that("build_opt_context preserves original row indices from model frames", {
+  fake_mod <- structure(list(), class = "glm")
+  dat <- data.frame(
+    y = c(1, 3, 4, 6),
+    x = c(0.1, 0.3, 0.4, 0.6),
+    z = c(1, 3, 4, 6),
+    row.names = c("1", "3", "4", "6")
+  )
+
+  ctx <- with_mocked_bindings(
+    build_opt_context(
+      fitted_mod = fake_mod,
+      cov_df = replicate(6, data.frame(x = 1, other = 2), simplify = FALSE)
+    ),
+    find_predictors = function(x) list(c("x")),
+    get_data = function(x, ...) dat,
+    .package = "multiScaleR"
+  )
+
+  expect_equal(ctx$data_idx, 1:4)
+  expect_equal(ctx$complete_idx, c(1, 3, 4, 6))
+  expect_equal(nrow(ctx$data_template), 4)
+  expect_equal(ctx$data_template$y, c(1, 3, 4, 6))
+})
+
+test_that("kernel_scale_fn aligns scaled covariates to model complete cases", {
   fake_mod <- structure(list(), class = "glm")
   captured <- new.env(parent = emptyenv())
   captured$seen <- numeric(0)
+  captured$refit_data <- NULL
 
   opt_context <- list(
     fitted_mod = fake_mod,
     mod_class = "glm",
     covs = "x",
     n_covs = 1,
-    data_template = data.frame(y = c(1, 3), x = c(0, 0)),
+    data_template = data.frame(y = c(2, 4), x = c(0, 0),
+                               row.names = c("2", "4")),
     complete_idx = c(2, 4)
   )
 
@@ -63,12 +90,18 @@ test_that("kernel_scale_fn subsets covariate inputs to model complete cases", {
       captured$seen <- c(captured$seen, r_stack.df$x[[1]])
       r_stack.df$x[[1]]
     },
-    .refit_model = function(model, data, opt_context) structure(list(), class = "mock_fit"),
+    .refit_model = function(model, data, opt_context) {
+      captured$refit_data <- data
+      structure(list(), class = "mock_fit")
+    },
     .neg_loglik_model = function(model, mod_class) 0,
     .package = "multiScaleR"
   )
 
+  expected_x <- as.numeric(scale(matrix(c(2, 4), ncol = 1)))
   expect_equal(captured$seen, c(2, 4))
+  expect_equal(captured$refit_data$y, c(2, 4))
+  expect_equal(captured$refit_data$x, expected_x)
   expect_equal(out, 0)
 })
 
@@ -365,16 +398,47 @@ test_that("multiScale_optim covers expow and warning branches via mocks", {
 test_that("multiScale_optim covers singular hessian and failure branches via mocks", {
   fix <- make_core_fixture()
 
-  expect_error(
-    with_mocked_bindings(
+  singular_out <- with_mocked_bindings(
+    multiScale_optim(
+      fitted_mod = fix$fitted_mod,
+      kernel_inputs = fix$kernel_inputs,
+      par = 0.2,
+      verbose = FALSE
+    ),
+    optim = function(...) {
+      list(par = 0.2, hessian = matrix(0, 1, 1))
+    },
+    kernel_scale_fn = function(..., mod_return = NULL) {
+      if (isTRUE(mod_return)) {
+        list(mod = fix$fitted_mod, scl_params = fix$kernel_inputs$scl_params)
+      } else {
+        0
+      }
+    },
+    kernel_dist = function(...) data.frame(Mean = 20, low = 10, high = 30),
+    .package = "multiScaleR"
+  )
+
+  expect_s3_class(singular_out, "multiScaleR")
+  expect_type(singular_out$scale_est$SE, "double")
+  expect_true(is.infinite(singular_out$scale_est$SE[[1]]))
+  singular_summary <- summary(singular_out)
+  expect_s3_class(singular_summary, "summary_multiScaleR")
+  expect_type(singular_summary$opt_scale$SE, "double")
+
+  expow_ki <- fix$kernel_inputs
+  expow_ki$kernel <- "expow"
+  expow_ki$shape <- 2
+
+  singular_expow <- with_mocked_bindings(
       multiScale_optim(
         fitted_mod = fix$fitted_mod,
-        kernel_inputs = fix$kernel_inputs,
-        par = 0.2,
+        kernel_inputs = expow_ki,
+        par = c(0.2, 2),
         verbose = FALSE
       ),
       optim = function(...) {
-        list(par = 0.2, hessian = matrix(0, 1, 1))
+        list(par = c(0.2, 2), hessian = matrix(0, 2, 2))
       },
       kernel_scale_fn = function(..., mod_return = NULL) {
         if (isTRUE(mod_return)) {
@@ -385,9 +449,17 @@ test_that("multiScale_optim covers singular hessian and failure branches via moc
       },
       kernel_dist = function(...) data.frame(Mean = 20, low = 10, high = 30),
       .package = "multiScaleR"
-    ),
-    "non-numeric argument"
   )
+
+  expect_s3_class(singular_expow, "multiScaleR")
+  expect_type(singular_expow$scale_est$SE, "double")
+  expect_type(singular_expow$shape_est$SE, "double")
+  expect_true(is.infinite(singular_expow$scale_est$SE[[1]]))
+  expect_true(is.infinite(singular_expow$shape_est$SE[[1]]))
+  expow_summary <- summary(singular_expow)
+  expect_s3_class(expow_summary, "summary_multiScaleR")
+  expect_type(expow_summary$opt_scale$SE, "double")
+  expect_type(expow_summary$opt_shape$SE, "double")
 
   expect_error(
     with_mocked_bindings(
@@ -486,4 +558,81 @@ test_that("multiScale_optim covers parallel and unmarked branches via mocks", {
 
   expect_s3_class(mocked_unmark, "multiScaleR")
   expect_equal(rownames(mocked_unmark$scale_est), c("bin1", "cont1"))
+})
+
+test_that("PSOCK workers load the same multiScaleR namespace as the main session", {
+  skip_on_cran()
+  skip_if_not_installed("pkgload")
+
+  fix <- make_core_fixture()
+  cl <- parallel::makeCluster(1)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
+
+  cluster_prep(fix$fitted_mod, cl)
+
+  master_path <- normalizePath(getNamespaceInfo("multiScaleR", "path"),
+                               winslash = "/", mustWork = FALSE)
+  master_system_path <- normalizePath(system.file(package = "multiScaleR"),
+                                      winslash = "/", mustWork = FALSE)
+  master_load_all <- nzchar(master_system_path) &&
+    !identical(master_path, master_system_path)
+  master_version <- as.character(utils::packageVersion("multiScaleR"))
+
+  worker_info <- parallel::clusterEvalQ(
+    cl,
+    list(
+      version = as.character(utils::packageVersion("multiScaleR")),
+      path = normalizePath(getNamespaceInfo("multiScaleR", "path"),
+                           winslash = "/", mustWork = FALSE)
+    )
+  )[[1]]
+
+  expect_equal(worker_info$version, master_version)
+  if (isTRUE(master_load_all)) {
+    expect_equal(worker_info$path, master_path)
+  }
+})
+
+test_that("PSOCK optimization works for unqualified MASS model calls", {
+  skip_on_cran()
+  skip_if_not_installed("MASS")
+  skip_if_not_installed("pkgload")
+
+  fix <- make_core_fixture()
+  mass_attached <- "package:MASS" %in% search()
+  if (!isTRUE(mass_attached)) {
+    library(MASS)
+    on.exit(detach("package:MASS", unload = FALSE), add = TRUE)
+  }
+
+  nb_mod <- glm.nb(y ~ cont1 + site, data = fix$df)
+
+  serial <- suppressWarnings(
+    suppressMessages(
+      multiScale_optim(
+        fitted_mod = nb_mod,
+        kernel_inputs = fix$kernel_inputs,
+        par = 40 / fix$kernel_inputs$unit_conv,
+        n_cores = NULL,
+        verbose = FALSE
+      )
+    )
+  )
+
+  parallel <- suppressWarnings(
+    suppressMessages(
+      multiScale_optim(
+        fitted_mod = nb_mod,
+        kernel_inputs = fix$kernel_inputs,
+        par = 40 / fix$kernel_inputs$unit_conv,
+        n_cores = 2,
+        PSOCK = TRUE,
+        verbose = FALSE
+      )
+    )
+  )
+
+  expect_equal(parallel$scale_est$Mean, serial$scale_est$Mean,
+               tolerance = 1e-5)
+  expect_true(is.finite(parallel$scale_est$SE[[1]]))
 })

@@ -42,7 +42,7 @@ land_rast <- rast(pkg_extdata("landscape.tif"))
 ## ----plot-data, fig.cap = "***Landscape rasters with survey locations.***"----
 plot(land_rast)
 plot(land_rast$land1, main = "land1 with survey points")
-points(pts, pch = 19, cex = 0.6)
+points(pts, pch = 19, cex = 0.6, col = 'red')
 
 ## ----kernel-prep--------------------------------------------------------------
 kernel_inputs <- kernel_prep(

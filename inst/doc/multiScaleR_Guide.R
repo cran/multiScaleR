@@ -4,8 +4,8 @@ library(multiScaleR)
 base_url <- "https://raw.githubusercontent.com/wpeterman/multiScaleR/master/inst/extdata/"
 
 f <- c("opt_exp.RData", "opt_expow.RData", "opt_fixed.RData",
-       "opt_umf_counts.RData", "opt_umf_occ.RData", "opt1.RData", 
-       "opt2.RData", "opt3.RData", "opt4.RData", "opt5.RData", 
+       "opt_umf_counts.RData", "opt_umf_occ.RData", "opt1.RData",
+       "opt2.RData", "opt3.RData", "opt4.RData", "opt5.RData",
        "opt6.RData", "sim_opt.RData", "zinb.RData")
 
 # Download each file
@@ -21,31 +21,31 @@ rdat <- list.files(tempdir(), pattern = "*.RData", full.names = T)
 invisible(lapply(rdat, load, .GlobalEnv))
 
 ## ----echo=FALSE---------------------------------------------------------------
-plot_kernel(prob = 0.9, 
-            sigma = 100, 
-            kernel = "gaus", 
+plot_kernel(prob = 0.9,
+            sigma = 100,
+            kernel = "gaus",
             scale_dist = F,
             add_label = F)
 
 ## ----echo=FALSE---------------------------------------------------------------
-plot_kernel(prob = 0.9, 
-            sigma = 50, 
-            kernel = "exp", 
+plot_kernel(prob = 0.9,
+            sigma = 50,
+            kernel = "exp",
             scale_dist = F,
             add_label = F)
 
 ## ----echo=FALSE---------------------------------------------------------------
-plot_kernel(prob = 0.9, 
-            sigma = 250, 
+plot_kernel(prob = 0.9,
+            sigma = 250,
             beta = 5,
-            kernel = "expow", 
+            kernel = "expow",
             scale_dist = F,
             add_label = F)
 
 ## ----echo=FALSE---------------------------------------------------------------
-plot_kernel(prob = 0.9, 
-            sigma = 300, 
-            kernel = "fixed", 
+plot_kernel(prob = 0.9,
+            sigma = 300,
+            kernel = "fixed",
             scale_dist = F,
             add_label = F)
 
@@ -59,8 +59,8 @@ dat <- landscape_counts
 data("surv_pts")
 pts <- vect(surv_pts)
 
-land_rast <- terra::rast(system.file("extdata", 
-                                     "landscape.tif", 
+land_rast <- terra::rast(system.file("extdata",
+                                     "landscape.tif",
                                      package = 'multiScaleR'))
 
 ## -----------------------------------------------------------------------------
@@ -73,7 +73,7 @@ land_rast
 plot(land_rast)
 
 ## Plot with points
-plot(land_rast$land1) 
+plot(land_rast$land1)
 plot(pts, add = T, pch = 19)
 
 ## -----------------------------------------------------------------------------
@@ -103,7 +103,7 @@ summary(mod0)
 summary(opt1)
 
 ## ----eval=FALSE---------------------------------------------------------------
-# summary(opt2, profile = TRUE)
+# summary(opt1, profile = TRUE)
 
 ## ----opt2---------------------------------------------------------------------
 ## New model
@@ -269,7 +269,7 @@ umf <- unmarkedFramePCount(y = s_dat$y,
 
 ## Base unmarked model
 mod0_umf.p <- unmarked::pcount(~1 ~bin1 + cont2,
-                               data = umf, 
+                               data = umf,
                                K = 100)
 
 ## ----eval=FALSE---------------------------------------------------------------
@@ -287,7 +287,7 @@ plot(opt_umf.p)
 plot_marginal_effects(opt_umf.p)
 
 ## -----------------------------------------------------------------------------
-## Project model 
+## Project model
 rast_scale.center <- kernel_scale.raster(raster_stack = rs,
                                          multiScaleR = opt_umf.p,
                                          scale_center = TRUE,
@@ -297,8 +297,8 @@ rast_scale.center <- kernel_scale.raster(raster_stack = rs,
 plot(rast_scale.center)
 
 
-ab.mod_pred <- terra::predict(rast_scale.center, 
-                             opt_umf.p$opt_mod, 
+ab.mod_pred <- terra::predict(rast_scale.center,
+                             opt_umf.p$opt_mod,
                              type = 'state')
 
 plot(ab.mod_pred)
@@ -344,22 +344,22 @@ summary(opt_umf.occ)
 plogis(opt_umf.occ$opt_mod@estimates@estimates$det@estimates[[1]])
 
 ## -----------------------------------------------------------------------------
-## Project model 
+## Project model
 rast_scale.center <- kernel_scale.raster(raster_stack = rs,
                                          multiScaleR = opt_umf.occ,
                                          scale_center = TRUE,
                                          clamp = T)
 plot(rast_scale.center)
 
-occ.mod_pred <- terra::predict(rast_scale.center, 
-                             opt_umf.occ$opt_mod, 
+occ.mod_pred <- terra::predict(rast_scale.center,
+                             opt_umf.occ$opt_mod,
                              type = 'state')
 
 plot(occ.mod_pred)
 
 ## -----------------------------------------------------------------------------
 set.seed(12345)
-rs <- sim_rast(user_seed = 999, 
+rs <- sim_rast(user_seed = 999,
                dim = 500, resolution = 30)
 rs <- terra::subset(rs, c(1,3))
 
@@ -377,8 +377,8 @@ StDev <- 2  # Negative binomial dispersion
 
 ## Generate random points
 bnd <- buffer(vect(ext(rs[[1]])), -1000)
-pts <- spatSample(x = rs[[1]], 
-                  size = n_points, 
+pts <- spatSample(x = rs[[1]],
+                  size = n_points,
                   method = 'random',
                   ext = ext(bnd),
                   replace = F,
@@ -396,7 +396,7 @@ zi_prob <- plogis(zi_alpha + zi_beta*kernel_out$kernel_dat$cont1)
 
 # Simulate zero-inflated counts
 # 1 = excess zero, 0 = from Poisson
-is_zero <- rbinom(length(zi_prob), size = 1, prob = zi_prob)  
+is_zero <- rbinom(length(zi_prob), size = 1, prob = zi_prob)
 
 obs <- exp(alpha + beta*kernel_out$kernel_dat$bin1)
 
