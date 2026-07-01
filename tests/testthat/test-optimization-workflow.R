@@ -10,6 +10,12 @@ test_that("multiScale_optim returns a valid optimized object", {
   expect_true(all(c("mean", "sd") %in% names(opt$scl_params)))
   expect_true(opt$scale_est[1, "Mean"] > 0)
   expect_true(is.list(opt$diagnostics))
+  expect_true(is.list(opt$next_run))
+  expect_equal(unname(opt$next_run$start_sigma),
+               unname(opt$scale_est[, "Mean"]))
+  expect_equal(opt$next_run$max_D, opt$max_D)
+  expect_equal(unname(opt$next_run$start_par),
+               unname(opt$next_run$start_sigma / opt$next_run$max_D))
 })
 
 test_that("build_opt_context stores complete-case indices from model data", {
@@ -145,6 +151,160 @@ test_that("multiScale_optim builds and forwards cached optimization context", {
   expect_false(isTRUE(out$diagnostics$max_distance$triggered))
   expect_equal(unname(out$diagnostics$max_distance$effective_distance[[1]]), 20)
   expect_equal(out$diagnostics$max_distance$suggested_max_D, 40)
+  expect_equal(out$next_run$max_D, fix$kernel_inputs$max_D)
+  expect_equal(unname(out$next_run$start_sigma), 0.2 * fix$kernel_inputs$unit_conv)
+  expect_equal(unname(out$next_run$start_par), 0.2)
+})
+
+test_that("multiScale_optim can prescreen sigma starts with marginal scans only", {
+  fix <- make_core_fixture()
+  captured <- new.env(parent = emptyenv())
+  sigma_grid <- exp(seq(
+    log(fix$kernel_inputs$min_D / fix$kernel_inputs$unit_conv),
+    log(fix$kernel_inputs$max_D / fix$kernel_inputs$unit_conv),
+    length.out = 5
+  ))
+  target <- sigma_grid[4]
+
+  out <- with_mocked_bindings(
+    multiScale_optim(
+      fitted_mod = fix$fitted_mod,
+      kernel_inputs = fix$kernel_inputs,
+      start_strategy = "screen",
+      screen_n_sigma = 5,
+      screen_n_jitter = 0,
+      verbose = FALSE
+    ),
+    optim = function(par, fn, hessian, ...) {
+      captured$full_par <- par
+      list(
+        par = par,
+        hessian = matrix(1, 1, 1),
+        value = fn(par, ...)
+      )
+    },
+    kernel_scale_fn = function(par, mod_return = NULL, ...) {
+      if (isTRUE(mod_return)) {
+        list(mod = fix$fitted_mod, scl_params = fix$kernel_inputs$scl_params)
+      } else {
+        (par[1] - target)^2
+      }
+    },
+    kernel_dist = function(...) data.frame(Mean = 20, low = 10, high = 30),
+    .package = "multiScaleR"
+  )
+
+  expect_s3_class(out, "multiScaleR")
+  expect_equal(captured$full_par[1], target, tolerance = 1e-10)
+})
+
+test_that("multiScale_optim screening keeps exactly one full optimization", {
+  fix <- make_core_fixture()
+  captured <- new.env(parent = emptyenv())
+  captured$screen_calls <- 0L
+  captured$full_calls <- 0L
+  target <- 0.3
+
+  out <- with_mocked_bindings(
+    multiScale_optim(
+      fitted_mod = fix$fitted_mod,
+      kernel_inputs = fix$kernel_inputs,
+      start_strategy = "screen",
+      screen_n_sigma = 4,
+      screen_n_jitter = 4,
+      screen_maxit = 3,
+      verbose = FALSE
+    ),
+    optim = function(par, fn, hessian, ...) {
+      if (isTRUE(hessian)) {
+        captured$full_calls <- captured$full_calls + 1L
+        captured$full_par <- par
+        return(list(
+          par = par,
+          hessian = matrix(1, 1, 1),
+          value = fn(par, ...)
+        ))
+      }
+
+      captured$screen_calls <- captured$screen_calls + 1L
+      list(
+        par = c(target),
+        value = fn(c(target), ...),
+        convergence = 0L
+      )
+    },
+    kernel_scale_fn = function(par, mod_return = NULL, ...) {
+      if (isTRUE(mod_return)) {
+        list(mod = fix$fitted_mod, scl_params = fix$kernel_inputs$scl_params)
+      } else {
+        (par[1] - target)^2
+      }
+    },
+    kernel_dist = function(...) data.frame(Mean = 20, low = 10, high = 30),
+    .package = "multiScaleR"
+  )
+
+  expect_s3_class(out, "multiScaleR")
+  expect_gt(captured$screen_calls, 0L)
+  expect_equal(captured$full_calls, 1L)
+  expect_equal(captured$full_par[1], target, tolerance = 1e-10)
+})
+
+test_that("screening attempts use allocated multiScale_optim cores when available", {
+  fix <- make_core_fixture()
+  captured <- new.env(parent = emptyenv())
+  captured$parallel_used <- FALSE
+  captured$cluster_n <- NA_integer_
+  captured$n_candidates <- NA_integer_
+  captured$cluster_stopped <- FALSE
+
+  set.seed(20260514)
+  start <- with_mocked_bindings(
+    multiScaleR:::.msr_prescreen_start(
+      par = c(0.2),
+      n_covs = 1,
+      lwr = c(0.05),
+      uppr = c(0.8),
+      fitted_mod = fix$fitted_mod,
+      kernel_inputs = fix$kernel_inputs,
+      join_by = NULL,
+      opt_context = fix$opt$opt_context,
+      screen_n_sigma = 4,
+      screen_n_jitter = 3,
+      screen_maxit = 2,
+      screen_jitter_sd = 0.5,
+      n_cores = 4,
+      PSOCK = TRUE,
+      verbose = FALSE
+    ),
+    .msr_objective_value = function(par, ...) (par[1] - 0.4)^2,
+    .msr_screen_run = function(par, ...) {
+      list(par = par, value = sum(par^2), convergence = 0L)
+    },
+    makeCluster = function(n) {
+      captured$cluster_n <- as.integer(n)
+      structure(list(n = n), class = "cluster")
+    },
+    cluster_prep = function(model, cl) {
+      invisible(NULL)
+    },
+    parLapply = function(cl, X, fun, ...) {
+      captured$parallel_used <- TRUE
+      captured$n_candidates <- length(X)
+      lapply(X, fun, ...)
+    },
+    stopCluster = function(cl) {
+      captured$cluster_stopped <- TRUE
+      invisible(NULL)
+    },
+    .package = "multiScaleR"
+  )
+
+  expect_true(isTRUE(captured$parallel_used))
+  expect_true(isTRUE(captured$cluster_stopped))
+  expect_equal(captured$cluster_n, min(4L, captured$n_candidates))
+  expect_type(start, "double")
+  expect_length(start, 1)
 })
 
 test_that("kernel_scale_fn can use a custom refit function", {
@@ -226,6 +386,68 @@ test_that("kernel_scale_fn can refit survival models through stats generics", {
   expect_s3_class(fit$mod, "coxph")
 })
 
+test_that("nested clogit wrappers can be optimized through their analysis model", {
+  testthat::skip_if_not_installed("survival")
+
+  fix <- make_core_fixture()
+  n <- nrow(fix$kernel_inputs$kernel_dat)
+  dat <- data.frame(
+    case_ = rep(c(TRUE, FALSE, FALSE), length.out = n),
+    cont1 = fix$kernel_inputs$kernel_dat$cont1,
+    site = seq_len(n) / 10,
+    stratum = factor(rep(seq_len(ceiling(n / 3)), each = 3, length.out = n))
+  )
+  coxph <- survival::coxph
+  strata <- survival::strata
+
+  inner <- suppressWarnings(
+    survival::clogit(
+      case_ ~ cont1 + site + strata(stratum),
+      data = dat,
+      model = TRUE
+    )
+  )
+  wrapped <- structure(
+    list(model = inner, sl_ = NULL, ta_ = NULL, more = NULL),
+    class = c("fit_clogit", "list")
+  )
+
+  opt_context <- build_opt_context(
+    fitted_mod = wrapped,
+    cov_df = fix$kernel_inputs$raw_cov
+  )
+
+  neg_ll <- suppressWarnings(
+    kernel_scale_fn(
+      par = 40 / fix$kernel_inputs$unit_conv,
+      d_list = fix$kernel_inputs$d_list,
+      cov_df = fix$kernel_inputs$raw_cov,
+      kernel = "gaussian",
+      fitted_mod = wrapped,
+      opt_context = opt_context
+    )
+  )
+
+  fit <- suppressWarnings(
+    kernel_scale_fn(
+      par = 40 / fix$kernel_inputs$unit_conv,
+      d_list = fix$kernel_inputs$d_list,
+      cov_df = fix$kernel_inputs$raw_cov,
+      kernel = "gaussian",
+      fitted_mod = wrapped,
+      opt_context = opt_context,
+      mod_return = TRUE
+    )
+  )
+
+  expect_equal(opt_context$covs, "cont1")
+  expect_true(all(c("case_", "cont1", "site", "stratum") %in%
+                    names(opt_context$data_template)))
+  expect_true(is.finite(neg_ll))
+  expect_s3_class(fit$mod, "fit_clogit")
+  expect_s3_class(fit$mod$model, "coxph")
+})
+
 test_that("single-covariate models work when kernel inputs contain extra raster layers", {
   set.seed(555)
 
@@ -272,7 +494,28 @@ test_that("summary and distance methods return structured outputs", {
   expect_equal(colnames(sum_opt$opt_scale), c("Mean", "SE", "2.5%", "97.5%"))
   expect_equal(colnames(dist_opt), c("Mean", "2.5%", "97.5%"))
   expect_true(dist_opt[1, "Mean"] > 0)
+  expect_identical(sum_opt$opt_distance, sum_opt$opt_dist)
   expect_identical(sum_opt$diagnostics, fix$opt$diagnostics)
+})
+
+test_that("summary handles optional args robustly and validates prob", {
+  fix <- make_core_fixture()
+
+  smry_default_prob <- summary(fix$opt, unused = TRUE)
+  expect_equal(smry_default_prob$prob, 0.9)
+
+  expect_error(
+    summary(fix$opt, prob = c(0.9, 0.95)),
+    "`prob` must be a single numeric value strictly between 0 and 1."
+  )
+  expect_error(
+    summary(fix$opt, prob = 0),
+    "`prob` must be a single numeric value strictly between 0 and 1."
+  )
+  expect_error(
+    summary(fix$opt, profile = NA),
+    "`profile` must be TRUE or FALSE."
+  )
 })
 
 test_that("diagnostics accessor returns structured warning metadata", {
@@ -289,6 +532,40 @@ test_that("diagnostics accessor returns structured warning metadata", {
       shape_precision = NULL
     )
   )
+})
+
+test_that("multiScale_optim does not invoke the RAM/n_cores probe (it is a separate call)", {
+  fix <- make_core_fixture()
+  ram_called <- FALSE
+
+  opt <- with_mocked_bindings(
+    multiScale_optim(
+      fitted_mod = fix$fitted_mod,
+      kernel_inputs = fix$kernel_inputs,
+      par = 0.2,
+      verbose = FALSE
+    ),
+    optim = function(...) list(par = 0.2, hessian = matrix(1, 1, 1)),
+    kernel_scale_fn = function(..., mod_return = NULL) {
+      if (isTRUE(mod_return)) {
+        list(mod = fix$fitted_mod, scl_params = fix$kernel_inputs$scl_params)
+      } else {
+        0
+      }
+    },
+    kernel_dist = function(...) data.frame(Mean = 20, low = 10, high = 30),
+    estimate_multiscale_ram = function(...) {
+      ram_called <<- TRUE
+      list(recommended_n_cores = 4L)
+    },
+    .package = "multiScaleR"
+  )
+
+  # A serial optimization must not shell out for a RAM/worker recommendation;
+  # `estimate_multiscale_ram()` is now an explicit, separate call.
+  expect_false(ram_called)
+  expect_null(opt$next_run$n_cores)
+  expect_null(summary(opt)$next_run$n_cores)
 })
 
 test_that("print methods emit readable summaries", {
@@ -393,6 +670,12 @@ test_that("multiScale_optim covers expow and warning branches via mocks", {
   expect_true(isTRUE(out$diagnostics$max_distance$triggered))
   expect_true(isTRUE(out$diagnostics$sigma_precision$triggered))
   expect_true(isTRUE(out$diagnostics$shape_precision$triggered))
+  expect_equal(out$next_run$max_D, 400)
+  expect_equal(unname(out$next_run$start_sigma), 0.2 * fix$kernel_inputs$unit_conv)
+  expect_equal(unname(out$next_run$start_shape), 2)
+  expect_equal(unname(out$next_run$start_par), c(50 / 400, 2))
+  expect_equal(out$next_run$flags,
+               c("max_distance", "sigma_precision", "shape_precision"))
 })
 
 test_that("multiScale_optim covers singular hessian and failure branches via mocks", {
@@ -511,6 +794,46 @@ test_that("multiScale_optim covers parallel and unmarked branches via mocks", {
 
   expect_s3_class(par_out, "multiScaleR")
 
+  expect_warning(
+    unsafe_ram_out <- with_mocked_bindings(
+      multiScale_optim(
+        fitted_mod = fix$fitted_mod,
+        kernel_inputs = fix$kernel_inputs,
+        par = 0.2,
+        n_cores = 2,
+        PSOCK = TRUE,
+        verbose = FALSE
+      ),
+      estimate_multiscale_ram = function(...) {
+        list(
+          max_cores_by_ram = 1L,
+          backend = "PSOCK",
+          component_bytes = data.frame(
+            component = "peak_parallel_estimate",
+            pretty = "2 GB",
+            stringsAsFactors = FALSE
+          )
+        )
+      },
+      makeCluster = function(...) "cl",
+      setDefaultCluster = function(cl = NULL) invisible(NULL),
+      cluster_prep = function(model, cl) "stats",
+      optimParallel = function(...) list(par = 0.2, hessian = matrix(1, 1, 1)),
+      stopCluster = function(cl) invisible(NULL),
+      kernel_scale_fn = function(..., mod_return = NULL) {
+        if (isTRUE(mod_return)) {
+          list(mod = fix$fitted_mod, scl_params = fix$kernel_inputs$scl_params)
+        } else {
+          0
+        }
+      },
+      kernel_dist = function(...) data.frame(Mean = 20, low = 10, high = 30),
+      .package = "multiScaleR"
+    ),
+    "conservative RAM budget"
+  )
+  expect_s3_class(unsafe_ram_out, "multiScaleR")
+
   expect_error(
     with_mocked_bindings(
       multiScale_optim(
@@ -593,6 +916,79 @@ test_that("PSOCK workers load the same multiScaleR namespace as the main session
   }
 })
 
+test_that("cluster_prep exports library paths for PSOCK workers", {
+  fix <- make_core_fixture()
+  captured <- new.env(parent = emptyenv())
+
+  with_mocked_bindings(
+    cluster_prep(fix$fitted_mod, cl = "cl"),
+    clusterExport = function(cl, varlist, envir) {
+      captured$varlist <- varlist
+      captured$lib_paths <- get("lib_paths", envir = envir)
+      captured$r_libs_user <- get("r_libs_user", envir = envir)
+      captured$r_libs <- get("r_libs", envir = envir)
+      invisible(NULL)
+    },
+    clusterEvalQ = function(cl, expr) {
+      list(list(
+        version = as.character(utils::packageVersion("multiScaleR")),
+        path = normalizePath(getNamespaceInfo("multiScaleR", "path"),
+                             winslash = "/", mustWork = FALSE)
+      ))
+    },
+    .package = "multiScaleR"
+  )
+
+  expect_true(all(c("lib_paths", "r_libs_user", "r_libs") %in% captured$varlist))
+  expect_true(length(captured$lib_paths) >= 1)
+  expect_equal(captured$r_libs_user, Sys.getenv("R_LIBS_USER", unset = ""))
+  expect_equal(captured$r_libs, Sys.getenv("R_LIBS", unset = ""))
+})
+
+test_that("screened starts run on real PSOCK workers", {
+  skip_on_cran()
+  skip_if_not_installed("pkgload")
+
+  fix <- make_core_fixture()
+
+  serial <- suppressWarnings(
+    suppressMessages(
+      multiScale_optim(
+        fitted_mod = fix$fitted_mod,
+        kernel_inputs = fix$kernel_inputs,
+        start_strategy = "screen",
+        screen_n_sigma = 3,
+        screen_n_jitter = 2,
+        screen_maxit = 2,
+        screen_jitter_sd = 0.25,
+        n_cores = NULL,
+        verbose = FALSE
+      )
+    )
+  )
+
+  parallel <- suppressWarnings(
+    suppressMessages(
+      multiScale_optim(
+        fitted_mod = fix$fitted_mod,
+        kernel_inputs = fix$kernel_inputs,
+        start_strategy = "screen",
+        screen_n_sigma = 3,
+        screen_n_jitter = 2,
+        screen_maxit = 2,
+        screen_jitter_sd = 0.25,
+        n_cores = 2,
+        PSOCK = TRUE,
+        verbose = FALSE
+      )
+    )
+  )
+
+  expect_s3_class(parallel, "multiScaleR")
+  expect_true(all(is.finite(parallel$scale_est$Mean)))
+  expect_equal(parallel$scale_est$Mean, serial$scale_est$Mean, tolerance = 1e-4)
+})
+
 test_that("PSOCK optimization works for unqualified MASS model calls", {
   skip_on_cran()
   skip_if_not_installed("MASS")
@@ -635,4 +1031,63 @@ test_that("PSOCK optimization works for unqualified MASS model calls", {
   expect_equal(parallel$scale_est$Mean, serial$scale_est$Mean,
                tolerance = 1e-5)
   expect_true(is.finite(parallel$scale_est$SE[[1]]))
+})
+
+test_that("PSOCK optimization works for nested clogit wrappers", {
+  skip_on_cran()
+  skip_if_not_installed("survival")
+  skip_if_not_installed("pkgload")
+
+  fix <- make_core_fixture()
+  n <- nrow(fix$kernel_inputs$kernel_dat)
+  dat <- data.frame(
+    case_ = rep(c(TRUE, FALSE, FALSE), length.out = n),
+    cont1 = fix$kernel_inputs$kernel_dat$cont1,
+    site = seq_len(n) / 10,
+    stratum = factor(rep(seq_len(ceiling(n / 3)), each = 3, length.out = n))
+  )
+  coxph <- survival::coxph
+  strata <- survival::strata
+
+  inner <- suppressWarnings(
+    survival::clogit(
+      case_ ~ cont1 + site + strata(stratum),
+      data = dat,
+      model = TRUE
+    )
+  )
+  wrapped <- structure(
+    list(model = inner, sl_ = NULL, ta_ = NULL, more = NULL),
+    class = c("fit_clogit", "list")
+  )
+
+  serial <- suppressWarnings(
+    suppressMessages(
+      multiScale_optim(
+        fitted_mod = wrapped,
+        kernel_inputs = fix$kernel_inputs,
+        par = 40 / fix$kernel_inputs$unit_conv,
+        n_cores = NULL,
+        verbose = FALSE
+      )
+    )
+  )
+
+  parallel <- suppressWarnings(
+    suppressMessages(
+      multiScale_optim(
+        fitted_mod = wrapped,
+        kernel_inputs = fix$kernel_inputs,
+        par = 40 / fix$kernel_inputs$unit_conv,
+        n_cores = 2,
+        PSOCK = TRUE,
+        verbose = FALSE
+      )
+    )
+  )
+
+  expect_equal(parallel$scale_est$Mean, serial$scale_est$Mean,
+               tolerance = 1e-5)
+  expect_s3_class(parallel$opt_mod, "fit_clogit")
+  expect_s3_class(parallel$opt_mod$model, "coxph")
 })

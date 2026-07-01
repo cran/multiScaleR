@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>Surface Texture Covariates</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Surface Texture Covariates</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-surface-texture-covariates-measure" id="toc-what-surface-texture-covariates-measure"><span class="toc-section-number">1</span> What surface texture covariates
+measure</a>
+<ul>
+<li><a href="#surface-metric-reference" id="toc-surface-metric-reference"><span class="toc-section-number">1.1</span> Surface metric reference</a></li>
+<li><a href="#a-note-on-scale" id="toc-a-note-on-scale"><span class="toc-section-number">1.2</span> A note on scale</a></li>
+</ul></li>
+<li><a href="#load-example-data" id="toc-load-example-data"><span class="toc-section-number">2</span> Load example data</a></li>
+<li><a href="#define-derived-covariates" id="toc-define-derived-covariates"><span class="toc-section-number">3</span> Define derived covariates</a></li>
+<li><a href="#prepare-model-data-and-fit" id="toc-prepare-model-data-and-fit"><span class="toc-section-number">4</span> Prepare model data and fit</a></li>
+<li><a href="#optimize-and-interpret" id="toc-optimize-and-interpret"><span class="toc-section-number">5</span> Optimize and interpret</a></li>
+<li><a href="#project-covariates-to-rasters" id="toc-project-covariates-to-rasters"><span class="toc-section-number">6</span> Project covariates to
+rasters</a></li>
+<li><a href="#roughness-surfaces-without-a-fitted-model" id="toc-roughness-surfaces-without-a-fitted-model"><span class="toc-section-number">7</span> Roughness surfaces without a fitted
+model</a>
+<ul>
+<li><a href="#distribution-shape-and-geometry-surfaces" id="toc-distribution-shape-and-geometry-surfaces"><span class="toc-section-number">7.1</span> Distribution-shape and geometry
+surfaces</a></li>
+</ul></li>
+<li><a href="#optimizing-the-scale-of-roughness" id="toc-optimizing-the-scale-of-roughness"><span class="toc-section-number">8</span> Optimizing the scale of
+roughness</a></li>
+<li><a href="#weighted-roughness-the-scale-of-effect-of-heterogeneity" id="toc-weighted-roughness-the-scale-of-effect-of-heterogeneity"><span class="toc-section-number">9</span> Weighted roughness: the scale of
+effect of heterogeneity</a></li>
+<li><a href="#practical-guidance" id="toc-practical-guidance"><span class="toc-section-number">10</span> Practical guidance</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">11</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">11.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">11.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-surface-texture-covariates-measure" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What surface texture
+covariates measure</h1>
+<p>A kernel covariate in <code>multiScaleR</code> summarizes the
+<em>average</em> value of a continuous raster in the neighborhood of a
+point. A surface texture covariate summarizes something different: how
+<em>variable</em> that surface is within the neighborhood. Two points
+can have the same average elevation, NDVI, or canopy height, yet one can
+sit in smooth terrain and the other in rugged terrain. Surface texture
+metrics capture that difference.</p>
+<p><code>surface_var()</code> derives these metrics from a continuous
+raster within a circular buffer, in the same way that
+<code>landscape_var()</code> derives landscape metrics from a
+categorical raster. The two functions are deliberately separate because
+they expect opposite kinds of raster: <code>landscape_var()</code>
+requires integer class codes, while <code>surface_var()</code> requires
+continuous values. If you have not used the explicit covariate interface
+before, read
+<code>vignette(&quot;landscape_metric_covariates&quot;, package = &quot;multiScaleR&quot;)</code>
+first; this vignette assumes you are comfortable with
+<code>msr_vars()</code>.</p>
+<p>This release supports six surface texture metrics, all borrowed from
+the surface-metrology literature. Two describe dispersion (how spread
+out the values are), two describe the shape of the value distribution,
+and two describe the geometry of local change (slope and surface area).
+Most are matched to the <code>geodiv</code> package so that
+<code>geodiv</code> can be used to validate results; the exceptions are
+noted below.</p>
+<div id="surface-metric-reference" class="section level2" number="1.1">
+<h2><span class="header-section-number">1.1</span> Surface metric
+reference</h2>
+<p>Each metric is computed on the continuous values within a circular
+buffer centered on a sample point (or on each raster cell when
+projecting with <code>kernel_scale.raster()</code>). In the formulas
+below, <span class="math inline">\(z_i\)</span> is a cell value in the
+neighborhood, <span class="math inline">\(\bar z\)</span> is the mean of
+those values, <span class="math inline">\(s\)</span> is their standard
+deviation, and <span class="math inline">\(n\)</span> is the number of
+finite cells.</p>
+<table>
+<colgroup>
+<col width="18%" />
+<col width="18%" />
+<col width="36%" />
+<col width="27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Name</th>
+<th>Definition</th>
+<th>Reading</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>sa</code></td>
+<td>Average roughness</td>
+<td><span class="math inline">\(S_a = \frac{1}{n}\sum_i \lvert z_i -
+\bar z \rvert\)</span></td>
+<td>Mean absolute deviation from the neighborhood mean. Robust to a few
+extreme cells.</td>
+</tr>
+<tr class="even">
+<td><code>sq</code></td>
+<td>RMS roughness</td>
+<td><span class="math inline">\(S_q = \sqrt{\frac{1}{n-1}\sum_i (z_i -
+\bar z)^2}\)</span></td>
+<td>The sample standard deviation of the neighborhood. More sensitive to
+large deviations than <code>sa</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>ssk</code></td>
+<td>Skewness</td>
+<td><span class="math inline">\(S_{sk} \propto \frac{1}{n\,s^3}\sum_i
+(z_i - \bar z)^3\)</span></td>
+<td>Asymmetry of the value distribution. Positive when occasional high
+values dominate, negative when occasional low values do.</td>
+</tr>
+<tr class="even">
+<td><code>sku</code></td>
+<td>Kurtosis</td>
+<td><span class="math inline">\(S_{ku} = \frac{1}{n\,s^4}\sum_i (z_i -
+\bar z)^4 - 3\)</span></td>
+<td>Peakedness and tail weight relative to a normal distribution (excess
+kurtosis, so a normal surface gives 0).</td>
+</tr>
+<tr class="odd">
+<td><code>sdq</code></td>
+<td>RMS slope</td>
+<td><span class="math inline">\(S_{dq} = \sqrt{\frac{1}{n}\sum_i \lvert
+\nabla z_i \rvert^2}\)</span></td>
+<td>Root mean square of the local gradient magnitude: how steeply the
+surface changes (terrain or structural ruggedness).</td>
+</tr>
+<tr class="even">
+<td><code>sdr</code></td>
+<td>Surface area ratio</td>
+<td><span class="math inline">\(S_{dr} = \left(\frac{A_{3D}}{A_{flat}} -
+1\right) \times 100\)</span></td>
+<td>Percentage by which the true 3D surface area exceeds the flat area.
+A continuous edge-density analog: more relief gives a larger ratio.</td>
+</tr>
+</tbody>
+</table>
+<p>The dispersion metrics (<code>sa</code>, <code>sq</code>) are zero on
+a perfectly flat surface and grow as the surface becomes more variable.
+They are reported in the units of the raster itself: if
+<code>land3</code> ranges from 0 to 1, a roughness of 0.10 means the
+values within the buffer deviate from their local mean by about a tenth
+of that range. <code>sa</code> and <code>sq</code> measure the same
+underlying idea (local spread) and are usually correlated;
+<code>sq</code> weights large deviations more heavily because it squares
+them, so it responds more strongly to a few unusual cells.</p>
+<p>The shape metrics (<code>ssk</code>, <code>sku</code>) are
+dimensionless and describe the <em>form</em> of the value distribution
+rather than its spread, so they complement the dispersion metrics. The
+geometry metrics (<code>sdq</code>, <code>sdr</code>) describe local
+change. <code>sdq</code> measures gradient steepness; it is reported as
+a true slope (rise over run), dividing the local elevation change by the
+cell resolution. The matched <code>geodiv</code> function
+<code>geodiv::sdq()</code> instead uses a cell spacing of one, so the
+two agree after multiplying by the resolution. <code>sdr</code> is the
+percentage by which the true 3D surface area exceeds the flat projected
+area, computed in physical units (real elevation values and the real
+cell size), so a tilted plane of slope <span class="math inline">\(s\)</span> gives exactly <span class="math inline">\((\sqrt{1 + s^2} - 1)\times 100\)</span>. It
+behaves as a continuous edge-density analog: terrain that folds and
+rises has more surface area per unit ground. Note that
+<code>geodiv::sdr()</code> rescales the surface to a unit range and is
+therefore dimensionless; the physical definition used here is the
+interpretable one for terrain and, unlike the rescaled version, can be
+projected by FFT. A few cautions are worth keeping in mind: the shape
+metrics are noisier than dispersion and need a reasonable number of
+cells in the buffer to be stable, and <code>ssk</code>,
+<code>sdq</code>, and <code>sdr</code> can be correlated with
+<code>sq</code> on many surfaces, so check their correlations before
+interpreting them together.</p>
+</div>
+<div id="a-note-on-scale" class="section level2" number="1.2">
+<h2><span class="header-section-number">1.2</span> A note on scale</h2>
+<p>A surface texture covariate behaves differently from a
+kernel-weighted mean as you change the radius. A larger radius does not
+simply smooth the same quantity over a wider area; it changes what is
+being measured. A small radius asks how rough the surface is in the
+immediate vicinity of a point (fine-grain texture). A large radius asks
+how variable the surface is across a broader extent, which folds in any
+large-scale gradient or patchiness. Keep this in mind when interpreting
+an optimized radius: the estimated scale is the neighborhood size at
+which within-neighborhood variability best explains the response, not
+the scale of an averaging window.</p>
+<hr />
+</div>
+</div>
+<div id="load-example-data" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Load example data</h1>
+<p>This example reuses the simulated count data, survey locations, and
+landscape raster included with <code>multiScaleR</code>. The data
+contain 100 spatial sample points, which is enough to demonstrate the
+workflow without making the vignette expensive to build.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>dat <span class="ot">&lt;-</span> landscape_counts</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">pkg_extdata</span>(<span class="st">&quot;landscape.tif&quot;</span>))</span></code></pre></div>
+<p>The raster stack contains two continuous layers suited to surface
+texture metrics. <code>land3</code> is a smooth, highly autocorrelated
+surface (think elevation or canopy height), so its roughness varies
+meaningfully from place to place. <code>land2</code> is a noisier,
+weakly autocorrelated surface. We also keep <code>land2</code> because
+the example counts were simulated to respond to its kernel-weighted
+mean, which gives us a covariate with a genuine, interpretable scale of
+effect.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>surfaces <span class="ot">&lt;-</span> <span class="fu">c</span>(land_rast<span class="sc">$</span>land2, land_rast<span class="sc">$</span>land3)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">plot</span>(surfaces)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="fu">plot</span>(land_rast<span class="sc">$</span>land3, <span class="at">main =</span> <span class="st">&quot;land3 with survey points&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">points</span>(pts, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
+<p><strong>How to read these plots:</strong> Where <code>land3</code>
+transitions sharply between low and high values, a buffer placed on the
+transition contains a wide spread of values and will have high
+roughness. Where <code>land3</code> is locally flat (a broad light or
+dark patch), a buffer contains similar values and roughness is low. The
+roughness surfaces produced later in this vignette make that pattern
+explicit.</p>
+<hr />
+</div>
+<div id="define-derived-covariates" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Define derived
+covariates</h1>
+<p>Use <code>msr_vars()</code> to name the model covariates. Here
+<code>land2_mean</code> is an optimized, kernel-weighted mean, while
+<code>land3_sq_500</code> and <code>land3_sa_500</code> are fixed-radius
+surface texture metrics computed within 500 m of each point. Computing
+the surface metrics at a fixed radius keeps this example fast: they are
+calculated once and are not re-evaluated during optimization.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>scale_vars <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">land2_mean   =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land2&quot;</span>),</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">land3_sq_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">land3_sa_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sa&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>scale_vars</span></code></pre></div>
+<p>The distinction is the same as for landscape metrics:</p>
+<ul>
+<li><code>land2</code> and <code>land3</code> are source raster
+layers.</li>
+<li><code>land2_mean</code>, <code>land3_sq_500</code>, and
+<code>land3_sa_500</code> are model covariates.</li>
+<li>Only <code>land2_mean</code> receives an optimized sigma in this
+example.</li>
+</ul>
+<hr />
+</div>
+<div id="prepare-model-data-and-fit" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Prepare model data and
+fit</h1>
+<p>Pass the specification to <code>kernel_prep()</code>. The returned
+<code>kernel_dat</code> data frame holds the derived covariates, already
+centered and scaled to unit variance.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>kernel_inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">pts =</span> pts,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">max_D =</span> <span class="dv">1500</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">scale_vars =</span> scale_vars,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>)</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="fu">head</span>(kernel_inputs<span class="sc">$</span>kernel_dat)</span></code></pre></div>
+<p>Combine the covariates with the response and fit the starting
+model.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(dat, kernel_inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">glm</span>(</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  counts <span class="sc">~</span> site <span class="sc">+</span> land2_mean <span class="sc">+</span> land3_sq_500 <span class="sc">+</span> land3_sa_500,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">family =</span> <span class="fu">poisson</span>(),</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">data =</span> df</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>)</span></code></pre></div>
+<hr />
+</div>
+<div id="optimize-and-interpret" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Optimize and
+interpret</h1>
+<p>Only <code>land2_mean</code> was left free, so optimization estimates
+a single scale parameter while the two surface metrics stay fixed at 500
+m. This keeps the example fast and mirrors a common analysis pattern:
+optimize the covariate whose scale is the scientific question, and hold
+the others at a biologically motivated buffer.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>opt <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">fitted_mod =</span> mod,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">kernel_inputs =</span> kernel_inputs,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>opt <span class="ot">&lt;-</span> vignette_cache<span class="sc">$</span>surface<span class="sc">$</span>opt</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">summary</span>(opt)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; multiScale_optim(fitted_mod = surface_mod, kernel_inputs = surface_inputs, </span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt;     verbose = FALSE)</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; Kernel used:</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Sigma *****</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;                Mean       SE     2.5%    97.5%</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; land2_mean 417.5643 35.16722 347.7486 487.3801</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Distance *****</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt; 90% Kernel Weight</span></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt;              Mean 2.5%  97.5%</span></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt; land2_mean 686.83  572 801.67</span></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt;  *****     Fitted Model Summary     *****</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt; glm(formula = counts ~ site + land2_mean + land3_sq_500 + land3_sa_500, </span></span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="co">#&gt;     family = poisson(), data = data)</span></span>
+<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a><span class="co">#&gt;              Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a><span class="co">#&gt; (Intercept)   0.46270    0.08676   5.333 9.64e-08 ***</span></span>
+<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a><span class="co">#&gt; site          0.07375    0.07911   0.932    0.351    </span></span>
+<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a><span class="co">#&gt; land2_mean    0.68555    0.07751   8.845  &lt; 2e-16 ***</span></span>
+<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a><span class="co">#&gt; land3_sq_500 -0.77677    1.07138  -0.725    0.468    </span></span>
+<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a><span class="co">#&gt; land3_sa_500  0.98629    1.06937   0.922    0.356    </span></span>
+<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
+<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
+<span id="cb7-45"><a href="#cb7-45" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-46"><a href="#cb7-46" tabindex="-1"></a><span class="co">#&gt; (Dispersion parameter for poisson family taken to be 1)</span></span>
+<span id="cb7-47"><a href="#cb7-47" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-48"><a href="#cb7-48" tabindex="-1"></a><span class="co">#&gt;     Null deviance: 224.24  on 99  degrees of freedom</span></span>
+<span id="cb7-49"><a href="#cb7-49" tabindex="-1"></a><span class="co">#&gt; Residual deviance: 137.90  on 95  degrees of freedom</span></span>
+<span id="cb7-50"><a href="#cb7-50" tabindex="-1"></a><span class="co">#&gt; AIC: 344.58</span></span>
+<span id="cb7-51"><a href="#cb7-51" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-52"><a href="#cb7-52" tabindex="-1"></a><span class="co">#&gt; Number of Fisher Scoring iterations: 5</span></span>
+<span id="cb7-53"><a href="#cb7-53" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-54"><a href="#cb7-54" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-55"><a href="#cb7-55" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-56"><a href="#cb7-56" tabindex="-1"></a><span class="co">#&gt; ***** Follow-up recommendation *****</span></span>
+<span id="cb7-57"><a href="#cb7-57" tabindex="-1"></a><span class="co">#&gt; Recommended `max_D`: 1500</span></span>
+<span id="cb7-58"><a href="#cb7-58" tabindex="-1"></a><span class="co">#&gt; Recommended starting `sigma` values:</span></span>
+<span id="cb7-59"><a href="#cb7-59" tabindex="-1"></a><span class="co">#&gt; land2_mean </span></span>
+<span id="cb7-60"><a href="#cb7-60" tabindex="-1"></a><span class="co">#&gt;   417.5643 </span></span>
+<span id="cb7-61"><a href="#cb7-61" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-62"><a href="#cb7-62" tabindex="-1"></a><span class="co">#&gt; Action:</span></span>
+<span id="cb7-63"><a href="#cb7-63" tabindex="-1"></a><span class="co">#&gt; Use the optimized parameters as efficient starting values if refitting.</span></span></code></pre></div>
+<p><strong>How to read the <code>summary()</code> output:</strong> The
+scale section reports the estimated sigma for <code>land2_mean</code>,
+with its standard error and 95% confidence interval, in map units
+(meters here). Below it is the <em>effective distance</em>, the radius
+that captures a stated proportion (default 90%) of the Gaussian kernel
+weight. That converts sigma into a distance you can interpret on the
+ground. The two fixed-radius surface metrics do not appear in the scale
+section because their radius was specified rather than estimated; they
+enter the model only as ordinary covariates.</p>
+<p>The model coefficients are on the Poisson log (link) scale, so they
+must be back-transformed to be interpretable. Because every covariate
+was centered and scaled, each coefficient describes the effect of a one
+standard deviation change in that covariate. Exponentiating gives the
+multiplicative change in expected count.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>cf <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">summary</span>(opt<span class="sc">$</span>opt_mod))</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="do">## Multiplicative change in expected count per 1 SD increase in each covariate</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">exp</span>(cf[, <span class="st">&quot;Estimate&quot;</span>]), <span class="dv">3</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt;  (Intercept)         site   land2_mean land3_sq_500 land3_sa_500 </span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;        1.588        1.077        1.985        0.460        2.681</span></span></code></pre></div>
+<p>For example, an <code>exp()</code> value of 1.20 for a surface metric
+would mean that a one standard deviation increase in roughness is
+associated with a 20 percent higher expected count, holding the other
+covariates constant. Note an important caveat: these example counts were
+simulated to respond to kernel-weighted means of <code>land1</code> and
+<code>land2</code>, not to surface roughness. The recovered scale for
+<code>land2_mean</code> is therefore the meaningful quantity to
+interpret here, and the roughness coefficients are best read as a
+demonstration of the mechanics. In your own analysis, a surface texture
+coefficient is interpreted exactly like any other scaled predictor.</p>
+<hr />
+</div>
+<div id="project-covariates-to-rasters" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Project covariates to
+rasters</h1>
+<p><code>kernel_scale.raster()</code> understands
+<code>surface_var()</code> specifications just as it does kernel and
+landscape covariates. When a fitted <code>multiScaleR</code> object is
+supplied, the optimized covariate uses its fitted scale and the
+fixed-radius surface metrics use their specified radius. Setting
+<code>scale_center = TRUE</code> returns the projected covariates on the
+same centered and scaled footing as the model, ready for
+<code>terra::predict()</code>.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>projected <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">unwrap</span>(vignette_cache<span class="sc">$</span>surface<span class="sc">$</span>projected)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="fu">plot</span>(projected)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Projected model covariates at their fitted or fixed scales." src="data:image/png;base64,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" alt="Projected model covariates at their fitted or fixed scales." />
+<div class="figcaption"><strong><em>Projected model covariates at their
+fitted or fixed scales.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">names</span>(projected)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;land2_mean&quot;   &quot;land3_sq_500&quot; &quot;land3_sa_500&quot; &quot;site&quot;</span></span></code></pre></div>
+<p><strong>How to read these plots:</strong> <code>land2_mean</code> is
+a smoothed average surface, so it looks like a blurred version of the
+source layer. The roughness layers (<code>land3_sq_500</code>,
+<code>land3_sa_500</code>) look different: they are bright where
+<code>land3</code> changes rapidly within 500 m and dark where it is
+locally uniform. Roughness maps highlight transitions and texture, not
+high or low values. The stack also includes a constant <code>site</code>
+layer filled with zeros: because <code>site</code> is a field-measured
+covariate with no raster source, <code>kernel_scale.raster()</code>
+appends a placeholder so the output can be passed directly to
+<code>terra::predict()</code>. Replace it with a real surface if you
+want to predict at a non-reference value of <code>site</code>.</p>
+<hr />
+</div>
+<div id="roughness-surfaces-without-a-fitted-model" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Roughness surfaces
+without a fitted model</h1>
+<p>You do not need a fitted model to produce a roughness surface. Pass a
+<code>scale_vars</code> object in which every covariate has a fixed
+<code>radius</code>, and <code>kernel_scale.raster()</code> returns the
+metric surfaces directly. This is useful for exploring how texture
+varies across a landscape, or for comparing scales before committing to
+a model.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>sq_multi <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast[<span class="st">&quot;land3&quot;</span>],</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="at">scale_vars =</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>    <span class="at">sq_200 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>, <span class="at">radius =</span> <span class="dv">200</span>),</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>    <span class="at">sq_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>    <span class="at">sq_900 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>, <span class="at">radius =</span> <span class="dv">900</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  ),</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>)</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="fu">plot</span>(sq_multi, <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;sq - 200 m&quot;</span>, <span class="st">&quot;sq - 500 m&quot;</span>, <span class="st">&quot;sq - 900 m&quot;</span>))</span></code></pre></div>
+<p><strong>How to read these plots:</strong> At 200 m the surface picks
+out fine, local texture, so roughness is patchy and concentrated near
+sharp transitions. At 900 m each buffer spans more of the underlying
+gradient, so roughness is smoother and generally higher. This is the
+practical face of the scale caution from the introduction: the radius
+changes the quantity, not just its resolution.</p>
+<p>The <code>sa</code> and <code>sq</code> metrics emphasize roughness
+slightly differently. Comparing them at a single radius shows where a
+few extreme cells (which <code>sq</code> weights more heavily) drive the
+signal.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>sa_sq <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast[<span class="st">&quot;land3&quot;</span>],</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="at">scale_vars =</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>    <span class="at">sa_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sa&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>    <span class="at">sq_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  ),</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>)</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="fu">plot</span>(sa_sq, <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;sa - 500 m&quot;</span>, <span class="st">&quot;sq - 500 m&quot;</span>))</span></code></pre></div>
+<p>Projection of <code>sq</code> uses fast Fourier transform
+convolution, and projection of <code>sa</code> uses a compiled focal
+pass. Both reproduce the per-point calculation exactly; <code>sq</code>
+is the faster of the two on very large rasters.</p>
+<div id="distribution-shape-and-geometry-surfaces" class="section level2" number="7.1">
+<h2><span class="header-section-number">7.1</span> Distribution-shape
+and geometry surfaces</h2>
+<p>The same standalone projection works for the shape metrics
+(<code>ssk</code>, <code>sku</code>) and the geometry metrics
+(<code>sdq</code>, <code>sdr</code>). They answer different questions
+than dispersion: skewness and kurtosis describe the <em>form</em> of the
+value distribution in the neighborhood, <code>sdq</code> describes how
+steeply the surface changes, and <code>sdr</code> describes how much
+extra surface area that change creates.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>shape_geom <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast[<span class="st">&quot;land3&quot;</span>],</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  <span class="at">scale_vars =</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>    <span class="at">ssk_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;ssk&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>    <span class="at">sku_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sku&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>    <span class="at">sdq_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sdq&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>    <span class="at">sdr_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sdr&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>  ),</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>)</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="fu">plot</span>(shape_geom,</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>     <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;ssk - 500 m&quot;</span>, <span class="st">&quot;sku - 500 m&quot;</span>, <span class="st">&quot;sdq - 500 m&quot;</span>, <span class="st">&quot;sdr - 500 m&quot;</span>))</span></code></pre></div>
+<p><strong>How to read these plots:</strong> The skewness surface is
+positive where the neighborhood is dominated by occasional high values
+and negative where low values dominate. The kurtosis surface is high
+where a few extreme cells stretch the tails of the local distribution.
+The <code>sdq</code> and <code>sdr</code> surfaces are both bright where
+<code>land3</code> changes steeply from cell to cell: <code>sdq</code>
+as a slope and <code>sdr</code> as the extra 3D surface area that slope
+produces, so they resemble ruggedness maps and are often correlated.
+Because shape and geometry are noisier than dispersion, they are most
+useful when a hypothesis specifically concerns asymmetry, tail behavior,
+gradient steepness, or surface complexity rather than overall
+variability.</p>
+<hr />
+</div>
+</div>
+<div id="optimizing-the-scale-of-roughness" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Optimizing the scale of
+roughness</h1>
+<p>To estimate the scale of a surface texture covariate rather than fix
+it, omit <code>radius</code> from <code>surface_var()</code>. The
+covariate then receives its own sigma, which
+<code>multiScale_optim()</code> estimates alongside the model.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>scale_vars_opt <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="at">land2_mean =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land2&quot;</span>),</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="at">land3_sq   =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>)</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>kernel_inputs_opt <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>  <span class="at">pts =</span> pts,</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast,</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>  <span class="at">max_D =</span> <span class="dv">1500</span>,</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>  <span class="at">scale_vars =</span> scale_vars_opt,</span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>)</span></code></pre></div>
+<p>Optimizing a surface texture radius is well defined, but it costs
+more than optimizing a kernel-weighted mean: at each candidate radius
+the metric is recomputed for every sample point, since (unlike a kernel
+mean) it cannot be read off a precomputed distance binning. Surface
+metrics are continuous in the radius, so they tend to optimize smoothly.
+Start with fixed radii to confirm the workflow, then optimize once the
+model structure is settled. Optimized <em>unweighted</em> surface
+metrics are not currently supported with <code>kernel = &quot;expow&quot;</code>,
+because the exponential-power shape parameter does not apply to a
+hard-edged buffer. The weighted form below does use the kernel, so it is
+supported with every kernel.</p>
+<hr />
+</div>
+<div id="weighted-roughness-the-scale-of-effect-of-heterogeneity" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Weighted roughness: the
+scale of effect of heterogeneity</h1>
+<p>The surface metrics above summarize a hard-edged circular
+neighborhood: every cell within the radius counts equally. Setting
+<code>weighted = TRUE</code> instead weights each cell by the model’s
+distance kernel, the same Gaussian (or exponential) kernel used for a
+<code>kernel_var()</code> mean, and optimizes the kernel scale (sigma)
+rather than a hard radius.</p>
+<p>This changes both the question and the statistics. A weighted
+<code>sq</code> answers “at what spatial scale does the
+<em>variability</em> of this surface, measured with a smoothly decaying
+neighborhood, best predict the response?” Because the kernel weights
+change smoothly as sigma changes (cells do not jump in and out of a hard
+edge), the likelihood is smooth in sigma, so
+<code>multiScale_optim()</code> recovers the scale with a standard error
+just as it does for a kernel-weighted mean. This is the natural way to
+ask about the scale of effect of heterogeneity, as opposed to the scale
+of effect of the mean.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>weighted_vars <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="at">land3_sq_weighted =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>, <span class="at">weighted =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>)</span></code></pre></div>
+<p>Weighting is available for the distribution metrics (<code>sa</code>,
+<code>sq</code>, <code>ssk</code>, <code>sku</code>) but not the slope
+metric (<code>sdq</code>), and the scale is always optimized, so no
+<code>radius</code> is supplied. To see the difference a weighting
+makes, the projection below compares a hard-radius <code>sq</code> at
+500 m with a Gaussian-weighted <code>sq</code> at the same nominal
+scale.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>sq_hard <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast[<span class="st">&quot;land3&quot;</span>],</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>  <span class="at">scale_vars =</span> <span class="fu">msr_vars</span>(<span class="at">sq_hard =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>                                              <span class="at">radius =</span> <span class="dv">500</span>)),</span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>)</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a>sq_weighted <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast[<span class="st">&quot;land3&quot;</span>],</span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a>  <span class="at">scale_vars =</span> weighted_vars,</span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a>  <span class="at">sigma =</span> <span class="dv">500</span>,            <span class="co"># the kernel scale for the weighted metric</span></span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a>  <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb16-13"><a href="#cb16-13" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb16-14"><a href="#cb16-14" tabindex="-1"></a>)</span>
+<span id="cb16-15"><a href="#cb16-15" tabindex="-1"></a></span>
+<span id="cb16-16"><a href="#cb16-16" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">c</span>(sq_hard, sq_weighted), <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;sq hard radius 500 m&quot;</span>, <span class="st">&quot;sq weighted sigma 500&quot;</span>))</span></code></pre></div>
+<p><strong>How to read these plots:</strong> Both maps show local
+roughness at a 500 m scale, but the weighted version transitions more
+smoothly because nearby cells contribute more than distant ones. In a
+model, the practical payoff is the optimization: the weighted form gives
+<code>multiScale_optim()</code> a smooth objective in sigma and returns
+the scale of heterogeneity with a confidence interval. Use the weighted
+form when the scale of heterogeneity is the scientific question; the
+hard-radius form remains convenient when you have a biologically
+motivated buffer or want a metric that matches the <code>geodiv</code>
+definitions exactly.</p>
+<hr />
+</div>
+<div id="practical-guidance" class="section level1" number="10">
+<h1><span class="header-section-number">10</span> Practical
+guidance</h1>
+<ul>
+<li>Use a surface texture covariate when you expect the
+<em>variability</em> of a continuous surface, rather than its average,
+to matter ecologically: terrain ruggedness, vegetation-structure
+heterogeneity, thermal patchiness, and similar.</li>
+<li>Choose <code>sq</code> when large local deviations are ecologically
+important, and <code>sa</code> when you want a measure that is less
+sensitive to a few extreme cells.</li>
+<li>A surface metric and a kernel-weighted mean from the same source
+layer answer different questions and can both be included; check their
+correlation before interpreting either in isolation.</li>
+<li>Use a fixed radius when you have a biologically motivated buffer or
+want a fast model; optimize the radius when the scale of heterogeneity
+is itself the question.</li>
+<li>Use <code>weighted = TRUE</code> (for <code>sa</code>,
+<code>sq</code>, <code>ssk</code>, <code>sku</code>) when you want the
+scale of heterogeneity estimated with a smooth likelihood under the
+model’s kernel; keep the default hard-radius form when you want a fixed
+buffer or exact agreement with <code>geodiv</code>.</li>
+</ul>
+<hr />
+</div>
+<div id="quick-reference" class="section level1" number="11">
+<h1><span class="header-section-number">11</span> Quick reference</h1>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="do">## 1. Define covariates: an optimized kernel mean plus fixed-radius roughness</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>scale_vars <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="at">land2_mean   =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land2&quot;</span>),</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  <span class="at">land3_sq_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>  <span class="at">land3_sa_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sa&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>)</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a><span class="do">## 2. Extract and prepare the covariates around each point</span></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>kernel_inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(pts, land_rast, <span class="at">max_D =</span> <span class="dv">1500</span>,</span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>                             <span class="at">scale_vars =</span> scale_vars, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a></span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a><span class="do">## 3. Fit the starting model</span></span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a>df  <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(dat, kernel_inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land2_mean <span class="sc">+</span> land3_sq_500 <span class="sc">+</span> land3_sa_500,</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a>           <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a></span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a><span class="do">## 4. Optimize the free scale parameter(s)</span></span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a>opt <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(<span class="at">fitted_mod =</span> mod, <span class="at">kernel_inputs =</span> kernel_inputs)</span>
+<span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a><span class="fu">summary</span>(opt)                              <span class="co"># sigma + effective distance, on map units</span></span>
+<span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="do">## 5. Project covariates for prediction (centered and scaled like the model)</span></span>
+<span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a>projected <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(land_rast, <span class="at">multiScaleR =</span> opt,</span>
+<span id="cb17-23"><a href="#cb17-23" tabindex="-1"></a>                                 <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb17-24"><a href="#cb17-24" tabindex="-1"></a></span>
+<span id="cb17-25"><a href="#cb17-25" tabindex="-1"></a><span class="do">## Standalone roughness surface, no model required</span></span>
+<span id="cb17-26"><a href="#cb17-26" tabindex="-1"></a>sq_500 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb17-27"><a href="#cb17-27" tabindex="-1"></a>  land_rast[<span class="st">&quot;land3&quot;</span>],</span>
+<span id="cb17-28"><a href="#cb17-28" tabindex="-1"></a>  <span class="at">scale_vars =</span> <span class="fu">msr_vars</span>(<span class="at">sq_500 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sq&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>))</span>
+<span id="cb17-29"><a href="#cb17-29" tabindex="-1"></a>)</span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="11.1">
+<h2><span class="header-section-number">11.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>surface_var()</code></td>
+<td>Define a continuous surface texture covariate (<code>sa</code> or
+<code>sq</code>).</td>
+</tr>
+<tr class="even">
+<td><code>msr_vars()</code></td>
+<td>Collect covariate specifications into one object.</td>
+</tr>
+<tr class="odd">
+<td><code>kernel_prep()</code></td>
+<td>Extract and prepare covariates around each point.</td>
+</tr>
+<tr class="even">
+<td><code>multiScale_optim()</code></td>
+<td>Estimate the scale of effect for optimized covariates.</td>
+</tr>
+<tr class="odd">
+<td><code>kernel_scale.raster()</code></td>
+<td>Project covariates to rasters, with or without a fitted model.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="11.2">
+<h2><span class="header-section-number">11.2</span> See also</h2>
+<ul>
+<li><code>vignette(&quot;landscape_metric_covariates&quot;, package = &quot;multiScaleR&quot;)</code>
+for categorical landscape metrics and the <code>msr_vars()</code>
+interface.</li>
+<li><code>vignette(&quot;multiScaleR_Guide&quot;, package = &quot;multiScaleR&quot;)</code>
+for the full modeling workflow and model interpretation.</li>
+<li><code>vignette(&quot;spatial_projection_clamping&quot;, package = &quot;multiScaleR&quot;)</code>
+for projecting fitted models to prediction surfaces.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

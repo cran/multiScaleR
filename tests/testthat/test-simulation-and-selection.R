@@ -18,6 +18,31 @@ test_that("simulation helpers return expected structures", {
   expect_false(anyNA(fix$sim_umf$df))
 })
 
+test_that("expected public helpers remain exported", {
+  expected_exports <- c(
+    "aic_tab",
+    "bic_tab",
+    "diagnostics",
+    "estimate_multiscale_ram",
+    "kernel_dist",
+    "kernel_prep",
+    "kernel_scale.raster",
+    "kernel_var",
+    "landscape_var",
+    "msr_vars",
+    "multiScale_optim",
+    "plot_kernel",
+    "plot_marginal_effects",
+    "profile_sigma",
+    "sim_dat",
+    "sim_dat_unmarked",
+    "sim_rast",
+    "surface_var"
+  )
+
+  expect_setequal(getNamespaceExports("multiScaleR"), expected_exports)
+})
+
 test_that("aic_tab and bic_tab compare optimized and standard models", {
   fix <- make_core_fixture()
 
@@ -30,6 +55,33 @@ test_that("aic_tab and bic_tab compare optimized and standard models", {
   expect_equal(nrow(bic_res), 2)
 })
 
+test_that("aic_tab and bic_tab count one optimized parameter per spatial term", {
+  fix <- make_core_fixture()
+
+  opt_multi <- fix$opt
+  opt_multi$scale_est <- data.frame(
+    Mean = c(40, 80),
+    SE = c(1, 1),
+    row.names = c("cont1", "site")
+  )
+
+  expected_k <- nrow(insight::get_parameters(opt_multi$opt_mod)) +
+    nrow(opt_multi$scale_est)
+
+  aic_res <- aic_tab(
+    list(opt_multi, fix$plain_mod),
+    AICc = FALSE,
+    mod_names = c("multi", "plain")
+  )
+  bic_res <- bic_tab(
+    list(opt_multi, fix$plain_mod),
+    mod_names = c("multi", "plain")
+  )
+
+  expect_equal(aic_res$K[aic_res$Modnames == "multi"], expected_k)
+  expect_equal(bic_res$K[bic_res$Modnames == "multi"], expected_k)
+})
+
 test_that("aic_tab rejects models fitted to different sample sizes", {
   fix <- make_core_fixture()
   smaller_mod <- glm(y ~ site, family = poisson(), data = fix$df[-1, ])
@@ -37,5 +89,20 @@ test_that("aic_tab rejects models fitted to different sample sizes", {
   expect_error(
     aic_tab(list(fix$opt, smaller_mod)),
     "different number of sample locations"
+  )
+})
+
+test_that("aic_tab and bic_tab reject models fit to different observation sets", {
+  fix <- make_core_fixture()
+  mod_a <- glm(y ~ site, family = poisson(), data = fix$df[-1, ])
+  mod_b <- glm(y ~ site, family = poisson(), data = fix$df[-nrow(fix$df), ])
+
+  expect_error(
+    aic_tab(list(mod_a, mod_b)),
+    "different observation sets"
+  )
+  expect_error(
+    bic_tab(list(mod_a, mod_b)),
+    "different observation sets"
   )
 })

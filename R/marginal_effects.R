@@ -1,23 +1,90 @@
 #' Plot Marginal Effects from a Fitted Model
 #'
-#' Generates marginal effect plots with 95% confidence intervals for each covariate
-#' in a fitted model stored within a `multiScaleR` object.
+#' Generates marginal effect plots with 95\% confidence intervals for each
+#' covariate in the optimized model stored within a \code{multiScaleR} object.
+#' Each panel sweeps one covariate across its observed range while holding all
+#' others at their sample mean.
 #'
-#' @param x A `multiScaleR` object containing at least the elements `opt_mod` (the fitted model)
-#'   and `scl_params` (a list with `mean` and `sd` for each covariate used for scaling).
-#' @param ylab Character. Y-axis label for the marginal effect plots. Default is `"Estimated response"`.
-#' @param length.out Integer. Number of points at which to evaluate the marginal effect curve.
-#'   Default is 100.
-#' @param type For `unmarked` models, Default is `"state"`
-#' @param link Logical. An optional switch to predict values on the response scale. Default = `FALSE`. If predicted values seem incorrect, try switching to `TRUE`
-#' @return A named list of `ggplot` objects, one for each covariate, showing the predicted
-#'   response and 95% confidence interval across the observed range of that covariate
-#'   while holding other covariates at their mean values.
+#' @param x A fitted \code{multiScaleR} object returned by
+#'   \code{\link{multiScale_optim}}. Must contain \code{opt_mod} (the optimized
+#'   fitted model) and \code{scl_params} (a list with \code{mean} and \code{sd}
+#'   elements for each covariate, used to back-transform scaled covariates to
+#'   their original units for the x-axis).
+#' @param ylab Character scalar. Y-axis label for all marginal effect panels.
+#'   Default: \code{"Estimated response"}.
+#' @param length.out Positive integer. Number of equally spaced points at which
+#'   to evaluate the marginal effect curve for each covariate. Default: \code{100}.
+#' @param type Character. Prediction type for \code{unmarked} models. One of
+#'   \code{"state"} (default) or \code{"lambda"}. Ignored for non-unmarked
+#'   models.
+#' @param link Logical. If \code{TRUE}, predictions are passed through the
+#'   model's inverse link function before plotting (i.e., plotted on the
+#'   response scale). For \code{glm} objects this is applied automatically.
+#'   Set to \code{TRUE} manually if predicted values appear to be on the link
+#'   scale. Default: \code{FALSE}.
 #'
-#' @details For `unmarked` models, predictions are made using `type = "state"` and
-#'   the `predict` method for state variables. For other models (e.g., `lm`, `glm`),
-#'   predictions are made using the standard `predict(..., se.fit = TRUE)` call and
-#'   transformed by the model's inverse link function .
+#' @return A named list of \code{ggplot2} objects, one per covariate. Plots are
+#'   printed as a side effect and the list is returned invisibly. Each plot
+#'   shows:
+#'   \itemize{
+#'     \item The predicted response (solid line) across the observed covariate
+#'       range, with x-axis values back-transformed to the original (unscaled)
+#'       units.
+#'     \item A shaded ribbon for the 95\% confidence interval (when available
+#'       from the model's \code{predict} method).
+#'     \item A subtitle noting any polynomial (\code{I(x^2)}) or interaction
+#'       terms that involve the covariate.
+#'   }
+#'
+#' @details
+#' Marginal effects are computed by constructing a \code{newdata} data frame
+#' where the focal covariate sweeps from its minimum to maximum observed value
+#' and all other predictors are held at their sample mean. For kernel-scaled
+#' covariates, whose scaled mean is 0, this is equivalent to holding them at
+#' their average landscape value.
+#'
+#' For \code{glm} and most GLM-family models, predictions are transformed via
+#' the inverse link function automatically (e.g., \code{exp()} for Poisson
+#' log-link models). Confidence intervals are constructed from
+#' \code{predict(..., se.fit = TRUE)} using \eqn{\pm 1.96 \times SE}.
+#'
+#' For \code{unmarked} models, \code{predict(mod, newdata, type = type)} is
+#' used, and lower/upper bounds come from the \code{lower} and \code{upper}
+#' columns of the returned data frame.
+#'
+#' For models with interaction terms, a message is printed explaining that each
+#' panel represents a conditional slice (at the mean of the interacting
+#' variable) rather than the full interaction surface.
+#'
+#' \code{HLfit} (spaMM) and \code{zeroinfl} (pscl) models are handled with
+#' class-specific prediction calls.
+#' When \code{x$opt_mod} is a wrapper object around another fitted model,
+#' \code{plot_marginal_effects()} uses the nested analysis model for predictor
+#' discovery, data recovery, and prediction when possible.
+#'
+#' @examples
+#' \donttest{
+#' data('pts')
+#' data('count_data')
+#' hab <- terra::rast(system.file('extdata', 'hab.tif', package = 'multiScaleR'))
+#'
+#' kernel_inputs <- kernel_prep(pts = pts,
+#'                              raster_stack = hab,
+#'                              max_D = 250,
+#'                              kernel = 'gaussian')
+#'
+#' mod <- glm(y ~ hab, family = poisson, data = count_data)
+#' opt <- multiScale_optim(fitted_mod = mod, kernel_inputs = kernel_inputs)
+#'
+#' ## Default marginal effect plot on the response scale
+#' plot_marginal_effects(opt)
+#'
+#' ## Custom y-axis label
+#' plot_marginal_effects(opt, ylab = "Predicted abundance")
+#'
+#' ## Finer evaluation grid
+#' plot_marginal_effects(opt, length.out = 200)
+#' }
 #'
 #' @export
 #' @importFrom unmarked coef predict
@@ -47,10 +114,11 @@ plot_marginal_effects <- function(x,
   }
 
   mod <- x$opt_mod
+  analysis_mod <- .analysis_model(mod)
   scl <- x$scl_params
-  namespace(mod)
+  namespace(analysis_mod)
 
-  if(inherits(mod, "glm")){
+  if(inherits(analysis_mod, "glm")){
     link <- TRUE
   }
 
@@ -112,11 +180,11 @@ plot_marginal_effects <- function(x,
     })
 
   } else {
-    c_vars <- find_predictors(mod)[[1]]
-    vars <- unlist(find_predictors(mod))
-    dat_all <- get_data(mod)
+    c_vars <- find_predictors(analysis_mod)[[1]]
+    vars <- unlist(find_predictors(analysis_mod))
+    dat_all <- .model_data(analysis_mod)
     if(is.null(dat_all)){
-      dat_all <- extract_model_data(mod)
+      dat_all <- extract_model_data(analysis_mod)
     }
     if(is.null(dat_all)){
       stop("Could not recover the original model data needed to plot marginal effects.")
@@ -127,7 +195,7 @@ plot_marginal_effects <- function(x,
     # so no special prediction logic is needed. Detection is used only for plot
     # annotations and the interaction warning below.
     fterms <- tryCatch(
-      attr(stats::terms(formula(mod)), "term.labels"),
+      attr(stats::terms(formula(analysis_mod)), "term.labels"),
       error = function(e) character(0)
     )
     poly_terms  <- fterms[grepl("^I\\(", fterms)]
@@ -155,15 +223,24 @@ plot_marginal_effects <- function(x,
       )
     }
 
-    # Compute sample means of all predictor columns so non-varied covariates are
-    # held at their actual mean rather than zero. For kernel-scaled variables the
-    # mean is already zero; for unscaled site covariates this is the true mean.
-    available_vars <- vars[vars %in% names(dat_all)]
-    pred_means <- stats::setNames(rep(0, length(vars)), vars)
-    if(length(available_vars) > 0) {
-      pred_means[available_vars] <- colMeans(
-        dat_all[, available_vars, drop = FALSE], na.rm = TRUE
-      )
+    # Hold non-focal predictors at representative observed values. Numeric
+    # columns use their sample mean; non-numeric columns keep the first
+    # non-missing observed value so special terms like strata() can still be
+    # evaluated during prediction.
+    pred_defaults <- stats::setNames(vector("list", length(vars)), vars)
+    for (var in vars) {
+      if (!var %in% names(dat_all)) {
+        pred_defaults[[var]] <- 0
+        next
+      }
+
+      values <- dat_all[[var]]
+      if (is.numeric(values)) {
+        pred_defaults[[var]] <- mean(values, na.rm = TRUE)
+      } else {
+        keep <- which(!is.na(values))[1]
+        pred_defaults[[var]] <- if (is.na(keep)) values[1] else values[keep]
+      }
     }
 
     plot_list <- lapply(c_vars, function(v) {
@@ -182,14 +259,14 @@ plot_marginal_effects <- function(x,
       # R's predict() evaluates I(x^2), log(x), etc. from the base column, so
       # newdata only needs to contain the base variable names.
       newdata <- as.data.frame(
-        matrix(rep(pred_means, each = length.out), nrow = length.out, byrow = FALSE)
+        lapply(pred_defaults, function(value) rep(value, length.out)),
+        stringsAsFactors = FALSE
       )
-      names(newdata) <- vars
       newdata[[v]] <- x_seq
 
-      if(inherits(mod, "HLfit")){
+      if(inherits(analysis_mod, "HLfit")){
         preds_ <- tryCatch(
-          predict(mod, newdata = newdata, variances = list(respVar = TRUE), re.form = NA),
+          predict(analysis_mod, newdata = newdata, variances = list(respVar = TRUE), re.form = NA),
           error = function(e) {
             stop(
               sprintf("Failed to compute marginal effects for covariate '%s': %s", v, e$message),
@@ -199,9 +276,9 @@ plot_marginal_effects <- function(x,
         )
         preds <- list(preds = as.vector(preds_),
                       se = sqrt(attr(preds_, "fixefVar")))
-      } else if(inherits(mod, "zeroinfl")) {
+      } else if(inherits(analysis_mod, "zeroinfl")) {
         preds <- tryCatch(
-          as.data.frame(get_predicted(mod, data = newdata)),
+          as.data.frame(get_predicted(analysis_mod, data = newdata)),
           error = function(e) {
             stop(
               sprintf("Failed to compute marginal effects for covariate '%s': %s", v, e$message),
@@ -211,7 +288,7 @@ plot_marginal_effects <- function(x,
         )
       } else {
         preds <- tryCatch(
-          predict(mod, newdata = newdata, se.fit = TRUE),
+          predict(analysis_mod, newdata = newdata, se.fit = TRUE),
           error = function(e) {
             stop(
               sprintf("Failed to compute marginal effects for covariate '%s': %s", v, e$message),
@@ -221,20 +298,20 @@ plot_marginal_effects <- function(x,
         )
       }
 
-      if(inherits(mod, "zeroinfl")) {
+      if(inherits(analysis_mod, "zeroinfl")) {
         fit_ <- preds$Predicted
         lwr  <- preds$CI_low
         upr  <- preds$CI_high
         if(is.null(lwr) && is.null(upr)) lwr <- upr <- NA
 
-      } else if(!is.null(link_inverse(mod)) && link){
+      } else if(!is.null(link_inverse(analysis_mod)) && link){
         if(!inherits(preds, 'list') || (is.list(preds) && length(preds) == 1)){
-          fit_ <- link_inverse(mod)(as.data.frame(preds)[, 1])
+          fit_ <- link_inverse(analysis_mod)(as.data.frame(preds)[, 1])
           lwr  <- upr <- NA
         } else {
-          fit_ <- link_inverse(mod)(preds[[1]])
-          lwr  <- link_inverse(mod)(preds[[1]] + qnorm(0.025) * preds[[2]])
-          upr  <- link_inverse(mod)(preds[[1]] + qnorm(0.975) * preds[[2]])
+          fit_ <- link_inverse(analysis_mod)(preds[[1]])
+          lwr  <- link_inverse(analysis_mod)(preds[[1]] + qnorm(0.025) * preds[[2]])
+          upr  <- link_inverse(analysis_mod)(preds[[1]] + qnorm(0.975) * preds[[2]])
         }
 
       } else {
@@ -349,8 +426,8 @@ safe_predict <- function(mod, newdata) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     stop("Package '", pkg, "' is required but not installed.")
   }
-  if (!isNamespaceLoaded(pkg)) {
-    attachNamespace(pkg)
+  if (!paste0("package:", pkg) %in% search()) {
+    .msr_attach_package(pkg)
   }
 
   # Dispatch predict
@@ -398,15 +475,22 @@ namespace <- function(x) {
   }
 
   # Check if namespace is already loaded
-  if (!isNamespaceLoaded(pkg)) {
-    # Load namespace if needed
-    if (!requireNamespace(pkg, quietly = TRUE)) {
-      stop("Package '", pkg, "' is required but not installed.")
-    }
-    attachNamespace(pkg)
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    stop("Package '", pkg, "' is required but not installed.")
+  }
+  if (!paste0("package:", pkg) %in% search()) {
+    .msr_attach_package(pkg)
   }
 
   invisible(pkg)
+}
+
+.msr_attach_package <- function(pkg) {
+  suppressWarnings(
+    suppressPackageStartupMessages(
+      library(pkg, character.only = TRUE)
+    )
+  )
 }
 
 utils::globalVariables(c("fit", "lwr", "upr"))

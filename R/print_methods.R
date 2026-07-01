@@ -28,6 +28,34 @@ format_max_distance_warning <- function(diagnostics) {
   )
 }
 
+.msr_print_next_run <- function(next_run) {
+  if (is.null(next_run) || !is.list(next_run)) {
+    return(invisible(NULL))
+  }
+
+  cat("\n\n***** Follow-up recommendation *****\n")
+
+  if (!is.null(next_run$n_cores)) {
+    cat("Conservative recommended `n_cores`: ", next_run$n_cores, "\n", sep = "")
+  }
+
+  cat("Recommended `max_D`: ", next_run$max_D, "\n", sep = "")
+  cat("Recommended starting `sigma` values:\n")
+  print(next_run$start_sigma)
+
+  if (!is.null(next_run$start_shape)) {
+    cat("\nRecommended starting `shape` values:\n")
+    print(next_run$start_shape)
+  }
+
+  if (!is.null(next_run$action)) {
+    cat("\nAction:\n")
+    cat(next_run$action, "\n")
+  }
+
+  invisible(next_run)
+}
+
 #' @title Print method for summary_multiScaleR
 #' @description Print method for objects of class \code{summary_multiScaleR}.
 #' @param x A \code{summary_multiScaleR} object
@@ -99,6 +127,7 @@ print.summary_multiScaleR <- function(x, ...){
             "The standard error of one or more `shape` estimates is >= 50% of the estimated mean value.\n",
             "Carefully assess if the Exponential Power kernel is appropriate, whether or not this variable is meaningful in your analysis, and interpret with caution.\n\n"))
   }
+  .msr_print_next_run(x$next_run)
   invisible(x)
 }
 
@@ -119,6 +148,20 @@ print.summary_multiScaleR <- function(x, ...){
 summary.multiScaleR <- function(object, profile = FALSE, ...){
 
   param_list <- list(...)
+  prob <- 0.9
+
+  if (!inherits(object, "multiScaleR")) {
+    stop("`object` must inherit from class 'multiScaleR'.")
+  }
+  if (is.null(object$opt_mod)) {
+    stop("`object$opt_mod` is missing; cannot summarize model output.")
+  }
+  if (is.null(object$scale_est)) {
+    stop("`object$scale_est` is missing; cannot summarize optimized scale estimates.")
+  }
+  if (!is.logical(profile) || length(profile) != 1L || is.na(profile)) {
+    stop("`profile` must be TRUE or FALSE.")
+  }
 
   if(any(class(object$opt_mod) == 'gls')){
     df <- object$opt_mod$dims$N - object$opt_mod$dims$p
@@ -139,12 +182,11 @@ summary.multiScaleR <- function(object, profile = FALSE, ...){
                               names = row.names(object$scale_est),
                               profile = profile)
 
-  if(length(param_list) >= 1){
-    if('prob' %in% names(param_list)){
-      prob <- param_list$prob
-    }
-  } else {
-    prob <- 0.9
+  if ("prob" %in% names(param_list)) {
+    prob <- param_list$prob
+  }
+  if (!is.numeric(prob) || length(prob) != 1L || is.na(prob) || prob <= 0 || prob >= 1) {
+    stop("`prob` must be a single numeric value strictly between 0 and 1.")
   }
 
   ## DEBUG
@@ -152,6 +194,7 @@ summary.multiScaleR <- function(object, profile = FALSE, ...){
 
   object_profile <- object
   object_profile$profile_scale_est <- tab_scale
+  opt_distance <- kernel_dist(object_profile, prob = prob)
 
   if(!is.null(object$shape_est)){
     tab_shape <- ci_func(object$shape_est,
@@ -161,22 +204,26 @@ summary.multiScaleR <- function(object, profile = FALSE, ...){
 
     out <- list(opt_scale = tab_scale,
                 opt_shape = tab_shape,
-                opt_dist = kernel_dist(object_profile, prob = prob),
+                opt_dist = opt_distance,
+                opt_distance = opt_distance,
                 fitted_mod = object$opt_mod,
                 prob = prob,
                 kernel = object$kernel_inputs$kernel,
                 diagnostics = object$diagnostics,
                 warn_message = object$warn_message,
+                next_run = object$next_run,
                 call = object$call)
   } else {
     out <- list(opt_scale = tab_scale,
                 opt_shape = NULL,
-                opt_dist = kernel_dist(object_profile, prob = prob),
+                opt_dist = opt_distance,
+                opt_distance = opt_distance,
                 fitted_mod = object$opt_mod,
                 prob = prob,
                 kernel = object$kernel_inputs$kernel,
                 diagnostics = object$diagnostics,
                 warn_message = object$warn_message,
+                next_run = object$next_run,
                 call = object$call)
   }
 
@@ -244,6 +291,7 @@ print.multiScaleR <- function(x, ...){
             "The standard error of one or more `shape` estimates is >= 50% of the estimated mean value.\n",
             "Carefully assess if the Exponential Power kernel is appropriate, whether or not this variable is meaningful in your analysis, and interpret with caution.\n\n"))
   }
+  .msr_print_next_run(x$next_run)
   invisible(x)
 }
 
@@ -263,7 +311,17 @@ print.multiScaleR_data <- function(x, ...){
   # cat("\n\nSparse Matrix contains: ")
   # cat(paste0(length(x$D@x), ' elements\n'))
   cat("\n\nNumber of elements: \n")
-  cat(paste0(length(x$d_list[[1]])))
+  if (!is.null(x$d_list)) {
+    cat(paste0(length(x$d_list[[1]])))
+  } else {
+    cat("cell-level data not stored (lean mode; `store_cell_data = FALSE`)")
+  }
+  cat("\nDistance binning:\n")
+  if (!is.null(x$binned)) {
+    cat(paste0("enabled (", x$binned$nbins, " distance bins per covariate)"))
+  } else {
+    cat("disabled (exact per-cell evaluation)")
+  }
   cat("\nMinimum Distance:\n")
   cat(x$min_D)
   cat("\nMaximum Distance:\n")

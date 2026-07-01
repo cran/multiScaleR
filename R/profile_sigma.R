@@ -5,20 +5,36 @@
 #' a diagnostic view of the likelihood surface and helps assess whether the
 #' optimized sigma is at a clear minimum or on a flat plateau.
 #'
-#' @param x A fitted \code{multiScaleR} object.
-#' @param n_pts Integer. Number of sigma values to evaluate for each covariate.
-#'   Default is 10. Ignored when \code{sigma_values} is supplied.
-#' @param metric Character. Which metric to profile: \code{"AICc"} (default)
-#'   or \code{"LL"} (log-likelihood).
-#' @param verbose Logical. Print progress messages. Default is \code{TRUE}.
-#' @param spacing Character. How to space automatically generated sigma values:
-#'   \code{"log"} (default) or \code{"linear"}.
-#' @param sigma_values Optional numeric vector of sigma values to evaluate
-#'   directly. When supplied, \code{spacing}, \code{sigma_range}, and
-#'   \code{n_pts} are ignored.
-#' @param sigma_range Optional numeric vector of length 2 giving the minimum
-#'   and maximum sigma values for the generated profile grid. Defaults to the
-#'   optimization range stored in \code{x}.
+#' @param x A fitted \code{multiScaleR} object returned by
+#'   \code{\link{multiScale_optim}}.
+#' @param n_pts Positive integer (>= 3). Number of sigma values to evaluate
+#'   for each covariate along the profile grid. More points give a smoother
+#'   profile at the cost of additional model refits. Default: \code{10}.
+#'   Ignored when \code{sigma_values} is supplied.
+#' @param metric Character. Metric to display on the y-axis of the profile.
+#'   One of \code{"AICc"} (default) or \code{"LL"} (log-likelihood). The
+#'   optimized sigma minimizes negative log-likelihood, so the \code{"LL"}
+#'   profile should peak at the optimized value and \code{"AICc"} should
+#'   show a minimum.
+#' @param verbose Logical. Print per-covariate progress messages. Default:
+#'   \code{TRUE}.
+#' @param n_cores Optional positive integer. Number of CPU cores to use when
+#'   profiling covariates in parallel. Parallel profiling is applied across
+#'   covariates with a PSOCK cluster. Default: \code{NULL} (serial profiling).
+#' @param spacing Character. Spacing of the automatically generated sigma grid.
+#'   \code{"log"} (default) concentrates evaluation points at small sigma
+#'   values where the likelihood surface typically changes more rapidly.
+#'   \code{"linear"} provides equal spacing across the range.
+#' @param sigma_values Optional positive numeric vector of sigma values (in the
+#'   original projection units) to evaluate directly. When supplied,
+#'   \code{spacing}, \code{sigma_range}, and \code{n_pts} are ignored. Duplicate
+#'   values are removed and remaining values are sorted before profiling.
+#'   Must contain at least 3 unique values.
+#' @param sigma_range Optional positive numeric vector of length 2 giving the
+#'   minimum and maximum sigma values (in projection units) for the generated
+#'   profile grid. Defaults to the optimization range stored in \code{x}
+#'   (\code{min_D} to \code{max_D}). Ignored when \code{sigma_values} is
+#'   supplied.
 #'
 #' @return A list of class \code{sigma_profile} containing:
 #' \describe{
@@ -100,6 +116,7 @@ profile_sigma <- function(x,
                           n_pts = 10,
                           metric = c("AICc", "LL"),
                           verbose = TRUE,
+                          n_cores = NULL,
                           spacing = c("log", "linear"),
                           sigma_values = NULL,
                           sigma_range = NULL) {
@@ -108,6 +125,9 @@ profile_sigma <- function(x,
     stop("`x` must be a fitted `multiScaleR` object.", call. = FALSE)
   }
   validate_scalar_logical(verbose, "verbose")
+  if (!is.null(n_cores)) {
+    validate_scalar_numeric(n_cores, "n_cores", integerish = TRUE, positive = TRUE)
+  }
   metric <- match.arg(metric)
   spacing <- match.arg(spacing)
 
@@ -124,6 +144,10 @@ profile_sigma <- function(x,
   n_covs    <- length(covs)
   opt_par   <- scale_est$Mean / unit_conv  # back to scaled space
 
+  if (n_covs < 1) {
+    stop("`x` does not contain any optimized sigma values to profile.", call. = FALSE)
+  }
+
   # Shape parameters if expow kernel
   if (kernel == "expow" && !is.null(x$shape_est)) {
     opt_shape <- x$shape_est$Mean
@@ -137,13 +161,8 @@ profile_sigma <- function(x,
 
   # Compute K (number of model parameters) for AICc
   mod <- x$opt_mod
-  if (any(grepl("^unmarked", class(mod)))) {
-    k_base <- length(all.vars(formula(mod@formula))) + 1
-    n <- dim(mod@data@siteCovs)[1]
-  } else {
-    k_base <- nrow(get_parameters(mod)) + 1
-    n <- n_obs(mod)
-  }
+  k_base <- .msr_parameter_count(mod)
+  n <- .msr_model_nobs(mod)
   # Add sigma parameters (and shape if expow)
   k_total <- k_base + n_covs
   if (kernel == "expow") k_total <- k_total + n_covs
@@ -187,16 +206,27 @@ profile_sigma <- function(x,
   }
   n_grid <- length(sigma_seq)
 
-  # Profile each covariate
-  results <- vector("list", n_covs)
+  # Only the profiled covariate's sigma changes across the grid; every other
+  # covariate sits at its optimum and produces an identical kernel-weighted
+  # column on every grid point. Compute those optimum columns once and reuse
+  # them, recomputing just the profiled column per point. This avoids the
+  # dominant cost (the per-point covariate weighting) for the held covariates.
+  # If the baseline cannot be built (e.g. a lean object missing data a covariate
+  # needs), `base_cov_w` is NULL and each point falls back to a full evaluation.
+  base_par <- if (is.null(opt_shape)) opt_par else c(opt_par, opt_shape)
+  base_cov_w <- tryCatch(
+    .msr_kernel_cov_w(par = base_par,
+                      d_list = kernel_inputs$d_list,
+                      cov_df = kernel_inputs$raw_cov,
+                      kernel = kernel,
+                      opt_context = opt_context),
+    error = function(e) NULL
+  )
 
-  for (j in seq_len(n_covs)) {
-    if (isTRUE(verbose)) {
-      cat(sprintf("Profiling '%s' (%d of %d)...\n", covs[j], j, n_covs))
-    }
-
+  profile_one_covariate <- function(j) {
     ll_vec   <- numeric(n_grid)
     aicc_vec <- numeric(n_grid)
+    cov_name <- covs[j]
 
     for (i in seq_len(n_grid)) {
       # Build parameter vector: replace j-th sigma, keep others at optimum
@@ -206,6 +236,26 @@ profile_sigma <- function(x,
       # Append shape parameters if expow
       if (!is.null(opt_shape)) {
         par_i <- c(par_i, opt_shape)
+      }
+
+      # Reuse the cached optimum columns and recompute only the profiled
+      # covariate. A NULL baseline (or any failure here) means `cov_w_i` stays
+      # NULL and `kernel_scale_fn()` recomputes every covariate as before.
+      cov_w_i <- NULL
+      if (!is.null(base_cov_w)) {
+        cov_w_i <- tryCatch({
+          col_j <- .msr_kernel_cov_w(
+            par = par_i,
+            d_list = kernel_inputs$d_list,
+            cov_df = kernel_inputs$raw_cov,
+            kernel = kernel,
+            opt_context = opt_context,
+            covariates = cov_name
+          )
+          cw <- base_cov_w
+          cw[, cov_name] <- col_j[, cov_name]
+          cw
+        }, error = function(e) NULL)
       }
 
       # Evaluate negative log-likelihood
@@ -218,7 +268,8 @@ profile_sigma <- function(x,
           fitted_mod  = opt_context$fitted_mod,
           join_by     = join_by,
           mod_return  = NULL,
-          opt_context = opt_context
+          opt_context = opt_context,
+          cov_w       = cov_w_i
         ),
         error = function(e) NA_real_
       )
@@ -238,7 +289,7 @@ profile_sigma <- function(x,
       aicc_vec[i] <- aicc_val
     }
 
-    results[[j]] <- data.frame(
+    data.frame(
       variable = covs[j],
       sigma    = sigma_seq,
       LL       = ll_vec,
@@ -247,14 +298,59 @@ profile_sigma <- function(x,
     )
   }
 
+  # Profile each covariate
+  results <- vector("list", n_covs)
+  use_parallel <- !is.null(n_cores) && n_cores > 1 && n_covs > 1
+
+  if (use_parallel) {
+    if (isTRUE(verbose)) {
+      cat(sprintf("Profiling %d covariates in parallel using %d cores...\n",
+                  n_covs, n_cores))
+    }
+
+    cl <- parallel::makeCluster(n_cores)
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+    cluster_prep(mod, cl)
+
+    results_try <- try(
+      parallel::parLapply(cl = cl,
+                          X = seq_len(n_covs),
+                          fun = profile_one_covariate),
+      silent = TRUE
+    )
+
+    if (inherits(results_try, "try-error")) {
+      err_msg <- attr(results_try, "condition")
+      if (!is.null(err_msg)) {
+        stop("Parallel sigma profiling failed: ",
+             conditionMessage(err_msg),
+             call. = FALSE)
+      }
+      stop("Parallel sigma profiling failed due to an unknown error.",
+           call. = FALSE)
+    }
+
+    results <- results_try
+  } else {
+    if (!is.null(n_cores) && n_cores > 1 && n_covs == 1 && isTRUE(verbose)) {
+      cat("Only one covariate was available; using serial profiling.\n")
+    }
+    for (j in seq_len(n_covs)) {
+      if (isTRUE(verbose)) {
+        cat(sprintf("Profiling '%s' (%d of %d)...\n", covs[j], j, n_covs))
+      }
+      results[[j]] <- profile_one_covariate(j)
+    }
+  }
+
   profiles <- do.call(rbind, results)
   rownames(profiles) <- NULL
 
   out <- list(
-    profiles  = profiles,
-    opt_sigma = stats::setNames(scale_est$Mean, covs),
-    metric    = metric,
-    spacing   = grid_type,
+    profiles   = profiles,
+    opt_sigma  = stats::setNames(scale_est$Mean, covs),
+    metric     = metric,
+    spacing    = grid_type,
     sigma_grid = sigma_seq
   )
   class(out) <- "sigma_profile"

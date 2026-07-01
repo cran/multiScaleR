@@ -25,11 +25,11 @@ knitr::opts_chunk$set(
 set.seed(321)
 
 # Simulate a raster landscape with two binary covariates
-rs <- sim_rast(user_seed = 999, dim = 500, resolution = 30)
+rs <- sim_rast(user_seed = 999, dim = 220, resolution = 30)
 rs <- terra::subset(rs, c("bin1", "bin2"))
 
 # Apply the TRUE smoothing used to generate the ecological signal
-true_sigmas <- c(400, 200)
+true_sigmas <- c(180, 90)
 
 true_smoothed <- kernel_scale.raster(
   raster_stack = rs,
@@ -73,7 +73,7 @@ sample_mask[] <- ifelse(
 # Sample only within this restricted domain
 pts <- spatSample(
   sample_mask,
-  size = 150,
+  size = 80,
   method = "random",
   na.rm = TRUE,
   as.points = TRUE
@@ -101,7 +101,7 @@ par(mfrow = c(1, 1))
 kernel_inputs <- kernel_prep(
   pts = pts,
   raster_stack = rs,
-  max_D = 1500,
+  max_D = 700,
   kernel = "gaussian",
   verbose = FALSE
 )

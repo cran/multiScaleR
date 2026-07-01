@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>Landscape Metric Covariates</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Landscape Metric Covariates</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#why-explicit-covariate-specifications" id="toc-why-explicit-covariate-specifications"><span class="toc-section-number">1</span> Why explicit covariate
+specifications?</a></li>
+<li><a href="#landscape-metric-reference" id="toc-landscape-metric-reference"><span class="toc-section-number">2</span> Landscape metric reference</a>
+<ul>
+<li><a href="#composition-metrics" id="toc-composition-metrics"><span class="toc-section-number">2.1</span> Composition metrics</a></li>
+<li><a href="#edge-metrics" id="toc-edge-metrics"><span class="toc-section-number">2.2</span> Edge metrics</a></li>
+<li><a href="#adjacency-metrics" id="toc-adjacency-metrics"><span class="toc-section-number">2.3</span> Adjacency metrics</a></li>
+<li><a href="#information-theory-metrics" id="toc-information-theory-metrics"><span class="toc-section-number">2.4</span> Information theory
+metrics</a></li>
+<li><a href="#class-level-metrics" id="toc-class-level-metrics"><span class="toc-section-number">2.5</span> Class-level metrics</a></li>
+</ul></li>
+<li><a href="#load-example-data" id="toc-load-example-data"><span class="toc-section-number">3</span> Load example data</a></li>
+<li><a href="#define-derived-covariates" id="toc-define-derived-covariates"><span class="toc-section-number">4</span> Define derived covariates</a></li>
+<li><a href="#prepare-model-data" id="toc-prepare-model-data"><span class="toc-section-number">5</span> Prepare model data</a></li>
+<li><a href="#optimize-the-kernel-covariate" id="toc-optimize-the-kernel-covariate"><span class="toc-section-number">6</span> Optimize the kernel
+covariate</a></li>
+<li><a href="#project-derived-covariates-to-rasters" id="toc-project-derived-covariates-to-rasters"><span class="toc-section-number">7</span> Project derived covariates to
+rasters</a></li>
+<li><a href="#producing-landscape-metric-rasters-without-a-fitted-model" id="toc-producing-landscape-metric-rasters-without-a-fitted-model"><span class="toc-section-number">8</span> Producing landscape metric rasters
+without a fitted model</a>
+<ul>
+<li><a href="#separating-composition-from-configuration" id="toc-separating-composition-from-configuration"><span class="toc-section-number">8.1</span> Separating composition from
+configuration</a></li>
+</ul></li>
+<li><a href="#optimizing-landscape-metric-radii" id="toc-optimizing-landscape-metric-radii"><span class="toc-section-number">9</span> Optimizing landscape metric
+radii</a></li>
+<li><a href="#practical-guidance" id="toc-practical-guidance"><span class="toc-section-number">10</span> Practical guidance</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">11</span> See also</a></li>
+<li><a href="#references" id="toc-references"><span class="toc-section-number">12</span> References</a></li>
+</ul>
+</div>
+
+<div id="why-explicit-covariate-specifications" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Why explicit covariate
+specifications?</h1>
+<p>Traditional <code>multiScaleR</code> workflows assume that each
+raster layer becomes one optimized, kernel-weighted covariate. That
+remains the default behavior. For landscape metrics, however, the
+relationship between raster layers and model covariates is no longer
+one-to-one.</p>
+<p>For example, the same binary forest raster might be used to
+calculate:</p>
+<ul>
+<li>a distance-weighted proportion of forest cover,</li>
+<li>edge density within a fixed buffer, and</li>
+<li>edge density at an optimized scale.</li>
+</ul>
+<p>Those are different covariates, even though they come from the same
+source raster. The <code>msr_vars()</code> interface lets you name those
+derived covariates explicitly.</p>
+<hr />
+</div>
+<div id="landscape-metric-reference" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Landscape metric
+reference</h1>
+<p><code>landscape_var()</code> supports 25 metrics grouped into five
+families. All metrics are computed within a circular buffer centered on
+each sample point (or on each raster cell when projecting with
+<code>kernel_scale.raster()</code>). Metrics that operate on categorical
+rasters expect integer class values; continuous rasters should be
+classified before use.</p>
+<p>Most metrics describe the whole landscape within the buffer. Three
+are <em>class-level</em>: they describe a single category and require a
+<code>class</code> argument naming the focal class (covered in <a href="#class-level-metrics">Class-level metrics</a>). All of the
+categorical metrics reproduce the values returned by the
+<code>landscapemetrics</code> package, which itself follows the
+FRAGSTATS conventions.</p>
+<div id="composition-metrics" class="section level2" number="2.1">
+<h2><span class="header-section-number">2.1</span> Composition
+metrics</h2>
+<p>These metrics describe the diversity and abundance of patch types
+within the buffer. They require a categorical (integer-valued)
+raster.</p>
+<table>
+<colgroup>
+<col width="24%" />
+<col width="24%" />
+<col width="52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>shdi</code></td>
+<td>Shannon Diversity Index</td>
+<td><span class="math inline">\(-\sum p_i \ln p_i\)</span>, where <span class="math inline">\(p_i\)</span> is the proportion of class <span class="math inline">\(i\)</span>. Increases with richness and evenness.
+The <code>base</code> argument controls the logarithm base (default:
+natural log).</td>
+</tr>
+<tr class="even">
+<td><code>shei</code></td>
+<td>Shannon Evenness Index</td>
+<td>SHDI / ln(richness). Ranges from 0 (one dominant class) to 1
+(perfectly even).</td>
+</tr>
+<tr class="odd">
+<td><code>sidi</code></td>
+<td>Simpson Diversity Index</td>
+<td><span class="math inline">\(1 - \sum p_i^2\)</span>. Probability
+that two randomly selected cells belong to different classes. Ranges
+from 0 to 1.</td>
+</tr>
+<tr class="even">
+<td><code>siei</code></td>
+<td>Simpson Evenness Index</td>
+<td>SIDI / (1 - 1/richness). Standardizes SIDI against maximum possible
+diversity. Requires at least 2 classes and can be uninformative for
+optimized scales when local evenness is uniform across sample
+points.</td>
+</tr>
+<tr class="odd">
+<td><code>msidi</code></td>
+<td>Modified Simpson Diversity</td>
+<td><span class="math inline">\(-\ln \sum p_i^2\)</span>. Logarithmic
+transformation of Simpson concentration; unbounded above.</td>
+</tr>
+<tr class="even">
+<td><code>msiei</code></td>
+<td>Modified Simpson Evenness</td>
+<td>MSIDI / ln(richness). Evenness analogue of MSIDI. Can be
+uninformative for optimized scales when local evenness is uniform across
+sample points.</td>
+</tr>
+<tr class="odd">
+<td><code>pr</code></td>
+<td>Patch Richness</td>
+<td>Count of distinct classes present in the buffer.</td>
+</tr>
+<tr class="even">
+<td><code>prd</code></td>
+<td>Patch Richness Density</td>
+<td>PR per 100 ha of buffer area.</td>
+</tr>
+<tr class="odd">
+<td><code>rpr</code></td>
+<td>Relative Patch Richness</td>
+<td>(PR / <code>classes_max</code>) × 100. Requires the
+<code>classes_max</code> argument.</td>
+</tr>
+<tr class="even">
+<td><code>ta</code></td>
+<td>Total Area</td>
+<td>Total area of the buffer in hectares.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="edge-metrics" class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Edge metrics</h2>
+<p>These metrics quantify the amount and complexity of boundaries
+between classes. They require a categorical raster and use cell
+adjacency information.</p>
+<table>
+<colgroup>
+<col width="24%" />
+<col width="24%" />
+<col width="52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ed</code></td>
+<td>Edge Density</td>
+<td>Total internal edge length (m) per hectare of buffer area. Higher
+values indicate a more fragmented landscape.</td>
+</tr>
+<tr class="even">
+<td><code>te</code></td>
+<td>Total Edge</td>
+<td>Total internal edge length in metres.</td>
+</tr>
+<tr class="odd">
+<td><code>lsi</code></td>
+<td>Landscape Shape Index</td>
+<td>Total perimeter / minimum possible perimeter for the same number of
+cells. LSI = 1 for a perfectly compact (circular) patch; increases with
+irregularity.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="adjacency-metrics" class="section level2" number="2.3">
+<h2><span class="header-section-number">2.3</span> Adjacency
+metrics</h2>
+<p>These metrics describe how often similar or dissimilar classes occur
+next to one another. They require a categorical raster and use cell-pair
+counts (the class-by-class co-occurrence matrix).</p>
+<table>
+<colgroup>
+<col width="24%" />
+<col width="24%" />
+<col width="52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ai</code></td>
+<td>Aggregation Index</td>
+<td>Area-weighted aggregation of like adjacencies within classes. Higher
+values indicate that classes are more aggregated.</td>
+</tr>
+<tr class="even">
+<td><code>pladj</code></td>
+<td>Proportion of Like Adjacencies</td>
+<td>Percentage of cell-pair boundaries shared between cells of the
+<em>same</em> class. High values indicate a clumped or aggregated
+landscape.</td>
+</tr>
+<tr class="odd">
+<td><code>contag</code></td>
+<td>Contagion</td>
+<td>Measures the degree of clumping across all class pairs. Ranges from
+0 (maximum interspersion) to 100 (single class). Requires at least 2
+classes.</td>
+</tr>
+<tr class="even">
+<td><code>iji</code></td>
+<td>Interspersion &amp; Juxtaposition</td>
+<td>Evenness of adjacencies <em>among different classes</em> (like
+adjacencies are ignored). Ranges from near 0 (one class pair dominates
+the between-class boundaries) to 100 (every class is equally adjacent to
+every other). Requires at least 3 classes and enough between-class
+adjacencies in each buffer; otherwise it returns <code>NA</code>.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="information-theory-metrics" class="section level2" number="2.4">
+<h2><span class="header-section-number">2.4</span> Information theory
+metrics</h2>
+<p>These metrics come from treating the class-pair co-occurrence matrix
+as a bivariate probability distribution, following Nowosad and Stepinski
+(2019). Their value is that they separate <em>composition</em> (how many
+classes, how evenly mixed) from <em>configuration</em> (how the classes
+are arranged), which the diversity and contagion metrics confound. They
+require a categorical raster. The <code>base</code> argument sets the
+logarithm base; use <code>base = 2</code> for bits, matching
+<code>landscapemetrics</code>.</p>
+<table>
+<colgroup>
+<col width="24%" />
+<col width="24%" />
+<col width="52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ent</code></td>
+<td>Marginal entropy, H(x)</td>
+<td>Diversity of the cell values entering adjacencies. Increases with
+the number and evenness of classes; this is the composition signal.</td>
+</tr>
+<tr class="even">
+<td><code>joinent</code></td>
+<td>Joint entropy, H(x, y)</td>
+<td>Diversity of the class-pair adjacencies themselves: the total
+complexity of the pattern.</td>
+</tr>
+<tr class="odd">
+<td><code>condent</code></td>
+<td>Conditional entropy, H(y | x)</td>
+<td>Configurational complexity remaining once composition is accounted
+for: the uncertainty about a neighbor’s class given the focal cell’s
+class.</td>
+</tr>
+<tr class="even">
+<td><code>mutinf</code></td>
+<td>Mutual information, I(y, x)</td>
+<td>How much a cell’s class tells you about its neighbor’s. Rises as
+like classes cluster; this is configuration separated from
+composition.</td>
+</tr>
+<tr class="odd">
+<td><code>relmutinf</code></td>
+<td>Relative mutual information</td>
+<td><code>mutinf / ent</code>, rescaled to 0–1 so configuration can be
+compared across landscapes of differing composition. Equal to 1 when
+<code>mutinf</code> is 0. Unaffected by <code>base</code>.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="class-level-metrics" class="section level2" number="2.5">
+<h2><span class="header-section-number">2.5</span> Class-level
+metrics</h2>
+<p>The metrics above summarize the whole landscape within the buffer.
+These three instead describe a single focal class, supplied through the
+<code>class</code> argument of <code>landscape_var()</code> (an integer
+matching one of the raster’s class codes). Asking for one of these
+metrics without a <code>class</code>, or supplying <code>class</code> to
+any other metric, is an error. Where the focal class is absent from a
+buffer, <code>pland</code> and <code>ca</code> return 0 and
+<code>clumpy</code> returns <code>NA</code>.</p>
+<table>
+<colgroup>
+<col width="24%" />
+<col width="24%" />
+<col width="52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>clumpy</code></td>
+<td>Clumpiness Index</td>
+<td>Aggregation of the focal class, corrected for its own abundance.
+Ranges from -1 (maximally disaggregated) through 0 (random) to 1
+(maximally clumped).</td>
+</tr>
+<tr class="even">
+<td><code>pland</code></td>
+<td>Percentage of Landscape</td>
+<td>The focal class’s share of the valid buffer cells, as a
+percentage.</td>
+</tr>
+<tr class="odd">
+<td><code>ca</code></td>
+<td>Class Area</td>
+<td>Area of the focal class within the buffer, in hectares.</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="do">## Clumpiness of land-cover class 2, and that class&#39;s percentage cover,</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="do">## both within a fixed 500 m radius</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>class_vars <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">cover2_clumpy =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;clumpy&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>, <span class="at">class =</span> <span class="dv">2</span>),</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">cover2_pland  =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;pland&quot;</span>,  <span class="at">radius =</span> <span class="dv">500</span>, <span class="at">class =</span> <span class="dv">2</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>class_vars</span></code></pre></div>
+<hr />
+</div>
+</div>
+<div id="load-example-data" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Load example data</h1>
+<p>This example uses the simulated count data and survey locations
+included with <code>multiScaleR</code>. The data contain 100 spatial
+sample points, which is large enough to demonstrate the workflow without
+making the vignette expensive to build.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>dat <span class="ot">&lt;-</span> landscape_counts</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">pkg_extdata</span>(<span class="st">&quot;landscape.tif&quot;</span>))</span></code></pre></div>
+<p>The raster layer <code>land1</code> is a binary habitat layer. To
+demonstrate a categorical landscape-diversity metric, we also create a
+simple three-class land-cover layer from the continuous
+<code>land2</code> raster. In a real analysis, this would usually be a
+mapped categorical land-cover product.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>landcover <span class="ot">&lt;-</span> <span class="fu">classify</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  land_rast<span class="sc">$</span>land2,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">rcl =</span> <span class="fu">matrix</span>(</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>    <span class="fu">c</span>(<span class="sc">-</span><span class="cn">Inf</span>, <span class="sc">-</span><span class="fl">0.5</span>, <span class="dv">1</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>      <span class="sc">-</span><span class="fl">0.5</span>,  <span class="fl">0.5</span>, <span class="dv">2</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>       <span class="fl">0.5</span>,  <span class="cn">Inf</span>, <span class="dv">3</span>),</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">3</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>    <span class="at">byrow =</span> <span class="cn">TRUE</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  )</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="fu">names</span>(landcover) <span class="ot">&lt;-</span> <span class="st">&quot;landcover&quot;</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>metric_rasters <span class="ot">&lt;-</span> <span class="fu">c</span>(land_rast<span class="sc">$</span>land1, landcover)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">plot</span>(metric_rasters)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">plot</span>(metric_rasters<span class="sc">$</span>land1, <span class="at">main =</span> <span class="st">&quot;land1 with survey points&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">points</span>(pts, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
+<hr />
+</div>
+<div id="define-derived-covariates" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Define derived
+covariates</h1>
+<p>Use <code>msr_vars()</code> to define model covariates as
+transformations of source raster layers. Here, <code>land1_prop</code>
+is optimized as a kernel-weighted covariate, while
+<code>land1_ed_500</code> and <code>landcover_shdi_500</code> are
+fixed-radius landscape metrics calculated within 500 m of each
+point.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>scale_vars <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">land1_prop =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land1&quot;</span>),</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">land1_ed_500 =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;ed&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">landcover_shdi_500 =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;shdi&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>scale_vars</span></code></pre></div>
+<p>This is the key distinction:</p>
+<ul>
+<li><code>land1</code> and <code>landcover</code> are source raster
+layers.</li>
+<li><code>land1_prop</code>, <code>land1_ed_500</code>, and
+<code>landcover_shdi_500</code> are model covariates.</li>
+<li>Only <code>land1_prop</code> receives an optimized sigma parameter
+in this example.</li>
+</ul>
+<hr />
+</div>
+<div id="prepare-model-data" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Prepare model data</h1>
+<p>Pass the covariate specification to <code>kernel_prep()</code>. The
+returned <code>kernel_dat</code> data frame contains the derived
+covariates, not merely the original raster layer names.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>kernel_inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">pts =</span> pts,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">raster_stack =</span> metric_rasters,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">max_D =</span> <span class="dv">1200</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">scale_vars =</span> scale_vars,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>)</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="fu">head</span>(kernel_inputs<span class="sc">$</span>kernel_dat)</span></code></pre></div>
+<p>Combine the derived covariates with the response data and fit the
+starting model.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(dat, kernel_inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">glm</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  counts <span class="sc">~</span> site <span class="sc">+</span> land1_prop <span class="sc">+</span> land1_ed_500 <span class="sc">+</span> landcover_shdi_500,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">family =</span> <span class="fu">poisson</span>(),</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">data =</span> df</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>)</span></code></pre></div>
+<hr />
+</div>
+<div id="optimize-the-kernel-covariate" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Optimize the kernel
+covariate</h1>
+<p>Because the two landscape metrics were defined with fixed radii, only
+<code>land1_prop</code> is optimized. This keeps the example fast while
+still showing how kernel-scaled and landscape-metric covariates can be
+included in the same model.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>opt <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="at">fitted_mod =</span> mod,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">kernel_inputs =</span> kernel_inputs,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>opt <span class="ot">&lt;-</span> vignette_cache<span class="sc">$</span>landscape<span class="sc">$</span>opt</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">summary</span>(opt)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; multiScale_optim(fitted_mod = landscape_mod, kernel_inputs = landscape_inputs, </span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt;     verbose = FALSE)</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; Kernel used:</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Sigma *****</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;                Mean      SE     2.5%    97.5%</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt; land1_prop 179.1503 39.2233 101.2822 257.0184</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Distance *****</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; 90% Kernel Weight</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt;              Mean   2.5%  97.5%</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; land1_prop 294.68 166.59 422.76</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;  *****     Fitted Model Summary     *****</span></span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt; glm(formula = counts ~ site + land1_prop + land1_ed_500 + landcover_shdi_500, </span></span>
+<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="co">#&gt;     family = poisson(), data = data)</span></span>
+<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="co">#&gt;                    Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a><span class="co">#&gt; (Intercept)         0.58563    0.07789   7.519 5.53e-14 ***</span></span>
+<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a><span class="co">#&gt; site                0.19109    0.07762   2.462 0.013817 *  </span></span>
+<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a><span class="co">#&gt; land1_prop         -0.33519    0.08770  -3.822 0.000132 ***</span></span>
+<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="co">#&gt; land1_ed_500       -0.11827    0.07755  -1.525 0.127223    </span></span>
+<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="co">#&gt; landcover_shdi_500 -0.14202    0.06091  -2.332 0.019723 *  </span></span>
+<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
+<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
+<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a><span class="co">#&gt; (Dispersion parameter for poisson family taken to be 1)</span></span>
+<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a><span class="co">#&gt;     Null deviance: 224.24  on 99  degrees of freedom</span></span>
+<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a><span class="co">#&gt; Residual deviance: 180.00  on 95  degrees of freedom</span></span>
+<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a><span class="co">#&gt; AIC: 386.67</span></span>
+<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a><span class="co">#&gt; Number of Fisher Scoring iterations: 5</span></span>
+<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a><span class="co">#&gt; ***** Follow-up recommendation *****</span></span>
+<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a><span class="co">#&gt; Recommended `max_D`: 1200</span></span>
+<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a><span class="co">#&gt; Recommended starting `sigma` values:</span></span>
+<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a><span class="co">#&gt; land1_prop </span></span>
+<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a><span class="co">#&gt;   179.1503 </span></span>
+<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a><span class="co">#&gt; Action:</span></span>
+<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a><span class="co">#&gt; Use the optimized parameters as efficient starting values if refitting.</span></span></code></pre></div>
+<hr />
+</div>
+<div id="project-derived-covariates-to-rasters" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Project derived
+covariates to rasters</h1>
+<p><code>kernel_scale.raster()</code> also understands
+<code>scale_vars</code>. When a fitted <code>multiScaleR</code> object
+is supplied, optimized covariates use their fitted scale and
+fixed-radius landscape metrics use their specified radius.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>projected <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">unwrap</span>(vignette_cache<span class="sc">$</span>landscape<span class="sc">$</span>projected)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="fu">plot</span>(projected)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Projected derived covariates." src="data:image/png;base64,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" alt="Projected derived covariates." />
+<div class="figcaption"><strong><em>Projected derived
+covariates.</em></strong></div>
+</div>
+<p>The resulting raster names match the model covariates:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">names</span>(projected)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;land1_prop&quot;         &quot;land1_ed_500&quot;       &quot;landcover_shdi_500&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; [4] &quot;site&quot;</span></span></code></pre></div>
+<hr />
+</div>
+<div id="producing-landscape-metric-rasters-without-a-fitted-model" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Producing landscape
+metric rasters without a fitted model</h1>
+<p><code>kernel_scale.raster()</code> can generate landscape metric
+raster surfaces directly, without having fitted a model at all. This is
+useful when you want to explore how a metric varies across the landscape
+at a given scale, compare metrics side-by-side before committing to a
+model structure, or simply produce a covariate map from a classified
+raster.</p>
+<p>Pass a <code>scale_vars</code> object in which all covariates have a
+fixed <code>radius</code> (i.e., <code>radius</code> is not
+<code>NULL</code> in <code>landscape_var()</code>). No
+<code>sigma</code> argument is needed because no scale is being
+optimized.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="do">## Define several metrics at a fixed 500 m radius</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>standalone_vars <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="at">land1_ai    =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>,    <span class="at">metric =</span> <span class="st">&quot;ai&quot;</span>,    <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">land1_ed    =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>,    <span class="at">metric =</span> <span class="st">&quot;ed&quot;</span>,    <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="at">land1_lsi   =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>,    <span class="at">metric =</span> <span class="st">&quot;lsi&quot;</span>,   <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="at">land1_pladj =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>,    <span class="at">metric =</span> <span class="st">&quot;pladj&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="at">cover_shdi  =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;shdi&quot;</span>,  <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>  <span class="at">cover_pr    =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;pr&quot;</span>,    <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>  <span class="at">cover_sidi  =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;sidi&quot;</span>,  <span class="at">radius =</span> <span class="dv">500</span>)</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>)</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="do">## Apply directly: no multiScaleR object or sigma values required</span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>metric_surfaces <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>  <span class="at">raster_stack =</span> metric_rasters,</span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>  <span class="at">scale_vars   =</span> standalone_vars,</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>  <span class="at">verbose      =</span> <span class="cn">FALSE</span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a>)</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="fu">plot</span>(metric_surfaces)</span></code></pre></div>
+<p>Each output layer is named after the covariate defined in
+<code>msr_vars()</code>:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">names</span>(metric_surfaces)</span></code></pre></div>
+<p>You can also compute a single metric in one line without defining a
+<code>msr_vars()</code> object. Simply wrap a single
+<code>landscape_var()</code> call:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>ed_300 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> metric_rasters[<span class="st">&quot;land1&quot;</span>],</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="at">scale_vars   =</span> <span class="fu">msr_vars</span>(<span class="at">ed_300m =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;ed&quot;</span>, <span class="at">radius =</span> <span class="dv">300</span>)),</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="at">verbose      =</span> <span class="cn">FALSE</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="fu">plot</span>(ed_300, <span class="at">main =</span> <span class="st">&quot;Edge density (m/ha) within 300 m&quot;</span>)</span></code></pre></div>
+<p>Different radii produce notably different surfaces for the same
+metric. The example below computes edge density at three scales and
+plots them together for comparison:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>ed_multi <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> metric_rasters[<span class="st">&quot;land1&quot;</span>],</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>  <span class="at">scale_vars   =</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>    <span class="at">ed_200m =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;ed&quot;</span>, <span class="at">radius =</span> <span class="dv">200</span>),</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>    <span class="at">ed_500m =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;ed&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>),</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>    <span class="at">ed_900m =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;ed&quot;</span>, <span class="at">radius =</span> <span class="dv">900</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>  ),</span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>)</span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="fu">plot</span>(ed_multi,</span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>     <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;ED: 200 m&quot;</span>, <span class="st">&quot;ED: 500 m&quot;</span>, <span class="st">&quot;ED: 900 m&quot;</span>))</span></code></pre></div>
+<div id="separating-composition-from-configuration" class="section level2" number="8.1">
+<h2><span class="header-section-number">8.1</span> Separating
+composition from configuration</h2>
+<p>The information-theory metrics are most useful when you want to ask
+whether an effect is driven by <em>what</em> is in the neighborhood (its
+composition) or by <em>how</em> it is arranged (its configuration). The
+surfaces below project three metrics for the three-class
+<code>landcover</code> layer at a fixed 500 m radius.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>info_surfaces <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> metric_rasters[<span class="st">&quot;landcover&quot;</span>],</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>  <span class="at">scale_vars   =</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>    <span class="at">H_x    =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;ent&quot;</span>,    <span class="at">radius =</span> <span class="dv">500</span>, <span class="at">base =</span> <span class="dv">2</span>),</span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>    <span class="at">MI     =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;mutinf&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>, <span class="at">base =</span> <span class="dv">2</span>),</span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>    <span class="at">relMI  =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;relmutinf&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>)</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a>  ),</span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>)</span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a><span class="fu">plot</span>(info_surfaces, <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;Marginal entropy (bits)&quot;</span>,</span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a>                             <span class="st">&quot;Mutual information (bits)&quot;</span>,</span>
+<span id="cb16-13"><a href="#cb16-13" tabindex="-1"></a>                             <span class="st">&quot;Relative mutual information&quot;</span>))</span></code></pre></div>
+<p><strong>How to read these surfaces:</strong> marginal entropy
+(<code>ent</code>, here in bits because <code>base = 2</code>) is a
+composition measure: it is high where the buffer holds several classes
+in roughly equal proportion, and near 0 where one class dominates.
+Mutual information (<code>mutinf</code>) is a configuration measure: it
+is high where like classes cluster into contiguous patches and low where
+the classes are finely interspersed, <em>independent</em> of how many
+classes are present. Relative mutual information
+(<code>relmutinf</code>) divides the two, putting configuration on a 0
+to 1 scale so it is comparable between neighborhoods that differ in
+composition. Two buffers can share the same <code>ent</code> yet have
+very different <code>mutinf</code>: same ingredients, different spatial
+arrangement. That separation is the reason to prefer these metrics over
+contagion when arrangement is the hypothesis of interest.</p>
+<p>For a single class, <code>clumpy</code> answers the same
+configuration question on the -1 to 1 scale familiar from FRAGSTATS,
+while <code>pland</code> reports that class’s cover:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>class2_surfaces <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> metric_rasters[<span class="st">&quot;landcover&quot;</span>],</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="at">scale_vars   =</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>    <span class="at">clumpy2 =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;clumpy&quot;</span>, <span class="at">radius =</span> <span class="dv">500</span>, <span class="at">class =</span> <span class="dv">2</span>),</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>    <span class="at">pland2  =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;pland&quot;</span>,  <span class="at">radius =</span> <span class="dv">500</span>, <span class="at">class =</span> <span class="dv">2</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>  ),</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a>)</span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a><span class="fu">plot</span>(class2_surfaces, <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;CLUMPY (class 2)&quot;</span>, <span class="st">&quot;PLAND (class 2, %)&quot;</span>))</span></code></pre></div>
+<hr />
+</div>
+</div>
+<div id="optimizing-landscape-metric-radii" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Optimizing landscape
+metric radii</h1>
+<p>To optimize the scale of a landscape metric, omit <code>radius</code>
+from <code>landscape_var()</code>. For example:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>scale_vars_opt <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>  <span class="at">land1_prop =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land1&quot;</span>),</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>  <span class="at">land1_ed =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;land1&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;ed&quot;</span>),</span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>  <span class="at">landcover_shdi =</span> <span class="fu">landscape_var</span>(<span class="st">&quot;landcover&quot;</span>, <span class="at">metric =</span> <span class="st">&quot;shdi&quot;</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>)</span></code></pre></div>
+<p>This is statistically meaningful, but it is more computationally
+expensive than optimizing a kernel-weighted mean. At each candidate
+radius, the landscape metric must be recalculated for every sample
+point. For moderate or large data sets, consider first testing the
+workflow with a subset of points or using precomputed results in
+reproducible documents.</p>
+<p>Before optimizing <code>iji</code>, <code>siei</code>, or
+<code>msiei</code>, inspect a pilot <code>kernel_prep()</code> result or
+compare a few fixed radii. These metrics can be all <code>NA</code> or
+nearly constant when buffers contain too few classes, too few
+between-class adjacencies, or nearly identical evenness at all sample
+points. In that case, use a larger radius, increase <code>max_D</code>,
+or choose a more stable diversity, entropy, or edge metric.</p>
+<hr />
+</div>
+<div id="practical-guidance" class="section level1" number="10">
+<h1><span class="header-section-number">10</span> Practical
+guidance</h1>
+<p>Use fixed-radius landscape metrics when you have a biologically
+motivated buffer distance or when the metric is expensive to recompute.
+Use optimized landscape metric radii when the scale itself is a central
+question and computation time is acceptable.</p>
+<p>At present, optimized landscape metrics are not supported with
+<code>kernel = &quot;expow&quot;</code> because the exponential-power shape
+parameter does not apply cleanly to fixed-buffer landscape metrics.</p>
+<hr />
+</div>
+<div id="see-also" class="section level1" number="11">
+<h1><span class="header-section-number">11</span> See also</h1>
+<ul>
+<li><code>vignette(&quot;surface_metric_covariates&quot;, package = &quot;multiScaleR&quot;)</code>
+for the continuous-surface analogue of these metrics (roughness,
+gradient, and texture of a continuous raster).</li>
+<li><code>vignette(&quot;multiScaleR_Guide&quot;, package = &quot;multiScaleR&quot;)</code>
+for the core kernel-weighting workflow.</li>
+<li>The help page <code>?msr_vars</code> lists every supported metric
+with its definition.</li>
+</ul>
+</div>
+<div id="references" class="section level1" number="12">
+<h1><span class="header-section-number">12</span> References</h1>
+<p>Nowosad, J., &amp; Stepinski, T. F. (2019). Information theory as a
+consistent framework for quantification and classification of landscape
+patterns. <em>Landscape Ecology</em>, 34(9), 2091–2101. <a href="https://doi.org/10.1007/s10980-019-00830-x" class="uri">https://doi.org/10.1007/s10980-019-00830-x</a></p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -48,6 +48,42 @@ test_that("kernel_scale.raster adds numeric site covariates as dummy rasters", {
   expect_lte(max(cont1_vals, na.rm = TRUE), train_range[2] + 1e-8)
 })
 
+test_that("kernel_scale.raster ignores unused default scale specs in fitted models", {
+  r <- terra::rast(list(
+    a = terra::rast(matrix(runif(20 * 20), 20, 20)),
+    b = terra::rast(matrix(runif(20 * 20), 20, 20)),
+    c = terra::rast(matrix(runif(20 * 20), 20, 20))
+  ))
+  names(r) <- c("a", "b", "c")
+
+  dat <- data.frame(y = rnorm(10), a = rnorm(10), b = rnorm(10))
+  mod <- glm(y ~ a + b, data = dat)
+
+  obj <- structure(
+    list(
+      scale_est = data.frame(Mean = c(a = 25, b = 40),
+                             SE = c(a = 5, b = 6)),
+      shape_est = NULL,
+      kernel_inputs = list(
+        kernel = "gaussian",
+        scale_vars = multiScaleR:::.msr_default_scale_vars(r)
+      ),
+      opt_mod = mod
+    ),
+    class = "multiScaleR"
+  )
+
+  scaled <- kernel_scale.raster(
+    raster_stack = r,
+    multiScaleR = obj,
+    scale_center = FALSE,
+    verbose = FALSE
+  )
+
+  expect_true(inherits(scaled, "SpatRaster"))
+  expect_equal(names(scaled), c("a", "b"))
+})
+
 test_that("kernel_scale.raster warns and skips categorical site covariates", {
   fix <- make_core_fixture()
 
@@ -103,11 +139,53 @@ test_that("plot_marginal_effects covers unmarked and zeroinfl models", {
   on.exit(grDevices::dev.off(), add = TRUE)
 
   unmark_plots <- plot_marginal_effects(unmark$obj, type = "state", length.out = 5)
-  zi_plots <- plot_marginal_effects(zi$obj, length.out = 5)
+  zi_plots <- expect_no_warning(plot_marginal_effects(zi$obj, length.out = 5))
 
   expect_length(unmark_plots, 2)
   expect_length(zi_plots, 1)
   expect_error(plot_marginal_effects(unmark$obj, type = NULL, length.out = 5), "must be specified")
+})
+
+test_that("plot_marginal_effects uses nested analysis models for wrapped clogit fits", {
+  testthat::skip_if_not_installed("survival")
+
+  fix <- make_core_fixture()
+  n <- nrow(fix$kernel_inputs$kernel_dat)
+  dat <- data.frame(
+    case_ = rep(c(TRUE, FALSE, FALSE), length.out = n),
+    cont1 = fix$kernel_inputs$kernel_dat$cont1,
+    site = seq_len(n) / 10,
+    stratum = factor(rep(seq_len(ceiling(n / 3)), each = 3, length.out = n))
+  )
+  coxph <- survival::coxph
+  strata <- survival::strata
+
+  inner <- suppressWarnings(
+    survival::clogit(
+      case_ ~ cont1 + site + strata(stratum),
+      data = dat,
+      model = TRUE
+    )
+  )
+  wrapped <- structure(
+    list(model = inner, sl_ = NULL, ta_ = NULL, more = NULL),
+    class = c("fit_clogit", "list")
+  )
+  obj <- structure(
+    list(
+      opt_mod = wrapped,
+      scl_params = fix$kernel_inputs$scl_params
+    ),
+    class = "multiScaleR"
+  )
+
+  open_null_device()
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  plots <- expect_no_warning(plot_marginal_effects(obj, length.out = 5))
+
+  expect_named(plots, c("cont1", "site"))
+  expect_true(all(vapply(plots, inherits, logical(1), what = "ggplot")))
 })
 
 test_that("plot_marginal_effects mocked branches cover HLfit, missing CI, and numeric predictions", {
@@ -257,6 +335,8 @@ test_that("profile_sigma returns complete profiles and validates inputs", {
   expect_error(profile_sigma(structure(list(), class = "not_multiScaleR")), "multiScaleR")
   expect_error(profile_sigma(fix$opt, n_pts = 2, verbose = FALSE), "n_pts")
   expect_error(profile_sigma(fix$opt, n_pts = 5, verbose = NA), "verbose")
+  expect_error(profile_sigma(fix$opt, n_cores = 0, verbose = FALSE), "n_cores")
+  expect_error(profile_sigma(fix$opt, n_cores = 1.5, verbose = FALSE), "n_cores")
 })
 
 test_that("profile_sigma supports linear and custom sigma grids", {
@@ -294,6 +374,57 @@ test_that("profile_sigma supports linear and custom sigma grids", {
   expect_error(profile_sigma(fix$opt, sigma_values = c(10, 10, 20),
                              verbose = FALSE),
                "at least 3 unique")
+})
+
+test_that("profile_sigma parallel output matches serial output", {
+  cores <- suppressWarnings(parallel::detectCores(logical = FALSE))
+  if (is.na(cores) || cores < 2) {
+    skip("Parallel parity test requires at least 2 physical cores.")
+  }
+
+  fix <- make_core_fixture()
+
+  prof_serial <- suppressWarnings(
+    suppressMessages(
+      profile_sigma(fix$opt, n_pts = 4, verbose = FALSE)
+    )
+  )
+  prof_parallel <- suppressWarnings(
+    suppressMessages(
+      profile_sigma(fix$opt, n_pts = 4, n_cores = 2, verbose = FALSE)
+    )
+  )
+
+  expect_identical(prof_parallel$metric, prof_serial$metric)
+  expect_identical(prof_parallel$spacing, prof_serial$spacing)
+  expect_equal(prof_parallel$sigma_grid, prof_serial$sigma_grid)
+  expect_equal(prof_parallel$opt_sigma, prof_serial$opt_sigma)
+  expect_equal(prof_parallel$profiles, prof_serial$profiles, tolerance = 1e-10)
+})
+
+test_that("profile_sigma uses the same parameter count logic as model selection", {
+  fix <- make_core_fixture()
+  opt_multi <- fix$opt
+  opt_multi$scale_est <- data.frame(
+    Mean = c(40, 80),
+    SE = c(1, 1),
+    row.names = c("cont1", "site")
+  )
+
+  prof <- with_mocked_bindings(
+    profile_sigma(opt_multi, n_pts = 3, verbose = FALSE),
+    kernel_scale_fn = function(...) 10,
+    .package = "multiScaleR"
+  )
+
+  expected_k <- nrow(insight::get_parameters(opt_multi$opt_mod)) +
+    nrow(opt_multi$scale_est)
+  expected_aic <- -2 * (-10) + 2 * expected_k
+  expected_aicc <- expected_aic +
+    (2 * expected_k * (expected_k + 1)) /
+    (.msr_model_nobs(opt_multi$opt_mod) - expected_k - 1)
+
+  expect_equal(unique(prof$profiles$AICc), expected_aicc)
 })
 
 test_that("plot.sigma_profile returns named ggplots and rejects bad input", {

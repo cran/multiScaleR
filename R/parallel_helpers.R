@@ -13,8 +13,15 @@
 cluster_prep <- function(model, cl) {
 
   pkg <- extract_namespace(model)
+  analysis_mod <- .analysis_model(model)
+  if (is.null(pkg) && !identical(analysis_mod, model)) {
+    pkg <- extract_namespace(analysis_mod)
+  }
   if(is.null(pkg)){
     pkg <- extract_call_function_package(model)
+  }
+  if (is.null(pkg) && !identical(analysis_mod, model)) {
+    pkg <- extract_call_function_package(analysis_mod)
   }
 
   msr_path <- normalizePath(getNamespaceInfo("multiScaleR", "path"),
@@ -23,6 +30,9 @@ cluster_prep <- function(model, cl) {
                                    winslash = "/", mustWork = FALSE)
   msr_version <- as.character(utils::packageVersion("multiScaleR"))
   msr_load_all <- nzchar(msr_system_path) && !identical(msr_path, msr_system_path)
+  lib_paths <- .libPaths()
+  r_libs_user <- Sys.getenv("R_LIBS_USER", unset = "")
+  r_libs <- Sys.getenv("R_LIBS", unset = "")
 
   if(is.null(pkg)){
     model_classes <- class(model)
@@ -62,7 +72,8 @@ cluster_prep <- function(model, cl) {
 
   # Export package metadata to workers
   clusterExport(cl,
-                varlist = c("pkg", "msr_path", "msr_version", "msr_load_all"),
+                varlist = c("pkg", "msr_path", "msr_version", "msr_load_all",
+                            "lib_paths", "r_libs_user", "r_libs"),
                 envir = environment())
 
   # Load required packages on each worker. In development sessions, the master
@@ -70,8 +81,24 @@ cluster_prep <- function(model, cl) {
   # use that same source tree rather than silently loading an older installed
   # multiScaleR from .libPaths().
   worker_info <- clusterEvalQ(cl, {
+    attach_pkg_quietly <- function(pkg) {
+      suppressWarnings(
+        suppressPackageStartupMessages(
+          library(pkg, character.only = TRUE)
+        )
+      )
+    }
+
+    if (nzchar(r_libs_user)) {
+      Sys.setenv(R_LIBS_USER = r_libs_user)
+    }
+    if (nzchar(r_libs)) {
+      Sys.setenv(R_LIBS = r_libs)
+    }
+    .libPaths(unique(c(lib_paths, .libPaths())))
+
     if (!is.null(pkg) && !identical(pkg, "multiScaleR")) {
-      library(pkg, character.only = TRUE)
+      attach_pkg_quietly(pkg)
     }
 
     if (isTRUE(msr_load_all)) {
@@ -87,7 +114,7 @@ cluster_prep <- function(model, cl) {
       }
       pkgload::load_all(msr_path, quiet = TRUE)
     } else {
-      library("multiScaleR")
+      attach_pkg_quietly("multiScaleR")
     }
 
     list(
