@@ -307,6 +307,24 @@ mod0_umf.p <- unmarked::pcount(~1 ~bin1 + cont2,
 opt_umf.p <- readRDS(system.file("extdata", "opt_umf_p.rds",
                                  package = "multiScaleR"))
 
+## ----eval=FALSE---------------------------------------------------------------
+# # Spatial site IDs follow the point order used by kernel_prep().
+# site_id <- seq_len(nrow(kernel_inputs$kernel_dat))
+# join_by <- data.frame(site_id = site_id)
+# 
+# # Each count matrix has one row per site and one column per visit.
+# y_stacked <- do.call(rbind, counts_by_year)
+# site_row <- rep(site_id, times = length(counts_by_year))
+# site_covs <- kernel_inputs$kernel_dat[site_row, , drop = FALSE]
+# site_covs$site_id <- site_id[site_row]
+# 
+# umf_years <- unmarked::unmarkedFramePCount(y = y_stacked,
+#                                            siteCovs = site_covs)
+# mod_years <- unmarked::pcount(~1 ~ bin1 + cont2, data = umf_years,
+#                               K = 100)
+# opt_years <- multiScale_optim(mod_years, kernel_inputs,
+#                               join_by = join_by)
+
 ## -----------------------------------------------------------------------------
 summary(opt_umf.p)
 
@@ -466,6 +484,9 @@ plot(ab.mod_pred)
 # ## Distance of 95% kernel
 # kernel_dist(opt2, prob = 0.95)
 # 
+# ## Radius of the circle holding 90% of ideal planar kernel weight
+# kernel_dist(opt2, dimension = "2d")
+# 
 
 ## -----------------------------------------------------------------------------
 kernel_dist(kernel = "gaussian", sigma = 100, prob = 0.9)
@@ -473,6 +494,9 @@ kernel_dist(kernel = "gaussian", sigma = 100, prob = 0.9)
 kernel_dist(kernel = "exp", sigma = 100, prob = 0.9)
 
 kernel_dist(kernel = "expow", sigma = 100, beta = 5, prob = 0.9)
+
+## The same Gaussian kernel, as the radius of a circle
+kernel_dist(kernel = "gaussian", sigma = 100, prob = 0.9, dimension = "2d")
 
 ## -----------------------------------------------------------------------------
 plot_kernel(kernel = 'exp',

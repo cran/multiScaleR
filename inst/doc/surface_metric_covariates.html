@@ -640,7 +640,7 @@ the others at a biologically motivated buffer.</p>
 <span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; Kernel used:</span></span>
 <span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Sigma *****</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect *****</span></span>
 <span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;                Mean       SE     2.5%    97.5%</span></span>
 <span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; land2_mean 417.5643 35.16722 347.7486 487.3801</span></span>
@@ -649,58 +649,69 @@ the others at a biologically motivated buffer.</p>
 <span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
 <span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Distance *****</span></span>
-<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt; 90% Kernel Weight</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt; Scale distances (map units) at 90%, two definitions.</span></span>
 <span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt;              Mean 2.5%  97.5%</span></span>
-<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt; land2_mean 686.83  572 801.67</span></span>
-<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt; 1D, along a line through the point (`kernel_dist()` default):</span></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt;              Mean 2.5%  97.5%</span></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a><span class="co">#&gt; land2_mean 686.83  572 801.67</span></span>
 <span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
-<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt;  *****     Fitted Model Summary     *****</span></span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt; 2D, radius of the circle for the ideal untruncated kernel (`dimension = &quot;2d&quot;`):</span></span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt;              Mean   2.5%  97.5%</span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt; land2_mean 896.08 746.26 1045.9</span></span>
 <span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
-<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt; glm(formula = counts ~ site + land2_mean + land3_sq_500 + land3_sa_500, </span></span>
-<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="co">#&gt;     family = poisson(), data = data)</span></span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="co">#&gt;  *****     Fitted Model Summary     *****</span></span>
 <span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
-<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a><span class="co">#&gt;              Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
-<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a><span class="co">#&gt; (Intercept)   0.46270    0.08676   5.333 9.64e-08 ***</span></span>
-<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a><span class="co">#&gt; site          0.07375    0.07911   0.932    0.351    </span></span>
-<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a><span class="co">#&gt; land2_mean    0.68555    0.07751   8.845  &lt; 2e-16 ***</span></span>
-<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a><span class="co">#&gt; land3_sq_500 -0.77677    1.07138  -0.725    0.468    </span></span>
-<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a><span class="co">#&gt; land3_sa_500  0.98629    1.06937   0.922    0.356    </span></span>
-<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
-<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
-<span id="cb7-45"><a href="#cb7-45" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-46"><a href="#cb7-46" tabindex="-1"></a><span class="co">#&gt; (Dispersion parameter for poisson family taken to be 1)</span></span>
-<span id="cb7-47"><a href="#cb7-47" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-48"><a href="#cb7-48" tabindex="-1"></a><span class="co">#&gt;     Null deviance: 224.24  on 99  degrees of freedom</span></span>
-<span id="cb7-49"><a href="#cb7-49" tabindex="-1"></a><span class="co">#&gt; Residual deviance: 137.90  on 95  degrees of freedom</span></span>
-<span id="cb7-50"><a href="#cb7-50" tabindex="-1"></a><span class="co">#&gt; AIC: 344.58</span></span>
-<span id="cb7-51"><a href="#cb7-51" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-52"><a href="#cb7-52" tabindex="-1"></a><span class="co">#&gt; Number of Fisher Scoring iterations: 5</span></span>
-<span id="cb7-53"><a href="#cb7-53" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-54"><a href="#cb7-54" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-55"><a href="#cb7-55" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-56"><a href="#cb7-56" tabindex="-1"></a><span class="co">#&gt; ***** Follow-up recommendation *****</span></span>
-<span id="cb7-57"><a href="#cb7-57" tabindex="-1"></a><span class="co">#&gt; Recommended `max_D`: 1500</span></span>
-<span id="cb7-58"><a href="#cb7-58" tabindex="-1"></a><span class="co">#&gt; Recommended starting `sigma` values:</span></span>
-<span id="cb7-59"><a href="#cb7-59" tabindex="-1"></a><span class="co">#&gt; land2_mean </span></span>
-<span id="cb7-60"><a href="#cb7-60" tabindex="-1"></a><span class="co">#&gt;   417.5643 </span></span>
-<span id="cb7-61"><a href="#cb7-61" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-62"><a href="#cb7-62" tabindex="-1"></a><span class="co">#&gt; Action:</span></span>
-<span id="cb7-63"><a href="#cb7-63" tabindex="-1"></a><span class="co">#&gt; Use the optimized parameters as efficient starting values if refitting.</span></span></code></pre></div>
+<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a><span class="co">#&gt; glm(formula = counts ~ site + land2_mean + land3_sq_500 + land3_sa_500, </span></span>
+<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a><span class="co">#&gt;     family = poisson(), data = data)</span></span>
+<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a><span class="co">#&gt;              Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a><span class="co">#&gt; (Intercept)   0.46270    0.08676   5.333 9.64e-08 ***</span></span>
+<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a><span class="co">#&gt; site          0.07375    0.07911   0.932    0.351    </span></span>
+<span id="cb7-45"><a href="#cb7-45" tabindex="-1"></a><span class="co">#&gt; land2_mean    0.68555    0.07751   8.845  &lt; 2e-16 ***</span></span>
+<span id="cb7-46"><a href="#cb7-46" tabindex="-1"></a><span class="co">#&gt; land3_sq_500 -0.77677    1.07138  -0.725    0.468    </span></span>
+<span id="cb7-47"><a href="#cb7-47" tabindex="-1"></a><span class="co">#&gt; land3_sa_500  0.98629    1.06937   0.922    0.356    </span></span>
+<span id="cb7-48"><a href="#cb7-48" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
+<span id="cb7-49"><a href="#cb7-49" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
+<span id="cb7-50"><a href="#cb7-50" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-51"><a href="#cb7-51" tabindex="-1"></a><span class="co">#&gt; (Dispersion parameter for poisson family taken to be 1)</span></span>
+<span id="cb7-52"><a href="#cb7-52" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-53"><a href="#cb7-53" tabindex="-1"></a><span class="co">#&gt;     Null deviance: 224.24  on 99  degrees of freedom</span></span>
+<span id="cb7-54"><a href="#cb7-54" tabindex="-1"></a><span class="co">#&gt; Residual deviance: 137.90  on 95  degrees of freedom</span></span>
+<span id="cb7-55"><a href="#cb7-55" tabindex="-1"></a><span class="co">#&gt; AIC: 344.58</span></span>
+<span id="cb7-56"><a href="#cb7-56" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-57"><a href="#cb7-57" tabindex="-1"></a><span class="co">#&gt; Number of Fisher Scoring iterations: 5</span></span>
+<span id="cb7-58"><a href="#cb7-58" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-59"><a href="#cb7-59" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-60"><a href="#cb7-60" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-61"><a href="#cb7-61" tabindex="-1"></a><span class="co">#&gt; ***** Follow-up recommendation *****</span></span>
+<span id="cb7-62"><a href="#cb7-62" tabindex="-1"></a><span class="co">#&gt; Recommended `max_D`: 1500</span></span>
+<span id="cb7-63"><a href="#cb7-63" tabindex="-1"></a><span class="co">#&gt; Recommended starting `sigma` values:</span></span>
+<span id="cb7-64"><a href="#cb7-64" tabindex="-1"></a><span class="co">#&gt; land2_mean </span></span>
+<span id="cb7-65"><a href="#cb7-65" tabindex="-1"></a><span class="co">#&gt;   417.5643 </span></span>
+<span id="cb7-66"><a href="#cb7-66" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-67"><a href="#cb7-67" tabindex="-1"></a><span class="co">#&gt; Action:</span></span>
+<span id="cb7-68"><a href="#cb7-68" tabindex="-1"></a><span class="co">#&gt; Use the optimized parameters as efficient starting values if refitting.</span></span></code></pre></div>
 <p><strong>How to read the <code>summary()</code> output:</strong> The
 scale section reports the estimated sigma for <code>land2_mean</code>,
 with its standard error and 95% confidence interval, in map units
-(meters here). Below it is the <em>effective distance</em>, the radius
-that captures a stated proportion (default 90%) of the Gaussian kernel
-weight. That converts sigma into a distance you can interpret on the
-ground. The two fixed-radius surface metrics do not appear in the scale
-section because their radius was specified rather than estimated; they
-enter the model only as ordinary covariates.</p>
+(meters here). Below it is the <em>effective distance</em>, which
+converts sigma into a distance you can interpret on the ground, reported
+two ways: the 1D distance along a line through the point (about 1.65
+sigma for a Gaussian kernel at the default 90%) and the 2D radius of the
+circle that holds 90% of the weight of an ideal, untruncated kernel on a
+plane (about 2.15 sigma). Use the 2D radius to describe the area
+associated with kernel weighting, while checking whether
+<code>max_D</code>, raster edges, or missing cells truncate that area.
+See <code>?kernel_dist</code> for both definitions. The two fixed-radius
+surface metrics do not appear in the scale section because their radius
+was specified rather than estimated; they enter the model only as
+ordinary covariates.</p>
 <p>The model coefficients are on the Poisson log (link) scale, so they
 must be back-transformed to be interpretable. Because every covariate
 was centered and scaled, each coefficient describes the effect of a one

@@ -28,7 +28,8 @@ with \code{max_D}.}
 \item{raster_stack}{One or more raster layers of class \code{SpatRaster}
 (terra). Layer names must match the variable names in the model formula
 used with \code{\link{multiScale_optim}}, unless \code{scale_vars} is
-provided to define derived covariates.}
+provided to define derived covariates. Layer names cannot be \code{"x"},
+which is reserved for internal coordinate data.}
 
 \item{max_D}{Positive numeric. The maximum radius (in the same units as the
 projection of \code{pts} and \code{raster_stack}) around each point to
@@ -154,7 +155,7 @@ values. The result is passed directly to \code{\link{multiScale_optim}}.
 Point locations and raster layers must share a defined CRS and both must be
 projected. All units (including \code{max_D} and any user-supplied
 \code{sigma}) must be in the same linear unit as the projection (typically
-metres or feet).
+meters or feet).
 
 The \code{max_D} buffer should be large enough to encompass the plausible
 range of the true scale of effect. A common rule of thumb is to set
@@ -168,7 +169,11 @@ refine them. Provide explicit starting values only if the default
 
 Row names from \code{pts} are preserved throughout the returned object so
 that downstream model data frames can be joined back to the original point
-order.
+order. Raster extraction is processed in batches of 25 points to limit the
+peak memory used by temporary extraction tables. Point order, returned
+values, and distance calculations are unchanged.
+To assign each observation to a different annual raster while estimating
+one pooled landscape relationship, use \code{\link{kernel_prep_by_group}}.
 }
 \examples{
 library(terra)

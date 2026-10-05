@@ -18,6 +18,7 @@ kernel_scale.raster(
   pct_mx = 0,
   na.rm = TRUE,
   verbose = TRUE,
+  offset_values = NULL,
   ...
 )
 }
@@ -27,7 +28,7 @@ layer(s) to be smoothed. Layer names must match the covariate names used
 during model fitting (or the \code{source} names in \code{scale_vars}).}
 
 \item{sigma}{Numeric vector of kernel scale parameter(s) in the same units
-as the raster projection (e.g., metres). One value per raster layer.
+as the raster projection (e.g., meters). One value per raster layer.
 Ignored when \code{multiScaleR} is provided; sigma values are extracted
 from the fitted object automatically.}
 
@@ -50,10 +51,12 @@ explicitly defined covariates without passing a fitted \code{multiScaleR}
 object. When \code{multiScaleR} is provided, \code{scale_vars} is
 extracted automatically.}
 
-\item{pct_wt}{Numeric between 0 and 1 (exclusive). Cumulative kernel density
-cutoff used to determine the focal window size for smoothing. A larger
-value (e.g., \code{0.99}) captures more of the kernel tail but increases
-computation time. Default: \code{0.975}.}
+\item{pct_wt}{Numeric between 0 and 1 (exclusive). Cumulative kernel weight
+along a line through the focal cell used to determine the smoothing window
+radius. A larger value (e.g., \code{0.99}) includes more of the kernel tail
+but increases computation time. This is the historical one-dimensional
+cutoff, not the proportion of total weight within the planar window.
+Default: \code{0.975}.}
 
 \item{fft}{Logical. If \code{TRUE} (default), smoothing is performed via
 Fast Fourier Transform (FFT) convolution, which is substantially faster
@@ -85,6 +88,13 @@ containing a \code{NA} cell will produce a \code{NA} output.}
 \item{verbose}{Logical. Print layer-level progress messages. Default:
 \code{TRUE}.}
 
+\item{offset_values}{Named numeric vector of values for variables
+inside model offsets, such as \code{c(n_weeks = 4)} for
+\code{offset(log(n_weeks))}. These are raw input values, not transformed
+offsets. When omitted, a log offset uses 1 (zero on the log scale) and
+a direct offset uses 0. Set this argument for a meaningful projection
+scenario.}
+
 \item{...}{Reserved for deprecated arguments. Currently only \code{scale_opt}
 (deprecated alias for \code{multiScaleR}) is handled.}
 }
@@ -96,6 +106,8 @@ Layer names match the covariate names from the model. When a fitted
 predictors (i.e., predictors not derived from raster layers), constant
 ("dummy") raster layers filled with zeros are appended to make the output
 compatible with \code{terra::predict}.
+Offset variables are appended under their input names so transformed offset
+expressions can be evaluated by \code{terra::predict}.
 }
 \description{
 Applies a kernel smoothing function to one or more raster
@@ -119,7 +131,7 @@ preds <- terra::predict(opt_hab_sc, opt$opt_mod, type = "response")
 \strong{FFT vs. focal smoothing}
 
 The FFT convolution (\code{fft = TRUE}) is substantially faster for large
-rasters or wide kernels. It produces minor edge artefacts near raster
+rasters or wide kernels. It produces minor edge artifacts near raster
 boundaries, typically within one kernel-width of the edge. For analyses
 focused on interior areas this is usually negligible. Use
 \code{fft = FALSE} for exact focal smoothing when edge accuracy matters.
@@ -135,6 +147,10 @@ covariates. These dummy layers are required for \code{terra::predict} to
 work but do not represent real spatial variation. Replace them manually for
 non-zero projection scenarios. Categorical predictors are skipped with a
 warning.
+Offset terms use their underlying input variables as layer names. For
+\code{offset(log(n_weeks))}, the default layer is \code{n_weeks = 1},
+representing one week of effort. Set \code{offset_values = c(n_weeks = 4)}
+to predict for four weeks. Direct offsets default to zero.
 }
 \examples{
 ## Not Run

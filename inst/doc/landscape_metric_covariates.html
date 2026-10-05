@@ -524,7 +524,7 @@ values indicate a more fragmented landscape.</td>
 <tr class="even">
 <td><code>te</code></td>
 <td>Total Edge</td>
-<td>Total internal edge length in metres.</td>
+<td>Total internal edge length in meters.</td>
 </tr>
 <tr class="odd">
 <td><code>lsi</code></td>
@@ -817,7 +817,7 @@ included in the same model.</p>
 <span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; Kernel used:</span></span>
 <span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Sigma *****</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect *****</span></span>
 <span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;                Mean      SE     2.5%    97.5%</span></span>
 <span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt; land1_prop 179.1503 39.2233 101.2822 257.0184</span></span>
@@ -826,49 +826,54 @@ included in the same model.</p>
 <span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
 <span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Distance *****</span></span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; 90% Kernel Weight</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; Scale distances (map units) at 90%, two definitions.</span></span>
 <span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt;              Mean   2.5%  97.5%</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; land1_prop 294.68 166.59 422.76</span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; 1D, along a line through the point (`kernel_dist()` default):</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;              Mean   2.5%  97.5%</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt; land1_prop 294.68 166.59 422.76</span></span>
 <span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;  *****     Fitted Model Summary     *****</span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; 2D, radius of the circle for the ideal untruncated kernel (`dimension = &quot;2d&quot;`):</span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt;              Mean   2.5%  97.5%</span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt; land1_prop 384.45 217.35 551.55</span></span>
 <span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
-<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt; glm(formula = counts ~ site + land1_prop + land1_ed_500 + landcover_shdi_500, </span></span>
-<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="co">#&gt;     family = poisson(), data = data)</span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="co">#&gt;  *****     Fitted Model Summary     *****</span></span>
 <span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
-<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="co">#&gt;                    Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
-<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a><span class="co">#&gt; (Intercept)         0.58563    0.07789   7.519 5.53e-14 ***</span></span>
-<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a><span class="co">#&gt; site                0.19109    0.07762   2.462 0.013817 *  </span></span>
-<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a><span class="co">#&gt; land1_prop         -0.33519    0.08770  -3.822 0.000132 ***</span></span>
-<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="co">#&gt; land1_ed_500       -0.11827    0.07755  -1.525 0.127223    </span></span>
-<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="co">#&gt; landcover_shdi_500 -0.14202    0.06091  -2.332 0.019723 *  </span></span>
-<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
-<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
-<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a><span class="co">#&gt; (Dispersion parameter for poisson family taken to be 1)</span></span>
-<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a><span class="co">#&gt;     Null deviance: 224.24  on 99  degrees of freedom</span></span>
-<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a><span class="co">#&gt; Residual deviance: 180.00  on 95  degrees of freedom</span></span>
-<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a><span class="co">#&gt; AIC: 386.67</span></span>
-<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a><span class="co">#&gt; Number of Fisher Scoring iterations: 5</span></span>
-<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a><span class="co">#&gt; ***** Follow-up recommendation *****</span></span>
-<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a><span class="co">#&gt; Recommended `max_D`: 1200</span></span>
-<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a><span class="co">#&gt; Recommended starting `sigma` values:</span></span>
-<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a><span class="co">#&gt; land1_prop </span></span>
-<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a><span class="co">#&gt;   179.1503 </span></span>
-<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a><span class="co">#&gt; Action:</span></span>
-<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a><span class="co">#&gt; Use the optimized parameters as efficient starting values if refitting.</span></span></code></pre></div>
+<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a><span class="co">#&gt; glm(formula = counts ~ site + land1_prop + land1_ed_500 + landcover_shdi_500, </span></span>
+<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a><span class="co">#&gt;     family = poisson(), data = data)</span></span>
+<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="co">#&gt;                    Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="co">#&gt; (Intercept)         0.58563    0.07789   7.519 5.53e-14 ***</span></span>
+<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a><span class="co">#&gt; site                0.19109    0.07762   2.462 0.013817 *  </span></span>
+<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a><span class="co">#&gt; land1_prop         -0.33519    0.08770  -3.822 0.000132 ***</span></span>
+<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a><span class="co">#&gt; land1_ed_500       -0.11827    0.07755  -1.525 0.127223    </span></span>
+<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a><span class="co">#&gt; landcover_shdi_500 -0.14202    0.06091  -2.332 0.019723 *  </span></span>
+<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
+<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
+<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a><span class="co">#&gt; (Dispersion parameter for poisson family taken to be 1)</span></span>
+<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a><span class="co">#&gt;     Null deviance: 224.24  on 99  degrees of freedom</span></span>
+<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a><span class="co">#&gt; Residual deviance: 180.00  on 95  degrees of freedom</span></span>
+<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a><span class="co">#&gt; AIC: 386.67</span></span>
+<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a><span class="co">#&gt; Number of Fisher Scoring iterations: 5</span></span>
+<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a><span class="co">#&gt; ***** Follow-up recommendation *****</span></span>
+<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a><span class="co">#&gt; Recommended `max_D`: 1200</span></span>
+<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a><span class="co">#&gt; Recommended starting `sigma` values:</span></span>
+<span id="cb9-64"><a href="#cb9-64" tabindex="-1"></a><span class="co">#&gt; land1_prop </span></span>
+<span id="cb9-65"><a href="#cb9-65" tabindex="-1"></a><span class="co">#&gt;   179.1503 </span></span>
+<span id="cb9-66"><a href="#cb9-66" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-67"><a href="#cb9-67" tabindex="-1"></a><span class="co">#&gt; Action:</span></span>
+<span id="cb9-68"><a href="#cb9-68" tabindex="-1"></a><span class="co">#&gt; Use the optimized parameters as efficient starting values if refitting.</span></span></code></pre></div>
 <hr />
 </div>
 <div id="project-derived-covariates-to-rasters" class="section level1" number="7">
