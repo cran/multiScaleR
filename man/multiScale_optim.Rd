@@ -2,14 +2,14 @@
 % Please edit documentation in R/multiScale_optim.R
 \name{multiScale_optim}
 \alias{multiScale_optim}
-\title{Multiscale optimization}
+\title{Estimate scales of effect by maximum likelihood}
 \usage{
 multiScale_optim(
   fitted_mod,
   kernel_inputs,
   join_by = NULL,
   par = NULL,
-  start_strategy = c("single", "screen"),
+  start_strategy = NULL,
   screen_n_sigma = 5,
   screen_n_jitter = 6,
   screen_maxit = 8,
@@ -17,242 +17,328 @@ multiScale_optim(
   n_cores = NULL,
   PSOCK = FALSE,
   verbose = TRUE,
-  refit_fn = NULL
+  refit_fn = NULL,
+  backend = c("refit", "profile_glm", "joint_nb2", "joint_mixed", "conditional_logit"),
+  profile_control = list(),
+  covariate_transform = c("candidate", "raw"),
+  radius_grid = NULL
 )
 }
 \arguments{
 \item{fitted_mod}{A fitted model object whose covariates include the
-kernel-weighted variables defined in \code{kernel_inputs}. Supported
-classes include \code{lm}, \code{glm}, \code{gls} (nlme), and
-\code{unmarkedFit} (unmarked). Many other model classes are also supported
-via \code{stats::update()} or a custom \code{refit_fn}. A predictor cannot
-be named \code{"x"}, which is reserved for internal coordinate data.}
+kernel-weighted variables defined in \code{kernel_inputs}. Supported classes
+include \code{lm}, \code{glm}, \code{gls} (nlme), and \code{unmarkedFit} (unmarked). Many
+other model classes also work through \code{stats::update()} or a custom
+\code{refit_fn}. A predictor cannot be named \code{"x"}, which is reserved for
+internal coordinate data.}
 
 \item{kernel_inputs}{A list of class \code{"multiScaleR_data"} created by
-\code{\link{kernel_prep}}. Must contain elements \code{raw_cov},
-\code{d_list}, \code{min_D}, \code{max_D}, \code{unit_conv}, and
-\code{kernel}.}
+\code{\link[=kernel_prep]{kernel_prep()}}. It must contain the elements \code{raw_cov}, \code{d_list}, \code{min_D},
+\code{max_D}, \code{unit_conv}, and \code{kernel}. See \link[=multiScaleR_data-class]{multiScaleR_data}.}
 
-\item{join_by}{Default: \code{NULL}. For \code{unmarked} models, a data
-frame with one unique key row per spatial site in \code{kernel_inputs},
-in the same order as those sites. Its named key columns must also occur in
-the fitted model's \code{siteCovs}. Use it when model rows repeat sites,
-such as one row per site and year. See Details.}
+\item{join_by}{Default: \code{NULL}. For \code{unmarked} models whose rows repeat
+sites (for example one row per site and year), a data frame with one
+unique key row per spatial site in \code{kernel_inputs}, in the same order as
+those sites. Its named key columns must also occur in the fitted model's
+\code{siteCovs}. See "Fit unmarked models with repeated sites" below.}
 
-\item{par}{Optional numeric vector of starting values for the optimizer.
-Values must be divided by \code{max_D} to match the internal scaled
-parameter space. Length must equal the number of optimized covariates
-(or twice that for \code{kernel = "expow"}, where shape parameters follow
-sigma parameters). Default: \code{NULL}; starting values are chosen
-automatically.}
+\item{par}{Optional numeric vector of starting values. Default: \code{NULL},
+which chooses starts automatically (see \code{start_strategy}). For the refit
+backend, divide each starting sigma by \code{max_D} to match the internal scaled
+parameter space. For the analytic backends, give scales in internal
+distance units (map distance divided by \code{unit_conv}), as for the rows of
+\code{profile_control$starts}. The length must equal the number of optimized
+covariates, or twice that for \code{kernel = "expow"}, where the shape values
+follow the sigma values. The \code{"expow"} layout keeps one shape position per
+optimized covariate, including hard radii, which ignore it; give a finite
+positive placeholder there.}
 
 \item{start_strategy}{Character. How to choose starting values when
-\code{par = NULL}: \code{"single"} (default) uses one shared default
-start, while \code{"screen"} performs a low-cost prescreen of sigma
-values and short screening optimizations before launching one full
-optimization.}
+\code{par = NULL}. \code{"single"} uses one shared default start. \code{"screen"} runs a
+cheap prescreen of sigma values and a few short searches before the one
+full search (see "Choose starting values" below). The default, \code{NULL},
+uses \code{"screen"} when \code{kernel_inputs} was prepared with \code{kernel = "fixed"}
+and the backend is \code{"refit"} without a \code{radius_grid}, and \code{"single"}
+otherwise. Under a fixed kernel every optimized scale is a hard radius,
+and a gradient search cannot leave a single start on that stepped
+likelihood. A refit search that returns its starting values gives a
+warning and records \code{start_stall} in \code{\link[=diagnostics]{diagnostics()}}.}
 
 \item{screen_n_sigma}{Positive integer. Number of log-spaced sigma values
 evaluated per covariate during the prescreen when
 \code{start_strategy = "screen"}. Default: \code{5}.}
 
 \item{screen_n_jitter}{Non-negative integer. Number of jittered candidate
-starts evaluated with short screening optimizations after the marginal
-prescreen. Default: \code{6}. Set to \code{0} to skip the short jittered
-runs.}
+starts tried with short searches after the prescreen. Default: \code{6}. Set
+to \code{0} to skip the short jittered runs.}
 
-\item{screen_maxit}{Positive integer. Maximum iterations used for each short
-screening optimization. Default: \code{8}.}
+\item{screen_maxit}{Positive integer. Maximum iterations for each short
+screening search. Default: \code{8}.}
 
 \item{screen_jitter_sd}{Non-negative numeric scalar. Standard deviation of
-multiplicative sigma jitter on the log scale during screening. Default:
-\code{0.5}.}
+the multiplicative sigma jitter, on the log scale, used during screening.
+Default: \code{0.5}.}
 
-\item{n_cores}{Positive integer. Number of cores for parallel optimization
-via \code{optimParallel}. Default: \code{NULL} (single-threaded). When
-\code{start_strategy = "screen"}, the same \code{n_cores} setting is also
-used for short screening attempts before the full optimization.
-Parallel optimization is beneficial for models with many covariates or
-slow log-likelihood evaluations. When \code{n_cores > 1},
-\code{multiScale_optim()} checks \code{\link{estimate_multiscale_ram}} and
-warns if the requested workers exceed the conservative RAM budget for the
-current \code{kernel_inputs} payload.}
+\item{n_cores}{Positive integer. Number of cores for a parallel search
+through \code{optimParallel}. Default: \code{NULL} (serial). With
+\code{start_strategy = "screen"}, the short screening searches also use these
+cores. Parallel searches help most with many covariates or slow model
+fits. When \code{n_cores > 1}, \code{multiScale_optim()} checks
+\code{\link[=estimate_multiscale_ram]{estimate_multiscale_ram()}} and stops before screening or creating
+workers if the requested workers exceed its conservative RAM-based limit.
+Use \code{n_cores = 1} for a serial search, or rebuild the inputs with
+\code{kernel_prep(..., bin = TRUE, store_cell_data = FALSE)} (lean mode) when
+every covariate is kernel-weighted. Landscape and surface metrics cannot
+use lean mode. An unavailable RAM estimate does not block the run, a
+passing estimate does not guarantee enough memory, and the worker count is
+never reduced automatically.}
 
 \item{PSOCK}{Logical. On Windows, a PSOCK cluster is always used. On Unix,
-a FORK cluster is used by default (faster). Set \code{TRUE} to force a
-PSOCK cluster on Unix. Default: \code{FALSE}.}
+a FORK cluster is used by default because it is faster. Set \code{TRUE} to
+force a PSOCK cluster on Unix. Default: \code{FALSE}.}
 
-\item{verbose}{Logical. Print optimization status and warnings to the
-console. Default: \code{TRUE}.}
+\item{verbose}{Logical. Print the search status and diagnostic messages to
+the console. Default: \code{TRUE}.}
 
-\item{refit_fn}{Optional function for refitting \code{fitted_mod} during
-optimization. When \code{NULL} (default), \code{stats::update()} (or the
-unmarked equivalent) is used. Provide this only when the default refit
-path is insufficient. See Details.}
+\item{refit_fn}{Optional function for refitting \code{fitted_mod} during the
+search. When \code{NULL} (default), \code{stats::update()} (or the \code{unmarked}
+equivalent) is used. Supply one only when the default refit is not enough;
+see "Supply a custom refit function" below.}
+
+\item{backend}{Character. The fitting method. \code{"refit"} (default) refits
+\code{fitted_mod} at each candidate scale and works with any model class that
+can be refit. \code{"profile_glm"} (Gaussian, Poisson, binomial, and NB2 GLMs),
+\code{"joint_nb2"} (NB2 models, including the exact Poisson boundary),
+\code{"joint_mixed"} (Poisson and NB2 \code{glmmTMB} models with one random
+intercept), and \code{"conditional_logit"} (step-selection models) estimate
+the scales and the model parameters in one likelihood. Fit a Gaussian
+model with \code{glm(family = gaussian())} for the analytic backends, because
+\code{lm()} fits are rejected. \link{multiScaleR-fitting-methods} gives each
+backend's requirements and the uncertainty it reports.}
+
+\item{profile_control}{Named list of settings for the analytic backends,
+such as the number of starts (\code{n_starts}, default 6), a matrix of explicit
+\code{starts}, iteration limits, NB2 theta bounds, and a PSOCK \code{worker_pool}
+for \code{"joint_nb2"}. Default: \code{list()}, which uses every default. The refit
+backend accepts no entries. The "Control settings" section of
+\link{multiScaleR-fitting-methods} lists every entry, the backends that accept
+it, and its default.}
+
+\item{covariate_transform}{Character. How optimized covariates enter the
+model. \code{"candidate"} (default) centers and scales the kernel or metric
+values at each candidate scale, so a coefficient describes a change of one
+standard deviation. \code{"raw"} keeps the values in their own units (for a
+binary layer, the kernel-weighted proportion) and records centers of zero
+and scales of one for prediction. Fit the starting model in those raw
+units, including any fixed spline knots. \code{"raw"} requires
+\code{backend = "refit"}. See \link{multiScaleR-fitting-methods}.}
+
+\item{radius_grid}{Experimental, so its behavior may change in a later
+release without a deprecation period. With \code{backend = "refit"}, an
+optional named list of candidate radius vectors, one for each optimized
+hard-radius predictor. For a single hard radius, supply the vector
+directly or name it in a list. Each vector needs at least two distinct
+radii in map units, between \code{kernel_inputs$min_D} and
+\code{kernel_inputs$max_D}. The fit evaluates every combination and
+reoptimizes any smooth kernel bandwidths and shapes at each one. The
+default \code{NULL} uses the backend's usual search. See "Profile hard radii
+over a grid" in \link{multiScaleR-fitting-methods}.}
 }
 \value{
-A list of class \code{"multiScaleR"} containing:
-\describe{
-  \item{\code{scale_est}}{Data frame with one row per optimized covariate and
-    two columns: \code{Mean} (optimized sigma on the original projection
-    scale) and \code{SE} (Hessian-based standard error). \code{SE} is
-    \code{NA} for hard-radius landscape and unweighted surface metrics,
-    whose likelihood changes in steps. Row names are covariate names.}
-  \item{\code{shape_est}}{Data frame of the same structure as
-    \code{scale_est} for the shape parameter, or \code{NULL} when
-    \code{kernel != "expow"}.}
-  \item{\code{optim_results}}{The raw list returned by \code{stats::optim}
-    or \code{optimParallel::optimParallel}, including \code{par},
-    \code{value} (negative log-likelihood), \code{hessian}, and convergence
-    codes. Also contains \code{par_unscale} (sigma values back on the
-    projection scale) and \code{hessian_unscale}.}
-  \item{\code{opt_mod}}{The refitted model at the optimized sigma values.
-    This is the model object to use for inference, prediction, and
-    \code{\link{plot_marginal_effects}}.}
-  \item{\code{fitted_mod_original}}{The original \code{fitted_mod} passed
-    by the user, stored for reference.}
-  \item{\code{min_D}}{Numeric. Lower bound for sigma during optimization.}
-  \item{\code{max_D}}{Numeric. Upper bound for sigma during optimization.}
-  \item{\code{kernel_inputs}}{The \code{kernel_inputs} list (minus
-    \code{min_D} and \code{max_D}, which are stored separately).}
-  \item{\code{scl_params}}{Named list with \code{mean} and \code{sd} vectors
-    for each covariate: the centering and scaling parameters from the
-    optimized kernel data. Used by \code{\link{kernel_scale.raster}} when
-    \code{scale_center = TRUE}.}
-  \item{\code{join_by}}{The \code{join_by} data frame, or \code{NULL}.}
-  \item{\code{opt_context}}{Internal optimization context object storing the
-    model-class-specific refit logic. Retained for use by
-    \code{\link{profile_sigma}}.}
-  \item{\code{profile_scale_est}}{Profile-likelihood CI data frame, or
-    \code{NULL} until \code{\link{profile_sigma}} has been run.}
-  \item{\code{diagnostics}}{List of diagnostic objects; see
-    \code{\link{diagnostics}}.}
-  \item{\code{next_run}}{List of recommended values for a follow-up fit.
-    Includes \code{max_D} for the next \code{\link{kernel_prep}} call,
-    optimized \code{start_sigma} values in map units, optional
-    \code{start_shape} values for \code{kernel = "expow"}, and
-    \code{start_par} on the internal scaled parameter space expected by
-    \code{multiScale_optim}. \code{n_cores} is \code{NULL}; a conservative
-    parallel worker-count suggestion is available on demand from
-    \code{\link{estimate_multiscale_ram}} (it is no longer computed
-    automatically, as that query can be slow and shells out to an external
-    process).}
-  \item{\code{warn_message}}{Integer vector of triggered warning codes:
-    1 = max-distance, 2 = sigma precision, 3 = shape precision.}
-  \item{\code{call}}{The matched call.}
+An object of class \code{"multiScaleR"}, a list. The elements you will
+use most are:
+\itemize{
+\item \code{scale_est}: the estimated sigma of each optimized covariate (\code{Mean})
+and its standard error (\code{SE}), in map units;
+\item \code{shape_est}: the same for the shape parameter under \code{kernel = "expow"},
+otherwise \code{NULL};
+\item \code{opt_mod}: your model refit at the estimated scales, to use for
+coefficients, prediction, and effect plots;
+\item \code{diagnostics}: search and uncertainty diagnostics, read with
+\code{\link[=diagnostics]{diagnostics()}};
+\item \code{next_run}: suggested \code{max_D} and starting values for a follow-up fit.
 }
+
+\link[=multiScaleR-class]{multiScaleR} describes every element, including those added by the
+analytic backends, and lists the methods that read the object.
 }
 \description{
-Identifies the kernel scale of effect (sigma) for each raster
-covariate by maximizing the log-likelihood of a fitted statistical model.
-Repeatedly replaces kernel-weighted covariate values at different scales and
-refits the model, using \code{optim} (or \code{optimParallel} for parallel
-execution) with the L-BFGS-B algorithm.
+Estimates the scale of effect (sigma) of each kernel-weighted
+covariate in a fitted model by maximizing the model's log-likelihood. The
+\emph{scale of effect} is the distance over which a landscape variable influences
+the response. By default, \code{multiScale_optim()} recomputes the kernel-weighted
+covariates at each candidate scale, refits your model, and searches with the
+L-BFGS-B algorithm through \code{\link[stats:optim]{stats::optim()}} (or
+\code{\link[optimParallel:optimParallel]{optimParallel::optimParallel()}} for parallel searches). Other backends
+estimate the scales and the model parameters in one likelihood; see
+\link{multiScaleR-fitting-methods}.
 }
-\details{
-\strong{Optimization approach}
+\section{How the search works}{
+A \emph{kernel} is a distance-weighting function that converts a raster layer
+into one covariate value per survey point. Its scale, sigma, sets how fast
+the weights decline with distance (see \link{multiScaleR-kernels}). The default
+refit backend proposes sigma values (and shape values for \code{"expow"}),
+recomputes the kernel-weighted covariates, refits \code{fitted_mod}, and keeps
+the values that maximize the log-likelihood. Standard errors come from the
+Hessian of this outer search. Hard-radius covariates have no Hessian
+standard error because their likelihood changes in steps. Profile
+likelihood intervals are available with \code{summary(fit, profile = TRUE)} or
+\code{\link[=profile_sigma]{profile_sigma()}}. \link{multiScaleR-fitting-methods} gives the rules for each
+backend.
+}
 
-The optimizer uses the L-BFGS-B algorithm (bounded quasi-Newton) to
-maximize the log-likelihood over sigma (and shape for \code{"expow"}) while
-holding all regression coefficients at their fitted values for each candidate
-scale. Standard errors are Hessian-based approximations from the outer
-optimization. Summary methods report profile-likelihood confidence intervals
-for sigma when \code{\link{profile_sigma}} has been run on the object;
-otherwise they fall back to Hessian-based intervals.
-Candidate scales that make a covariate undefined at a modeled observation
-are rejected, so the optimizer compares likelihoods for the same sample.
-The final \code{sample_size} diagnostic reports prepared and fitted row
-counts; for repeated-site \code{unmarked} data it also reports the number
-of distinct prepared spatial sites. For hard-radius landscape and
-unweighted surface metrics, Hessian uncertainty is not meaningful; use
-\code{summary(x, profile = TRUE)} for profile-likelihood intervals.
+\section{Read the warnings}{
+\code{multiScale_optim()} prints a warning, and records a code in
+\code{warn_message}, in three situations:
+\itemize{
+\item \strong{The scale approaches \code{max_D}.} The estimate is near or beyond the
+search extent, so the true scale may be larger. Rebuild the inputs with
+\code{\link[=kernel_prep]{kernel_prep()}} using at least the suggested \code{max_D}, which is also stored
+in \code{fit$next_run$max_D}, and refit.
+\item \strong{A sigma standard error is at least half its estimate.} The scale is
+poorly determined. Assess whether the covariate is meaningful in your
+analysis and interpret it with caution.
+\item \strong{A shape standard error is at least half its estimate.} Assess whether
+the exponential power kernel suits your data.
+}
 
-\strong{Binned acceleration}
+A search that never leaves its starting values also warns and records
+\code{start_stall} in \code{\link[=diagnostics]{diagnostics()}}. Supply different starts with \code{par}, or use
+\code{start_strategy = "screen"}.
+}
 
-When \code{kernel_inputs} was created by \code{\link{kernel_prep}} with
-\code{bin = TRUE} (the default), kernel-weighted covariates are evaluated
-from precomputed distance-binned summaries rather than by iterating every
-buffer cell on each optimizer evaluation. This makes the per-evaluation cost
-independent of \code{max_D} and typically speeds up optimization by an order
-of magnitude or more for large buffers, with a negligible binning
-approximation. Inputs created with \code{store_cell_data = FALSE} ("lean"
-mode) carry only the binned summaries; these still optimize, profile, and
-refit normally. Landscape-metric covariates always use the exact per-cell
-path and therefore require cell-level data.
+\section{Choose starting values}{
+With \code{start_strategy = "screen"} and \code{par = NULL}, \code{multiScale_optim()}
+first scouts the sigma range with one-dimensional, log-spaced scans of each
+covariate. It then tests a few jittered starts with short searches that skip
+the Hessian. The marginal scans are serial, but the short searches use
+\code{n_cores} when you request a parallel search. Screening only chooses one
+starting vector for the single full search. On Windows those parallel
+screening searches use PSOCK workers, so the serialization advice under
+"Speed up the search" applies to them too. Call \code{set.seed()} before
+\code{multiScale_optim()} for reproducible screened starts.
 
-\strong{Parallel optimization}
+To continue from an earlier fit, rebuild the inputs with \code{fit$next_run$max_D}
+and pass \code{fit$next_run$start_par} as \code{par}. Those starts are scaled to that
+\code{max_D}.
+}
 
-To ensure that fitted model function calls are properly serialized for
-parallel workers, fit models using fully namespace-qualified functions. For
-example, fit a negative binomial model as
-\code{fitted_mod <- MASS::glm.nb(y ~ x, data = df)} rather than loading the
-namespace implicitly.
+\section{Speed up the search}{
+When \code{\link[=kernel_prep]{kernel_prep()}} was run with \code{bin = TRUE} (the default),
+kernel-weighted covariates are computed from precomputed distance-binned
+summaries instead of every buffer cell at each evaluation. The cost of an
+evaluation then no longer depends on \code{max_D}, which usually speeds the
+search by an order of magnitude or more for large buffers, with a
+negligible binning approximation. Inputs created with
+\code{store_cell_data = FALSE} (lean mode) carry only the binned summaries; they
+still optimize, profile, and refit normally. Landscape-metric covariates
+always use the exact per-cell path and so need the cell-level data.
 
-\strong{Joining unmarked multi-year data}
+For a parallel search, fit the starting model with fully
+namespace-qualified functions so that its call serializes cleanly to the
+workers. For example, fit a negative binomial model as
+\code{fitted_mod <- MASS::glm.nb(y ~ x, data = df)} rather than relying on an
+attached package.
+}
 
-When \code{unmarked} model rows repeat spatial sites, provide a
-\code{join_by} data frame with one row per prepared site. For example, if
-the spatial sites have IDs \code{c("A", "B")} and model rows have site IDs
-\code{c("A", "B", "A", "B")} for two years, use
-\code{join_by = data.frame(site = c("A", "B"))} and include the four-row
-\code{site} column in the model's \code{siteCovs}. Multiple key columns
-are allowed. Prepared keys must be unique and every model row must match.
-The model's response and site-covariate row order is preserved. Without
-\code{join_by}, the number and order of model rows must equal the prepared
-spatial sites. When both objects retain the same row IDs, their order is
-checked. Otherwise, the order must be supplied correctly by the caller.
-Optimized covariates must be static \code{siteCovs};
-\code{obsCovs} and \code{yearlySiteCovs} cannot be optimized through this
-site-level workflow.
+\section{Fit unmarked models with repeated sites}{
+When the rows of an \code{unmarked} model repeat spatial sites, for example a
+stacked layout with one row per site and year, the preparation object
+still has one row per unique site. Add a site ID to the model's \code{siteCovs}
+and pass one matching ID per prepared site through \code{join_by}. For spatial
+sites \code{c("A", "B")} and model rows \code{c("A", "B", "A", "B")} for two years,
+use \code{join_by = data.frame(site = c("A", "B"))} and include the four-row
+\code{site} column in \code{siteCovs}. Multiple key columns are allowed. Prepared keys
+must be unique, every model row must match one, and the IDs in the model
+may repeat in any order. The model's response and site-covariate row order
+is preserved.
 
-\strong{Custom refit functions}
+The layout looks like this, where \code{counts_by_year} is a list of count
+matrices, each with one row per site (in the order of
+\code{kernel_inputs$kernel_dat}) and one column per visit:
 
-By default, \code{multiScale_optim()} refits the model using
-\code{stats::update()} (standard models) or the \code{unmarked} equivalent.
-When the default path is insufficient, supply \code{refit_fn}. The function
-must accept arguments \code{model}, \code{data}, and \code{context}, and
-return a fitted model whose log-likelihood can be extracted by
-\code{stats::logLik()} or \code{insight::get_loglikelihood()}.
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{site_id <- seq_len(nrow(kernel_inputs$kernel_dat))
+y_stacked <- do.call(rbind, counts_by_year)
+site_row <- rep(site_id, times = length(counts_by_year))
+site_covs <- kernel_inputs$kernel_dat[site_row, , drop = FALSE]
+site_covs$site_id <- site_id[site_row]
+site_covs$Year <- factor(rep(seq_along(counts_by_year),
+                             each = length(site_id)))
+umf <- unmarked::unmarkedFramePCount(y = y_stacked, siteCovs = site_covs)
+mod <- unmarked::pcount(~Year ~ Year + hab, data = umf, K = 100)
+fit <- multiScale_optim(mod, kernel_inputs,
+                        join_by = data.frame(site_id = site_id))
+}\if{html}{\out{</div>}}
 
-A minimal custom refit function:
-\preformatted{
-refit_fn <- function(model, data, context) \{
+Check that the rows of \code{y_stacked} and \code{site_covs} refer to the same
+site-year records before fitting. Without \code{join_by}, model rows must match
+the prepared sites one for one, in the same order. When both objects keep
+the same row IDs their order is checked; otherwise you are responsible for
+it. An open-population \code{unmarked::pcountOpen()} model instead stores one
+row per site with the years across count columns, so it uses the same
+static site covariates without \code{join_by}. Optimized covariates must be
+static \code{siteCovs}; \code{obsCovs} and \code{yearlySiteCovs} cannot be optimized
+through this site-level workflow. Sparse counts can leave scales weakly
+identified, so examine the scale profile and \code{\link[=diagnostics]{diagnostics()}}.
+}
+
+\section{Supply a custom refit function}{
+By default, \code{multiScale_optim()} refits the model with \code{stats::update()}
+(standard models) or the \code{unmarked} equivalent. When that is not enough,
+supply \code{refit_fn}. The function must accept the arguments \code{model}, \code{data},
+and \code{context}, and return a fitted model whose log-likelihood
+\code{stats::logLik()} or \code{insight::get_loglikelihood()} can extract. A minimal
+refit function:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{refit_fn <- function(model, data, context) \{
   stats::update(model, data = data)
 \}
-}
+}\if{html}{\out{</div>}}
 
-For models requiring explicit call reconstruction:
-\preformatted{
-refit_fn <- function(model, data, context) \{
+For models that need their call rebuilt explicitly:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{refit_fn <- function(model, data, context) \{
   call <- model$call
   call$data <- quote(data)
   eval(call, envir = list(data = data), enclos = parent.frame())
 \}
-}
+}\if{html}{\out{</div>}}
 
 With PSOCK clusters, \code{refit_fn} must serialize cleanly. Prefer
-namespace-qualified calls (e.g., \code{stats::update()}) and avoid
-closures over large local objects.
+namespace-qualified calls such as \code{stats::update()} and avoid closures over
+large local objects.
 
-\strong{Wrapper model objects}
+The function receives \code{context$return_model = FALSE} for scalar objective
+evaluations and \code{TRUE} when a fitted model is wanted, including the final
+refit at the selected scales. For supported \code{unmarked} models, you can skip
+the intermediate Hessian calculations while keeping the original model's
+uncertainty settings whenever a fitted model is returned:
 
-Some packages return wrapper objects around another fitted model (e.g.,
-\code{amt::fit_clogit()} wraps a \code{survival::clogit()} fit in its
-\code{model} component). When possible, \code{multiScale_optim()} unwraps
-these automatically. For \code{amt::fit_clogit()}, pass \code{model = TRUE}
-when fitting so the nested \code{clogit} model retains its model frame.
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{refit_unmarked <- function(model, data, context) \{
+  if (identical(context$return_model, FALSE))
+    unmarked::update(model, data = data, se = FALSE)
+  else
+    unmarked::update(model, data = data)
+\}
+}\if{html}{\out{</div>}}
 
-When `start_strategy = "screen"` and `par` is left as `NULL`,
-`multiScale_optim()` first scouts the sigma space with one-dimensional
-log-spaced scans, then optionally tests a few jittered starts using short,
-Hessian-free optimizations. The marginal sigma scans are serial, but the
-short screening attempts use `n_cores` when parallel optimization is
-requested. These screening steps are used only to choose one starting vector
-for the single full optimization. On Windows, those parallel screening
-attempts use PSOCK workers, so the same PSOCK serialization guidance applies
-as in the full optimization. For reproducible screened starts, call
-`set.seed()` before `multiScale_optim()`.
+This changes neither the coefficient starts nor the model's likelihood. It
+does not add uncertainty for the kernel scales or override an original
+\code{se = FALSE} setting. Verify this behavior for your model class before you
+rely on a custom refit function.
 }
+
+\section{Fit wrapper model objects}{
+Some packages return a wrapper around another fitted model. For example,
+\code{amt::fit_clogit()} wraps a \code{survival::clogit()} fit in its \code{model}
+component. \code{multiScale_optim()} unwraps these automatically when it can.
+For \code{amt::fit_clogit()}, pass \code{model = TRUE} when fitting so the nested
+\code{clogit} model keeps its model frame. For complete choice sets with learned
+predictors such as \code{base::scale()}, use \code{na.action = stats::na.fail} to keep
+the fitted transformation attributes, because some \code{survival} versions drop
+them when applying omission, even with complete data.
+}
+
 \examples{
 \donttest{
 set.seed(555)
@@ -340,8 +426,35 @@ refit_glm <- function(model, data, context) {
 opt_custom <- multiScale_optim(fitted_mod = mod,
                                kernel_inputs = kernel_inputs,
                                refit_fn = refit_glm)
+
+## Opt-in NB2 fit: theta and kernel scales are estimated together.
+if (requireNamespace("MASS", quietly = TRUE)) {
+  ki_nb <- kernel_prep(pts = pts, raster_stack = hab, max_D = 250,
+                       kernel = "gaussian", bin = TRUE)
+  nb_data <- data.frame(ki_nb$kernel_dat)
+  nb_data$y <- rnbinom(nrow(nb_data),
+                      mu = exp(0.5 + 0.8 * nb_data$hab), size = 2)
+  nb_initial <- glm(y ~ hab, data = nb_data,
+                     family = MASS::negative.binomial(2))
+  nb_fit <- multiScale_optim(nb_initial, ki_nb, backend = "profile_glm",
+                             n_cores = 1,
+                             profile_control = list(n_starts = 6))
+  diagnostics(nb_fit)$profile_glm
+  predict(nb_fit)  # Expected counts for the retained fitting rows.
+  if (nb_fit$uncertainty$available) {
+    predict(nb_fit, interval = "confidence")
+    vcov(nb_fit)  # Includes kernel/coefficient/dispersion covariance.
+  }
+}
 }
 }
 \seealso{
-\code{\link[multiScaleR]{kernel_dist}}
+\link{multiScaleR-fitting-methods} for the backends,
+\link[=multiScaleR-class]{multiScaleR} for the returned object, \code{\link[=kernel_prep]{kernel_prep()}} to prepare
+the inputs, \code{\link[=profile_sigma]{profile_sigma()}} for profile-likelihood intervals,
+\code{\link[=kernel_scale.raster]{kernel_scale.raster()}} to map the fitted covariates, \code{\link[=kernel_dist]{kernel_dist()}} for
+effective distances, and
+\code{vignette("v01-quickstart", package = "multiScaleR")} and
+\code{vignette("v02-user-guide", package = "multiScaleR")} for worked
+examples.
 }

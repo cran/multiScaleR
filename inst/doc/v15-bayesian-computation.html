@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>15. Choose and Check a Bayesian Computation Method</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">15. Choose and Check a Bayesian Computation
+Method</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#compare-the-methods" id="toc-compare-the-methods"><span class="toc-section-number">2</span> Compare the methods</a></li>
+<li><a href="#check-the-software-and-the-model" id="toc-check-the-software-and-the-model"><span class="toc-section-number">3</span> Check the software and the
+model</a></li>
+<li><a href="#run-a-short-pilot" id="toc-run-a-short-pilot"><span class="toc-section-number">4</span> Run a short pilot</a></li>
+<li><a href="#extend-the-run-or-change-the-sampler" id="toc-extend-the-run-or-change-the-sampler"><span class="toc-section-number">5</span> Extend the run or change the
+sampler</a></li>
+<li><a href="#use-chains-and-cores" id="toc-use-chains-and-cores"><span class="toc-section-number">6</span> Use chains and cores</a></li>
+<li><a href="#use-an-approximation-when-sampling-is-too-slow" id="toc-use-an-approximation-when-sampling-is-too-slow"><span class="toc-section-number">7</span> Use an approximation when sampling
+is too slow</a>
+<ul>
+<li><a href="#fit-the-approximations" id="toc-fit-the-approximations"><span class="toc-section-number">7.1</span> Fit the approximations</a></li>
+<li><a href="#compare-them-with-the-samplers" id="toc-compare-them-with-the-samplers"><span class="toc-section-number">7.2</span> Compare them with the
+samplers</a></li>
+<li><a href="#check-one-probability-from-an-uncorrected-approximation" id="toc-check-one-probability-from-an-uncorrected-approximation"><span class="toc-section-number">7.3</span> Check one probability from an
+uncorrected approximation</a></li>
+</ul></li>
+<li><a href="#check-the-precision-of-the-numbers-you-report" id="toc-check-the-precision-of-the-numbers-you-report"><span class="toc-section-number">8</span> Check the precision of the numbers
+you report</a></li>
+<li><a href="#plan-for-run-time-and-memory" id="toc-plan-for-run-time-and-memory"><span class="toc-section-number">9</span> Plan for run time and
+memory</a></li>
+<li><a href="#what-to-do-when-a-fit-struggles" id="toc-what-to-do-when-a-fit-struggles"><span class="toc-section-number">10</span> What to do when a fit
+struggles</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">11</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">11.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">11.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p><code>multiScale_bayes()</code> can compute the same posterior in
+several ways. The <code>method</code> argument changes how the answer is
+computed and how long it takes. It does not change the model, the
+likelihood, or the priors. A slow, exact method and a fast, approximate
+one can still return different numbers, and this vignette shows how to
+choose between them and how to tell when a result is safe to report.</p>
+<p>You will check a model before fitting, run a short pilot, read its
+diagnostics, compare five computations of one model, check a probability
+from a fast approximation, and work through what to do when a fit
+struggles. Every result shown is stored in the package, so nothing here
+needs sampling software. Read
+<code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code>
+first for priors and model fitting.</p>
+</div>
+<div id="compare-the-methods" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Compare the
+methods</h1>
+<table>
+<colgroup>
+<col width="13%" />
+<col width="23%" />
+<col width="27%" />
+<col width="25%" />
+<col width="10%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"><code>method</code></th>
+<th align="left">What it computes</th>
+<th align="left">Uncertainty you get</th>
+<th align="left">Optional packages</th>
+<th align="left">Use it</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>&quot;prepare&quot;</code></td>
+<td align="left">Checks the formulas, data rows, priors, and landscape
+inputs. Fits nothing</td>
+<td align="left">None</td>
+<td align="left">None</td>
+<td align="left">Before every fit</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;sample&quot;</code> (default)</td>
+<td align="left">Draws from the full posterior with NUTS, a
+gradient-based Markov chain Monte Carlo (MCMC) sampler</td>
+<td align="left">Full posterior, with chain diagnostics</td>
+<td align="left">RTMB, tmbstan, rstan, posterior</td>
+<td align="left">For results you will report</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>&quot;slice&quot;</code></td>
+<td align="left">Draws from the same posterior with a slice sampler
+written in R</td>
+<td align="left">Full posterior, with chain diagnostics</td>
+<td align="left">None to fit, posterior for diagnostics</td>
+<td align="left">When you cannot install the NUTS software, and for
+small models</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;laplace&quot;</code></td>
+<td align="left">Finds the peak of the posterior and fits one Gaussian
+curve around it</td>
+<td align="left">Approximate. Symmetric on the model’s internal log
+scale</td>
+<td align="left">RTMB</td>
+<td align="left">To explore while you build a model</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>&quot;marginal&quot;</code></td>
+<td align="left">Integrates the spread of one scale among groups
+numerically, with a Gaussian approximation for everything else</td>
+<td align="left">Approximate. The spread among groups can be skewed</td>
+<td align="left">RTMB</td>
+<td align="left">When sampling is too slow and the model has one such
+spread</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;marginal&quot;</code> with
+<code>control = list(correction = &quot;importance&quot;)</code></td>
+<td align="left">Reweights draws from the marginal approximation against
+the full posterior</td>
+<td align="left">Targets the full posterior, with weight
+diagnostics</td>
+<td align="left">RTMB, posterior</td>
+<td align="left">As a check on the marginal approximation</td>
+</tr>
+</tbody>
+</table>
+<p>The <em>posterior</em> is the distribution of parameter values
+supported by the data and the priors. Sampling methods draw from it
+directly, in several independent runs called <em>chains</em>.
+Approximations replace it with a simpler shape that is fast to compute.
+The whole interface is experimental, and the importance correction most
+of all.</p>
+</div>
+<div id="check-the-software-and-the-model" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Check the software and
+the model</h1>
+<p><code>check_bayes_setup()</code> reports whether the optional
+packages for a method are installed. It installs nothing and fits
+nothing.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>setup <span class="ot">&lt;-</span> <span class="fu">check_bayes_setup</span>(<span class="st">&quot;sample&quot;</span>)       <span class="co"># also &quot;slice&quot;, &quot;laplace&quot;, &quot;marginal&quot;</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>setup<span class="sc">$</span>packages[<span class="fu">c</span>(<span class="st">&quot;package&quot;</span>, <span class="st">&quot;minimum&quot;</span>)]    <span class="co"># packages NUTS needs, minimum versions</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">#&gt;     package minimum</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co">#&gt; 1      RTMB     2.0</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co">#&gt; 2   tmbstan   1.2.1</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co">#&gt; 3     rstan    &lt;NA&gt;</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co">#&gt; 4 posterior   1.6.0</span></span></code></pre></div>
+<p><code>setup$ready</code> is <code>TRUE</code> when every listed
+package loads and meets its minimum version. That says nothing about
+memory or about how well a model will sample. Add <code>cores = 2</code>
+to the call to check the <code>processx</code> package, which parallel
+fits need.</p>
+<p>Next, check the model itself. <code>method = &quot;prepare&quot;</code> matches
+each observation to its landscape inputs, builds the formulas and
+priors, and stops with an error if anything is inconsistent. It takes
+well under a second.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>example <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;bayesian-annual-example.rds&quot;</span>,</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>                               <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>dat    <span class="ot">&lt;-</span> example<span class="sc">$</span>data     <span class="co"># 100 counts from 25 sites over five years</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> example<span class="sc">$</span>inputs   <span class="co"># prepared landscape inputs, distances in meters</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>response <span class="ot">&lt;-</span> count <span class="sc">~</span> habitat <span class="sc">+</span> <span class="fu">factor</span>(year) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>scales   <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="sc">~</span><span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> year))   <span class="co"># scale of effect varies by year</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>priors   <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="dv">250</span>, <span class="at">scale_group_sd =</span> <span class="fl">0.5</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>prepared <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>                             <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>                             <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;prepare&quot;</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>prepared</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt; Experimental Bayesian landscape-scale model</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt; Inference: prepared </span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt; Family: nbinom2 | observations: 100 </span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; Scale formulas:</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;   habitat : ~1 + (1 | year)</span></span></code></pre></div>
+<p>The printed object confirms the family, the number of observations,
+and the scale formula. No sampling has happened yet.</p>
+</div>
+<div id="run-a-short-pilot" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Run a short pilot</h1>
+<p>A short run tells you how long a full run will take and whether the
+sampler moves freely. Slice sampling needs no extra software, so it is a
+convenient first test.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>pilot <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>                          <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>                          <span class="at">priors =</span> priors,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>                          <span class="at">method =</span> <span class="st">&quot;slice&quot;</span>,   <span class="co"># sampler written in R</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>                          <span class="at">chains =</span> <span class="dv">2</span>,         <span class="co"># independent runs</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>                          <span class="at">iter =</span> <span class="dv">1000</span>,        <span class="co"># iterations per chain; half are warmup</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>                          <span class="at">seed =</span> <span class="dv">5212</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>pilot<span class="sc">$</span>diagnostics<span class="sc">$</span>passed                <span class="co"># did the sampler checks pass?</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="fu">diagnose_bayes_scales</span>(pilot)<span class="sc">$</span>parameters <span class="co"># checks on the quantities you report</span></span></code></pre></div>
+<pre><code>#&gt; [1] FALSE
+#&gt;            quantity     group     rhat  ess_bulk ess_tail
+#&gt; 1      log_distance year=2021 1.002041 135.71006 232.5721
+#&gt; 2      log_distance year=2022 1.004091 146.46579 259.6545
+#&gt; 3      log_distance year=2023 1.009791 180.33941 298.7237
+#&gt; 4      log_distance year=2024 1.007655 138.36776 322.3073
+#&gt; 5      log_distance year=2025 1.007691 190.31119 282.6925
+#&gt; 6    scale_group_sd      year 1.002993 289.95932 472.7959
+#&gt; 7 response_group_sd      site 1.020492  48.62673 152.6421</code></pre>
+<p><strong>How to read the diagnostics:</strong> The pilot took 18
+seconds and failed its checks, which is expected for 500 retained
+iterations per chain. Three numbers matter.</p>
+<ul>
+<li><strong><code>rhat</code></strong> compares the chains with one
+another. Values near 1 mean the chains agree. The package requires 1.01
+or less.</li>
+<li><strong><code>ess_bulk</code> and <code>ess_tail</code></strong> are
+effective sample sizes, or the number of independent draws the
+correlated chain is worth, for the center and the tails of the
+distribution. The package requires at least 100 per chain for each,
+which is 200 here.</li>
+<li><strong><code>passed</code></strong> is <code>TRUE</code> only when
+every parameter meets both rules. NUTS fits must also have no
+divergences, no tree-depth hits, and an energy statistic (E-BFMI) of at
+least 0.3.</li>
+</ul>
+<p><code>fit$diagnostics</code> checks the raw model parameters.
+<code>diagnose_bayes_scales()</code> adds the quantities you will
+report. Those are the log of each year’s scale, the spread of scales
+among years (<code>scale_group_sd</code>), and the spread of baselines
+among sites (<code>response_group_sd</code>). Here the site spread is
+the weakest, with a bulk effective sample size of 49.</p>
+</div>
+<div id="extend-the-run-or-change-the-sampler" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Extend the run or
+change the sampler</h1>
+<p>More iterations are the first remedy. The call below runs four chains
+of 8,000 iterations on four workers.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>slice_long <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>                               <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                               <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;slice&quot;</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>                               <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">iter =</span> <span class="dv">8000</span>, <span class="at">seed =</span> <span class="dv">5213</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                               <span class="at">cores =</span> <span class="dv">4</span>)       <span class="co"># one chain per worker</span></span></code></pre></div>
+<p>The same model was also fitted with NUTS, and that fit is stored in
+the example data.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>nuts_fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>                             <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                             <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                             <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">iter =</span> <span class="dv">6000</span>, <span class="at">warmup =</span> <span class="dv">3000</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                             <span class="at">seed =</span> <span class="dv">5211</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>                             <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>                                            <span class="at">max_treedepth =</span> <span class="dv">12</span>))</span></code></pre></div>
+<table>
+<colgroup>
+<col width="16%" />
+<col width="20%" />
+<col width="10%" />
+<col width="17%" />
+<col width="24%" />
+<col width="9%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Run</th>
+<th align="right">Retained draws</th>
+<th align="right">Seconds</th>
+<th align="right">Largest Rhat</th>
+<th align="right">Smallest bulk ESS</th>
+<th align="left">Passed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Slice pilot</td>
+<td align="right">1000</td>
+<td align="right">18</td>
+<td align="right">1.147</td>
+<td align="right">13</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="even">
+<td align="left">Slice, long</td>
+<td align="right">16000</td>
+<td align="right">82</td>
+<td align="right">1.021</td>
+<td align="right">185</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="odd">
+<td align="left">NUTS</td>
+<td align="right">12000</td>
+<td align="right">145</td>
+<td align="right">1.001</td>
+<td align="right">3759</td>
+<td align="left">TRUE</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the table:</strong> Sixteen times as many draws
+brought the slice sampler close, yet its largest Rhat is still 1.021 and
+its smallest effective sample size is 185, short of the 400 required.
+Site effects are the parameters that lag. NUTS passed with fewer draws,
+because each of its draws is worth far more. Its smallest effective
+sample size is 3,759 from 12,000 draws. The slice run used four workers
+and the NUTS run used one, so the seconds are a record of these runs and
+not a benchmark.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Compare samplers by
+effective sample size per second, not by iterations. A model with many
+site or year effects usually favors NUTS. Do not report a fit whose
+<code>passed</code> flag is <code>FALSE</code>, even when it fails
+narrowly.</p>
+</blockquote>
+</div>
+<div id="use-chains-and-cores" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Use chains and
+cores</h1>
+<p><code>chains</code> sets how many independent runs the sampler makes,
+and at least two are needed for any diagnostic. <code>iter</code> is the
+length of each chain, and <code>warmup</code> (half of <code>iter</code>
+by default) is the part discarded while the sampler tunes itself.
+<code>cores</code> sets how many R processes work at once.</p>
+<table>
+<colgroup>
+<col width="23%" />
+<col width="76%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Method</th>
+<th align="left">Work spread across cores</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>&quot;sample&quot;</code>, <code>&quot;slice&quot;</code></td>
+<td align="left">Chains, so cores beyond the number of chains go
+unused</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;laplace&quot;</code></td>
+<td align="left">Optimizer starts (6 by default)</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>&quot;marginal&quot;</code></td>
+<td align="left">Optimizer starts at each grid point (3 by default)</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;marginal&quot;</code> with importance correction</td>
+<td align="left">Optimizer starts, and evaluation of candidate
+draws</td>
+</tr>
+</tbody>
+</table>
+<p>Parallel work is not free. Each worker starts its own R process and
+holds its own copy of the model. The two-chain pilot took 18 seconds on
+one worker and 23 seconds on two, and it returned identical draws both
+times because slice sampling uses the same chain seeds at any core
+count. Save <code>cores</code> for runs that take minutes.</p>
+</div>
+<div id="use-an-approximation-when-sampling-is-too-slow" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Use an approximation
+when sampling is too slow</h1>
+<div id="fit-the-approximations" class="section level2" number="7.1">
+<h2><span class="header-section-number">7.1</span> Fit the
+approximations</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># One Gaussian curve around the posterior peak</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>fast_fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                             <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                             <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;laplace&quot;</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>                             <span class="at">laplace_draws =</span> <span class="dv">2000</span>, <span class="at">seed =</span> <span class="dv">527001</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co"># Numerical integration over the spread of scales among years</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>marginal_fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>                                 <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>                                 <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;marginal&quot;</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>                                 <span class="at">laplace_draws =</span> <span class="dv">2000</span>, <span class="at">seed =</span> <span class="dv">527002</span>)</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co"># The same, reweighted against the full posterior</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>corrected_fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>                                  <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>                                  <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;marginal&quot;</span>,</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>                                  <span class="at">laplace_draws =</span> <span class="dv">2000</span>, <span class="at">seed =</span> <span class="dv">527003</span>,</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>                                  <span class="at">control =</span> <span class="fu">list</span>(<span class="at">correction =</span> <span class="st">&quot;importance&quot;</span>,</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>                                                 <span class="at">importance_df =</span> <span class="dv">5</span>,</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>                                                 <span class="at">importance_min =</span> <span class="dv">65536</span>,</span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>                                                 <span class="at">importance_max =</span> <span class="dv">131072</span>,</span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>                                                 <span class="at">importance_refinements =</span> <span class="dv">2</span>))</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>fast_fit<span class="sc">$</span>diagnostics        <span class="co"># each fit stores its own numerical checks</span></span></code></pre></div>
+<p><code>laplace_draws</code> sets how many draws are taken from the
+approximation for summaries. More draws smooth the summaries and cannot
+repair a poor approximation. <code>method = &quot;marginal&quot;</code> works only
+when the model has exactly one spread of scales among groups, as
+<code>~1 + (1 | year)</code> does here. Each method has its own checks,
+stored in <code>fit$diagnostics</code>.</p>
+<table>
+<colgroup>
+<col width="29%" />
+<col width="70%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Method</th>
+<th align="left"><code>passed</code> requires</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>&quot;laplace&quot;</code></td>
+<td align="left">The optimizer converged (<code>gradient_max</code> at
+most 0.0001), the curvature is valid (<code>min_eigenvalue</code> above
+0, <code>condition_number</code> at most 1e12), and no second peak lies
+within 2 log-posterior units (<code>competing_modes</code>)</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;marginal&quot;</code></td>
+<td align="left">The same at every grid point, a finer grid leaves the
+answer unchanged (<code>grid_converged</code>),
+<code>competing_mass</code> at most 0.01, and
+<code>upper_tail_mass</code> at most 0.001</td>
+</tr>
+<tr class="odd">
+<td align="left">Importance correction</td>
+<td align="left"><code>pareto_k</code> at most 0.7, <code>ess</code> at
+least 1,000, <code>min_tail_ess</code> at least 400,
+<code>max_weight</code> at most 0.01, and <code>split_cdf_error</code>
+at most 0.05</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="compare-them-with-the-samplers" class="section level2" number="7.2">
+<h2><span class="header-section-number">7.2</span> Compare them with the
+samplers</h2>
+<p>The package stores the results of those three calls, alongside the
+NUTS fit.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>comparison <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;bayesian-computation-example.rds&quot;</span>,</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>                                  <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="fu">print</span>(comparison<span class="sc">$</span>availability, <span class="at">row.names =</span> <span class="cn">FALSE</span>)   <span class="co"># status, run time, reason</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt;    method   status seconds               reason</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;   laplace eligible    0.31                     </span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt;  marginal rejected   14.21 grid converged FALSE</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt;    nested eligible  207.30</span></span></code></pre></div>
+<p>In this table <code>nested</code> is the importance-corrected
+marginal fit. The next chunk puts the spread of scales among years from
+every computation side by side.</p>
+<table>
+<colgroup>
+<col width="28%" />
+<col width="15%" />
+<col width="11%" />
+<col width="27%" />
+<col width="8%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Computation</th>
+<th align="left">Own checks</th>
+<th align="right">Seconds</th>
+<th align="right">Spread among years</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">NUTS</td>
+<td align="left">Passed</td>
+<td align="right">145.0</td>
+<td align="right">0.24</td>
+<td align="right">0.01</td>
+<td align="right">0.85</td>
+</tr>
+<tr class="even">
+<td align="left">Slice, long</td>
+<td align="left">Failed</td>
+<td align="right">82.0</td>
+<td align="right">0.24</td>
+<td align="right">0.01</td>
+<td align="right">0.87</td>
+</tr>
+<tr class="odd">
+<td align="left">Laplace</td>
+<td align="left">Passed</td>
+<td align="right">0.3</td>
+<td align="right">0.62</td>
+<td align="right">0.22</td>
+<td align="right">1.80</td>
+</tr>
+<tr class="even">
+<td align="left">Marginal</td>
+<td align="left">Failed</td>
+<td align="right">14.2</td>
+<td align="right">0.08</td>
+<td align="right">0.00</td>
+<td align="right">0.42</td>
+</tr>
+<tr class="odd">
+<td align="left">Marginal, corrected</td>
+<td align="left">Passed</td>
+<td align="right">207.3</td>
+<td align="right">0.23</td>
+<td align="right">0.01</td>
+<td align="right">0.85</td>
+</tr>
+</tbody>
+</table>
+<div class="float">
+<img role="img" aria-label="Scale of effect in each year from three computations of the same model. Points are posterior medians and bars are 95% intervals." src="data:image/png;base64,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" alt="Scale of effect in each year from three computations of the same model. Points are posterior medians and bars are 95% intervals." />
+<div class="figcaption"><strong><em>Scale of effect in each year from
+three computations of the same model. Points are posterior medians and
+bars are 95% intervals.</em></strong></div>
+</div>
+<p><strong>How to read the output:</strong> The spread among years is on
+the log scale, so exponentiate it. With a NUTS median of 0.24, a year
+one standard deviation above the typical year has a scale 1.27 times the
+typical scale. Both the long slice run and the corrected marginal fit
+agree with NUTS to within 0.01. Laplace does not. It took 0.3 seconds
+and passed all of its own checks, yet its median of 0.62 is more than
+twice the NUTS value. Its yearly scales in the figure are shifted upward
+as well, to a median of 436 m in 2021 against 173 m. Because the
+uncorrected marginal fit failed its grid check, do not use its median of
+0.08.</p>
+<p>The gap is not peculiar to this example. In simulations of three
+other designs, the probability that a year’s scale fell below a set
+distance differed from NUTS by more than 0.05, well beyond Monte Carlo
+error, in 49 of 87 comparisons for Laplace fits and 39 of 71 for
+uncorrected marginal fits.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> A passed check on an
+approximation says the arithmetic finished cleanly. It does not say the
+approximation is close to the posterior. Before you report an
+approximate fit, compare it once with a sampler on the same model or on
+a subset of the data.</p>
+</blockquote>
+<p>The corrected marginal fit matched NUTS here and took longer (207
+against 145 seconds), so it offered no advantage for this model.
+Summarize a corrected fit with
+<code>posterior_scales(corrected_fit, estimator = &quot;weighted&quot;)</code>,
+which uses the importance weights directly.</p>
+<p>The correction also tracked NUTS in simulations of eight designs with
+Gaussian, Poisson, binomial, or negative binomial responses. Across
+5,282 scale probabilities, the largest difference from NUTS was 0.033.
+Matching NUTS is not the same as a calibrated interval. In one
+repeated-site Poisson design, 90% intervals for the first year’s scale
+held the true value in 39 of 48 data sets for the corrected fits and 38
+of 48 for NUTS. The evidence covers those designs only.</p>
+</div>
+<div id="check-one-probability-from-an-uncorrected-approximation" class="section level2" number="7.3">
+<h2><span class="header-section-number">7.3</span> Check one probability
+from an uncorrected approximation</h2>
+<p>When sampling is out of reach, <code>diagnose_bayes_laplace()</code>
+checks one kind of number from a Laplace or uncorrected marginal fit.
+That number is the probability that a year’s scale is at or below a
+distance you name. The function draws a fresh, deliberately wide sample
+around the approximation, reweights every draw against the full
+posterior, and compares the reweighted probability with the one the
+approximation gave. The function is experimental and needs the RTMB and
+posterior packages.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Probability that each year&#39;s scale is 150 m or less, and 350 m or less</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>check <span class="ot">&lt;-</span> <span class="fu">diagnose_bayes_laplace</span>(fast_fit,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>                                <span class="at">thresholds =</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">350</span>)),</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>                                <span class="at">tolerance  =</span> <span class="fl">0.05</span>,     <span class="co"># difference that matters</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>                                <span class="at">candidates =</span> <span class="dv">65536</span>,    <span class="co"># size of the fresh sample</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>                                <span class="at">seed       =</span> <span class="dv">127</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>check<span class="sc">$</span>probabilities[, <span class="fu">c</span>(<span class="st">&quot;group&quot;</span>, <span class="st">&quot;threshold&quot;</span>, <span class="st">&quot;approximation&quot;</span>, <span class="st">&quot;reference&quot;</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>                        <span class="st">&quot;status&quot;</span>)]</span></code></pre></div>
+<p>Each row of <code>check$probabilities</code> is one year and one
+threshold. Read the <code>status</code> column.</p>
+<table>
+<colgroup>
+<col width="32%" />
+<col width="29%" />
+<col width="38%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"><code>status</code></th>
+<th align="left">Meaning</th>
+<th align="left">What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>&quot;discrepancy&quot;</code></td>
+<td align="left">The approximation and the reweighted reference differ
+by more than <code>tolerance</code>, beyond Monte Carlo error</td>
+<td align="left">Do not report the approximate probability. Sample the
+model</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;within_tolerance&quot;</code></td>
+<td align="left">They agree within <code>tolerance</code> for this year
+and threshold</td>
+<td align="left">The approximate probability can be reported, for this
+threshold only</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>&quot;unresolved&quot;</code></td>
+<td align="left">The reference is too imprecise, or overlaps the
+posterior too poorly, to decide</td>
+<td align="left">Treat the probability as unchecked. Raise
+<code>candidates</code>, or sample</td>
+</tr>
+</tbody>
+</table>
+<p>In 35 simulated data sets, the check flagged 54 of 135 real
+differences for Laplace fits and 21 of 67 for marginal fits, and it
+never marked a real difference as within tolerance. Most checks, 448 of
+630, were unresolved, including every one in models with repeated site
+effects. Expect <code>&quot;unresolved&quot;</code> often, and read it as “not
+checked”, not as “close enough”.</p>
+</div>
+</div>
+<div id="check-the-precision-of-the-numbers-you-report" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Check the precision of
+the numbers you report</h1>
+<p>A credible interval describes what the data leave uncertain.
+<em>Monte Carlo error</em> describes how precisely a finite number of
+draws pins down that interval. <code>diagnose_bayes_scales()</code>
+reports it as <code>mcse</code>, the Monte Carlo standard error of each
+quantile.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>precision <span class="ot">&lt;-</span> <span class="fu">diagnose_bayes_scales</span>(slice_long)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>precision<span class="sc">$</span>quantiles     <span class="co"># median and interval limits, each with its mcse</span></span></code></pre></div>
+<pre><code>#&gt;       quantity     group probability estimate       mcse
+#&gt; 1 log_distance year=2021       0.025 3.635022 0.03353090
+#&gt; 2 log_distance year=2021       0.500 5.128946 0.01705650
+#&gt; 3 log_distance year=2021       0.975 6.036441 0.02734664</code></pre>
+<p><strong>How to read the output:</strong> Estimates for a scale are
+natural logs of meters. For 2021 the lower limit is 3.64, or 38 m, with
+an <code>mcse</code> of 0.034. An error of that size on the log scale is
+about 3% of the distance, so repeating the run would move this limit by
+a meter or two. Compare that with the credible interval itself, which
+spans 38 to 418 m. The computation is far more precise than the data are
+informative.</p>
+<p>For a specific threshold, <code>diagnose_bayes_probabilities()</code>
+reports the posterior probability that a scale is at or below it.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">diagnose_bayes_probabilities</span>(slice_long,</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>                             <span class="at">thresholds =</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">250</span>)),  <span class="co"># meters</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>                             <span class="at">mcse_target =</span> <span class="fl">0.005</span>)<span class="sc">$</span>probabilities</span></code></pre></div>
+<pre><code>#&gt;       group threshold  estimate        mcse precision_target_met
+#&gt; 1 year=2021       100 0.1940000 0.006921826                FALSE
+#&gt; 2 year=2021       250 0.7554375 0.012581750                FALSE</code></pre>
+<p><strong>In a report.</strong> “The posterior probability that the
+2021 scale of effect was 250 m or less was 0.76 (Monte Carlo standard
+error 0.013).” The run missed the requested precision of 0.005, so
+report two decimal places and no more.</p>
+<p>Both functions need the original chains. The stored example fits keep
+only 2,000 thinned draws, so they return <code>available = FALSE</code>
+with the reason.</p>
+</div>
+<div id="plan-for-run-time-and-memory" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Plan for run time and
+memory</h1>
+<ul>
+<li><strong>Time a pilot and scale up from it.</strong> The pilot here
+ran about 113 iterations per second. At that rate, four chains of 8,000
+iterations need about 5 minutes on one worker.</li>
+<li><strong>A fitted object keeps its chains.</strong> The long slice
+fit held 4000 iterations of 40 parameters in each of 4 chains and
+occupied 10 MB.</li>
+<li><strong>Prediction can need more than fitting.</strong>
+<code>predict()</code> computes one value per posterior draw and
+observation, at 8 bytes each. With 2,000 draws, a map of 100,000 cells
+needs 1.6 GB. Lower <code>draws</code>, or predict in blocks when you
+need only a summary for each location.</li>
+<li><strong>Each worker holds a copy of the model.</strong> Memory use
+rises with <code>cores</code>.</li>
+</ul>
+</div>
+<div id="what-to-do-when-a-fit-struggles" class="section level1" number="10">
+<h1><span class="header-section-number">10</span> What to do when a fit
+struggles</h1>
+<table>
+<colgroup>
+<col width="51%" />
+<col width="48%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">What you see</th>
+<th align="left">What to try</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>diagnostics$passed</code> is <code>FALSE</code>
+with a large <code>rhat</code> or small effective sample size</td>
+<td align="left">Raise <code>iter</code>. If a slice fit still fails,
+switch to <code>method = &quot;sample&quot;</code></td>
+</tr>
+<tr class="even">
+<td align="left">A NUTS fit reports divergences or tree-depth hits</td>
+<td align="left">Raise <code>adapt_delta</code> (default 0.9) or
+<code>max_treedepth</code> (default 12) in <code>control</code>. The
+stored fits used <code>adapt_delta</code> of 0.95 and 0.99</td>
+</tr>
+<tr class="odd">
+<td align="left">A Laplace fit stops with an error or warns of competing
+modes</td>
+<td align="left">Add starts with
+<code>control = list(starts = 10, iter.max = 1500)</code>, or
+sample</td>
+</tr>
+<tr class="even">
+<td align="left">A marginal fit has
+<code>grid_converged = FALSE</code></td>
+<td align="left">Refine the grid with
+<code>control = list(max_grid = 257)</code>, or sample</td>
+</tr>
+<tr class="odd">
+<td align="left">A corrected fit fails its weight checks</td>
+<td align="left">Raise <code>importance_min</code> and
+<code>importance_max</code>, set <code>importance_df = 5</code> for
+heavier tails, or sample</td>
+</tr>
+<tr class="even">
+<td align="left"><code>diagnose_bayes_laplace()</code> reports
+<code>&quot;discrepancy&quot;</code> or <code>&quot;unresolved&quot;</code> for a
+probability you need</td>
+<td align="left">Sample the model before you report that
+probability</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>method = &quot;marginal&quot;</code> stops because the
+model has more than one spread of scales among groups</td>
+<td align="left">Use <code>&quot;sample&quot;</code>, <code>&quot;slice&quot;</code>, or
+<code>&quot;laplace&quot;</code></td>
+</tr>
+<tr class="even">
+<td align="left">Every check passes, but much of a scale’s posterior
+lies below <code>min_D</code> or above <code>max_D</code></td>
+<td align="left">The data say little about that scale. Review the priors
+and <code>max_D</code> in
+<code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Keep the model, priors, and data fixed while you compare
+computations. If a check fails, change the computation and leave the
+thresholds alone.</p>
+</div>
+<div id="quick-reference" class="section level1" number="11">
+<h1><span class="header-section-number">11</span> Quick reference</h1>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># 1. Check the software and the model</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="fu">check_bayes_setup</span>(<span class="st">&quot;sample&quot;</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>prepared <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>                             <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                             <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;prepare&quot;</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co"># 2. Short pilot: time it and read the diagnostics</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>pilot <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>                          <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>                          <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;slice&quot;</span>,</span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>                          <span class="at">chains =</span> <span class="dv">2</span>, <span class="at">iter =</span> <span class="dv">1000</span>, <span class="at">seed =</span> <span class="dv">5212</span>)</span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>pilot<span class="sc">$</span>diagnostics<span class="sc">$</span>passed                  <span class="co"># FALSE: extend or change sampler</span></span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="fu">diagnose_bayes_scales</span>(pilot)<span class="sc">$</span>parameters   <span class="co"># Rhat and ESS for reported quantities</span></span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a></span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co"># 3. Full run with NUTS</span></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>nuts_fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a>                             <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a>                             <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a>                             <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">iter =</span> <span class="dv">6000</span>, <span class="at">warmup =</span> <span class="dv">3000</span>,</span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a>                             <span class="at">seed =</span> <span class="dv">5211</span>,</span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a>                             <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>,</span>
+<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a>                                            <span class="at">max_treedepth =</span> <span class="dv">12</span>))</span>
+<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a><span class="fu">summary</span>(nuts_fit)<span class="sc">$</span>diagnostics             <span class="co"># passed, divergences, Rhat, ESS</span></span>
+<span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a></span>
+<span id="cb14-25"><a href="#cb14-25" tabindex="-1"></a><span class="co"># 4. Precision of what you report (needs the original chains)</span></span>
+<span id="cb14-26"><a href="#cb14-26" tabindex="-1"></a><span class="fu">diagnose_bayes_scales</span>(nuts_fit)<span class="sc">$</span>quantiles <span class="co"># interval limits with their mcse</span></span>
+<span id="cb14-27"><a href="#cb14-27" tabindex="-1"></a><span class="fu">diagnose_bayes_probabilities</span>(nuts_fit,</span>
+<span id="cb14-28"><a href="#cb14-28" tabindex="-1"></a>                             <span class="at">thresholds =</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">250</span>)),</span>
+<span id="cb14-29"><a href="#cb14-29" tabindex="-1"></a>                             <span class="at">mcse_target =</span> <span class="fl">0.005</span>)<span class="sc">$</span>probabilities</span>
+<span id="cb14-30"><a href="#cb14-30" tabindex="-1"></a></span>
+<span id="cb14-31"><a href="#cb14-31" tabindex="-1"></a><span class="co"># 5. A fast approximation. Compare it with a sampler before you report it</span></span>
+<span id="cb14-32"><a href="#cb14-32" tabindex="-1"></a>fast_fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(response, inputs, dat, <span class="at">scales =</span> scales,</span>
+<span id="cb14-33"><a href="#cb14-33" tabindex="-1"></a>                             <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb14-34"><a href="#cb14-34" tabindex="-1"></a>                             <span class="at">priors =</span> priors, <span class="at">method =</span> <span class="st">&quot;laplace&quot;</span>,</span>
+<span id="cb14-35"><a href="#cb14-35" tabindex="-1"></a>                             <span class="at">laplace_draws =</span> <span class="dv">2000</span>, <span class="at">seed =</span> <span class="dv">527001</span>)</span>
+<span id="cb14-36"><a href="#cb14-36" tabindex="-1"></a>fast_fit<span class="sc">$</span>diagnostics                      <span class="co"># numerical checks only</span></span>
+<span id="cb14-37"><a href="#cb14-37" tabindex="-1"></a><span class="fu">diagnose_bayes_laplace</span>(fast_fit, <span class="at">thresholds =</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">350</span>)),</span>
+<span id="cb14-38"><a href="#cb14-38" tabindex="-1"></a>                       <span class="at">candidates =</span> <span class="dv">65536</span>, <span class="at">seed =</span> <span class="dv">127</span>)<span class="sc">$</span>probabilities</span>
+<span id="cb14-39"><a href="#cb14-39" tabindex="-1"></a>                                          <span class="co"># &quot;unresolved&quot; means not checked</span></span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="11.1">
+<h2><span class="header-section-number">11.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>check_bayes_setup()</code></td>
+<td align="left">Report whether the optional packages for a method are
+installed</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_bayes()</code></td>
+<td align="left">Fit the model. <code>method</code> chooses the
+computation</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>summary()</code></td>
+<td align="left">Report estimates and the stored diagnostics of a
+fit</td>
+</tr>
+<tr class="even">
+<td align="left"><code>diagnose_bayes_scales()</code></td>
+<td align="left">Check chain agreement and Monte Carlo error for the
+scales and spreads you report</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>diagnose_bayes_probabilities()</code></td>
+<td align="left">Report the probability that a scale is at or below a
+threshold, with its Monte Carlo error</td>
+</tr>
+<tr class="even">
+<td align="left"><code>diagnose_bayes_laplace()</code></td>
+<td align="left">Check such a probability from an uncorrected
+approximation against a reweighted reference</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>posterior_scales()</code></td>
+<td align="left">Summarize scales in map units.
+<code>estimator = &quot;weighted&quot;</code> uses importance weights</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="11.2">
+<h2><span class="header-section-number">11.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+priors, model fitting, and reading a Bayesian fit.</li>
+<li><strong><code>vignette(&quot;v14-bayesian-prediction&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+predicting new sites, new years, and totals.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what each interval includes and leaves out.</li>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

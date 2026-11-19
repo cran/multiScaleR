@@ -6,30 +6,98 @@
 
 .profile_scale_cache <- new.env(parent = emptyenv())
 
+.msr_profile_cache_bytes <- function() {
+  keys <- ls(.profile_scale_cache, all.names = TRUE)
+  sum(vapply(keys, function(key) as.numeric(utils::object.size(
+    get(key, envir = .profile_scale_cache, inherits = FALSE))), numeric(1)))
+}
+
+.msr_clear_profile_cache <- function() {
+  rm(list = ls(.profile_scale_cache, all.names = TRUE), envir = .profile_scale_cache)
+  invisible(NULL)
+}
+
 scale_ci_table <- function(object,
                            df,
                            min_D = object$min_D,
                            names = row.names(object$scale_est),
                            profile = FALSE) {
 
+  if (identical(object$backend, "joint_mixed")) {
+    if (isTRUE(profile)) stop("Scale profiling is not validated for joint_mixed.", call. = FALSE)
+    tab <- ci_func(object$scale_est, df = df, min_D = min_D, names = names)
+    attr(tab, "interval_method") <- stats::setNames(rep("unavailable", nrow(tab)), rownames(tab))
+    return(tab)
+  }
+
+  # The step-selection backend withholds scale uncertainty by design, so it
+  # has no interval to profile. profile_sigma() still draws the likelihood.
+  if (identical(object$backend, "conditional_logit") && isTRUE(profile))
+    stop("Profile intervals for sigma are not available for conditional_logit ",
+         "fits, because step-selection scale uncertainty is not calibrated. ",
+         "Use profile_sigma() to view the log-likelihood across sigma.",
+         call. = FALSE)
+
+  if (.msr_analytic_backend(object)) {
+    tab <- .msr_profile_wald_table(object)
+    if (isTRUE(profile)) {
+      pr <- .msr_profile_likelihood_intervals(object)
+      tab[, c("2.5%", "97.5%")] <- pr$intervals
+      attr(tab, "interval_method") <- pr$method
+      attr(tab, "bound_limited") <- pr$bound_limited
+    }
+    return(tab)
+  }
+  object <- .msr_refit_bound_view(object)
   tab <- ci_func(object$scale_est,
                  df = df,
                  min_D = min_D,
                  names = names)
 
-  methods <- rep("wald", nrow(tab))
+  methods <- ifelse(is.finite(tab$SE), "wald", "unavailable")
   names(methods) <- row.names(tab)
+
+  if (isTRUE(profile) && !is.null(object$diagnostics$radius_profile))
+    stop("Profile intervals are unavailable for a declared radius_grid. Inspect diagnostics(object)$radius_profile.", call. = FALSE)
 
   if (!isTRUE(profile)) {
     attr(tab, "interval_method") <- methods
     return(tab)
   }
 
-  cache_key <- profile_scale_cache_key(object = object,
-                                       min_D = min_D,
-                                       names = names)
-  if (exists(cache_key, envir = .profile_scale_cache, inherits = FALSE)) {
-    profile_tab <- get(cache_key, envir = .profile_scale_cache, inherits = FALSE)
+  budget <- getOption("multiScaleR.profile_cache_max_bytes", 64 * 1024^2)
+  validate_scalar_numeric(budget, "multiScaleR.profile_cache_max_bytes", lower = 0)
+  if (.msr_profile_cache_bytes() > budget) .msr_clear_profile_cache()
+  cache_enabled <- budget > 0 && is.null(object$opt_context$refit_fn)
+  cache_info <- list(status = if (cache_enabled) "enabled" else "disabled",
+    reason = if (budget == 0) "zero_budget" else if (!cache_enabled) "custom_refit" else NULL)
+  cache_key <- NULL
+  entry <- NULL
+  if (cache_enabled) {
+    cache_key <- tryCatch(profile_scale_cache_key(object, min_D, names),
+      error = function(e) {
+        cache_info <<- list(status = "unavailable", reason = conditionMessage(e))
+        warning("Profile cache unavailable; computing intervals without caching: ",
+          conditionMessage(e), call. = FALSE)
+        NULL
+      })
+    if (is.null(cache_key)) cache_enabled <- FALSE else {
+      # Release oversized key payloads before the numerical profile starts.
+      key_bytes <- as.numeric(utils::object.size(list(
+        payload = attr(cache_key, "payload"), result = NULL)))
+      if (key_bytes > budget) {
+        cache_enabled <- FALSE
+        cache_info <- list(status = "disabled", reason = "payload_exceeds_budget")
+        cache_key <- NULL
+      }
+    }
+  }
+  if (cache_enabled && exists(cache_key, envir = .profile_scale_cache, inherits = FALSE))
+    entry <- get(cache_key, envir = .profile_scale_cache, inherits = FALSE)
+  # Verify the full payload as well as the digest; cache corruption is a miss.
+  if (is.list(entry) && identical(entry$payload, attr(cache_key, "payload")) &&
+      is.list(entry$result) && !is.null(entry$result$intervals)) {
+    profile_tab <- entry$result
   } else {
     profile_tab <- try(profile_sigma_intervals(object), silent = TRUE)
     if (inherits(profile_tab, "try-error") || is.null(profile_tab)) {
@@ -41,7 +109,14 @@ scale_ci_table <- function(object,
       stop("Profile-likelihood intervals could not be computed: ", detail,
            call. = FALSE)
     }
-    assign(cache_key, profile_tab, envir = .profile_scale_cache)
+    if (cache_enabled) {
+      candidate <- list(payload = attr(cache_key, "payload"), result = profile_tab)
+      bytes <- as.numeric(utils::object.size(candidate))
+      if (bytes <= budget) {
+        if (.msr_profile_cache_bytes() + bytes > budget) .msr_clear_profile_cache()
+        assign(cache_key, candidate, envir = .profile_scale_cache)
+      } else cache_info <- list(status = "disabled", reason = "result_exceeds_budget")
+    }
   }
 
   if (!inherits(profile_tab, "try-error") && !is.null(profile_tab$intervals)) {
@@ -54,6 +129,7 @@ scale_ci_table <- function(object,
   }
 
   attr(tab, "interval_method") <- methods
+  attr(tab, "profile_cache") <- cache_info
   tab
 }
 
@@ -74,8 +150,31 @@ profile_scale_cache_key <- function(object,
     names = names
   )
 
-  paste(as.character(serialize(key_payload, NULL, version = 2)),
-        collapse = "")
+  # Data and refit controls can change while the call and optimum stay equal.
+  model <- object$fitted_mod_original
+  frame <- .msr_selection_frame(.analysis_model(model))
+  if (!is.null(frame)) attr(frame, "terms") <- NULL
+  key_payload$training_inputs <- object$kernel_inputs
+  key_payload$training_frame <- frame
+  key_payload$response <- if (is.list(model)) model$y else NULL
+  key_payload$weights <- if (is.list(model)) model$prior.weights else NULL
+  key_payload$join_by <- object$join_by
+  key_payload$model_class <- class(model)
+  key_payload$family <- tryCatch(stats::family(model)[c("family", "link")],
+    error = function(e) NULL)
+  key_payload$native_data <- if (methods::is(model, "unmarkedFit")) model@data else NULL
+  context <- object$opt_context
+  context$fitted_mod <- context$refit_fn <- NULL
+  key_payload$context <- context
+  # Formula environments may contain the caller's mutable workspace. Do not
+  # serialize them: the retained numeric frame and prepared cells bind the data.
+  key_payload$formula <- tryCatch(paste(deparse(stats::formula(model)), collapse = " "),
+    error = function(e) NULL)
+  payload <- serialize(key_payload, NULL, version = 2)
+  path <- tempfile("msr-profile-key-")
+  on.exit(unlink(path), add = TRUE)
+  writeBin(payload, path)
+  structure(unname(tools::md5sum(path)), payload = payload)
 }
 
 
@@ -84,6 +183,8 @@ profile_sigma_intervals <- function(object,
                                     max_expand = 5,
                                     refine_steps = 4) {
 
+  if (.msr_analytic_backend(object))
+    return(.msr_profile_likelihood_intervals(object, level))
   if (!inherits(object, "multiScaleR")) {
     stop("`object` must inherit from class 'multiScaleR'.", call. = FALSE)
   }

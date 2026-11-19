@@ -636,7 +636,8 @@
 }
 
 
-.landscape_class_count_rasters <- function(raster, radius, na.rm = TRUE) {
+.landscape_class_count_rasters <- function(raster, radius, na.rm = TRUE,
+                                     convolve = fft_convolution) {
   validate_scalar_numeric(radius, "radius", positive = TRUE)
   validate_scalar_logical(na.rm, "na.rm")
 
@@ -658,7 +659,7 @@
       ncol = ncol(values)
     )
     class_indicator[is.na(class_indicator)] <- 0
-    class_counts[[i]] <- .landscape_clean_count_matrix(fft_convolution(
+    class_counts[[i]] <- .landscape_clean_count_matrix(convolve(
       x = class_indicator,
       kernel = kernel,
       fun = "sum",
@@ -688,7 +689,8 @@
                                               base = exp(1),
                                               classes_max = NULL,
                                               focal_class = NULL,
-                                              na.rm = TRUE) {
+                                              na.rm = TRUE,
+                                              convolve = fft_convolution) {
   metric <- match.arg(
     metric,
     c("shdi", "shei", "sidi", "siei", "msidi", "msiei", "pr",
@@ -709,7 +711,8 @@
   counts <- .landscape_class_count_rasters(
     raster = raster,
     radius = radius,
-    na.rm = na.rm
+    na.rm = na.rm,
+    convolve = convolve
   )
   out <- terra::rast(raster)
 
@@ -784,13 +787,15 @@
 .landscape_shdi_raster_fft <- function(raster,
                                        radius,
                                        base = exp(1),
-                                       na.rm = TRUE) {
+                                       na.rm = TRUE,
+                                       convolve = fft_convolution) {
   .landscape_composition_raster_fft(
     raster = raster,
     radius = radius,
     metric = "shdi",
     base = base,
-    na.rm = na.rm
+    na.rm = na.rm,
+    convolve = convolve
   )
 }
 
@@ -824,7 +829,8 @@
 }
 
 
-.landscape_edge_counts_raster_fft <- function(raster, radius, na.rm = TRUE) {
+.landscape_edge_counts_raster_fft <- function(raster, radius, na.rm = TRUE,
+                                     convolve = fft_convolution) {
   validate_scalar_numeric(radius, "radius", positive = TRUE)
   validate_scalar_logical(na.rm, "na.rm")
   resolution <- .landscape_validate_single_layer_raster(raster, "Edge")
@@ -869,23 +875,23 @@
                                         resolution = resolution,
                                         orientation = "down")
 
-  area_cells <- .landscape_clean_count_matrix(fft_convolution(valid * 1,
+  area_cells <- .landscape_clean_count_matrix(convolve(valid * 1,
                                                               area_kernel,
                                                               fun = "sum",
                                                               na.rm = na.rm))
-  right_count <- .landscape_clean_count_matrix(fft_convolution(right_edges,
+  right_count <- .landscape_clean_count_matrix(convolve(right_edges,
                                                                right_kernel,
                                                                fun = "sum",
                                                                na.rm = na.rm))
-  down_count <- .landscape_clean_count_matrix(fft_convolution(down_edges,
+  down_count <- .landscape_clean_count_matrix(convolve(down_edges,
                                                               down_kernel,
                                                               fun = "sum",
                                                               na.rm = na.rm))
-  right_valid_count <- .landscape_clean_count_matrix(fft_convolution(right_valid_pairs,
+  right_valid_count <- .landscape_clean_count_matrix(convolve(right_valid_pairs,
                                                                      right_kernel,
                                                                      fun = "sum",
                                                                      na.rm = na.rm))
-  down_valid_count <- .landscape_clean_count_matrix(fft_convolution(down_valid_pairs,
+  down_valid_count <- .landscape_clean_count_matrix(convolve(down_valid_pairs,
                                                                     down_kernel,
                                                                     fun = "sum",
                                                                     na.rm = na.rm))
@@ -945,12 +951,14 @@
 .landscape_edge_raster_fft <- function(raster,
                                        radius,
                                        metric,
-                                       na.rm = TRUE) {
+                                       na.rm = TRUE,
+                                       convolve = fft_convolution) {
   metric <- match.arg(metric, c("ed", "te", "lsi"))
   counts <- .landscape_edge_counts_raster_fft(
     raster = raster,
     radius = radius,
-    na.rm = na.rm
+    na.rm = na.rm,
+    convolve = convolve
   )
 
   edge_total <- counts$internal_edge_count * counts$resolution
@@ -976,24 +984,28 @@
 
 .landscape_ed_raster_fft <- function(raster,
                                      radius,
-                                     na.rm = TRUE) {
+                                     na.rm = TRUE,
+                                     convolve = fft_convolution) {
   .landscape_edge_raster_fft(
     raster = raster,
     radius = radius,
     metric = "ed",
-    na.rm = na.rm
+    na.rm = na.rm,
+    convolve = convolve
   )
 }
 
 
 .landscape_te_raster_fft <- function(raster,
                                      radius,
-                                     na.rm = TRUE) {
+                                     na.rm = TRUE,
+                                     convolve = fft_convolution) {
   .landscape_edge_raster_fft(
     raster = raster,
     radius = radius,
     metric = "te",
-    na.rm = na.rm
+    na.rm = na.rm,
+    convolve = convolve
   )
 }
 
@@ -1003,7 +1015,8 @@
                                              to,
                                              right_kernel,
                                              down_kernel,
-                                             na.rm) {
+                                             na.rm,
+                                             convolve = fft_convolution) {
   right_pairs <- matrix(0, nrow = nrow(values), ncol = ncol(values))
   down_pairs <- matrix(0, nrow = nrow(values), ncol = ncol(values))
 
@@ -1023,11 +1036,11 @@
   }
 
   .landscape_clean_count_matrix(
-    fft_convolution(right_pairs,
+    convolve(right_pairs,
                     right_kernel,
                     fun = "sum",
                     na.rm = na.rm) +
-      fft_convolution(down_pairs,
+      convolve(down_pairs,
                       down_kernel,
                       fun = "sum",
                       na.rm = na.rm)
@@ -1040,7 +1053,8 @@
                                             metric,
                                             base = exp(1),
                                             focal_class = NULL,
-                                            na.rm = TRUE) {
+                                            na.rm = TRUE,
+                                            convolve = fft_convolution) {
   metric <- match.arg(
     metric,
     c("ai", "pladj", "contag", "iji", "ent", "condent", "joinent", "mutinf",
@@ -1064,7 +1078,8 @@
   counts <- .landscape_edge_counts_raster_fft(
     raster = raster,
     radius = radius,
-    na.rm = na.rm
+    na.rm = na.rm,
+    convolve = convolve
   )
   values <- counts$values
   .landscape_validate_categorical_values(
@@ -1090,7 +1105,8 @@
       to = to,
       right_kernel = counts$right_kernel,
       down_kernel = counts$down_kernel,
-      na.rm = na.rm
+      na.rm = na.rm,
+      convolve = convolve
     )
   }
 
@@ -1104,7 +1120,8 @@
         to = class,
         right_kernel = counts$right_kernel,
         down_kernel = counts$down_kernel,
-        na.rm = na.rm
+        na.rm = na.rm,
+        convolve = convolve
       )
     }
     result <- like_source / total_source * 100
@@ -1114,7 +1131,8 @@
     class_counts <- .landscape_class_count_rasters(
       raster = raster,
       radius = radius,
-      na.rm = na.rm
+      na.rm = na.rm,
+      convolve = convolve
     )
     result <- matrix(0, nrow = nrow(counts$area_cells),
                      ncol = ncol(counts$area_cells))
@@ -1128,7 +1146,8 @@
         to = class,
         right_kernel = counts$right_kernel,
         down_kernel = counts$down_kernel,
-        na.rm = na.rm
+        na.rm = na.rm,
+        convolve = convolve
       )
       max_adjacencies <- .landscape_max_like_adjacencies_matrix(count)
       class_ai <- like_source / max_adjacencies * 100
@@ -1142,7 +1161,8 @@
     class_counts <- .landscape_class_count_rasters(
       raster = raster,
       radius = radius,
-      na.rm = na.rm
+      na.rm = na.rm,
+      convolve = convolve
     )
     idx <- match(focal_class, class_counts$classes)
     zero_mat <- matrix(0, nrow = nrow(counts$area_cells),
@@ -1160,7 +1180,9 @@
     high <- (g_i >= p_i) | (p_i >= 0.5)
     high[is.na(high)] <- FALSE
     result[high]  <- (g_i[high]  - p_i[high])  / (1 - p_i[high])
-    result[!high] <- (g_i[!high] - p_i[!high]) / (-p_i[!high])
+    # FRAGSTATS: -1 when maximally disaggregated (g_i = 0). landscapemetrics
+    # 2.2.1 divides by -p_i here, which flips the sign of this branch.
+    result[!high] <- (g_i[!high] - p_i[!high]) / p_i[!high]
     result[n_i <= 0 | p_i >= 1 | !is.finite(min_e) |
              total_cells <= 0 | counts$area_cells <= 0] <- NA_real_
   } else {
@@ -1170,7 +1192,8 @@
     class_counts <- .landscape_class_count_rasters(
       raster = raster,
       radius = radius,
-      na.rm = na.rm
+      na.rm = na.rm,
+      convolve = convolve
     )
     present <- matrix(0, nrow = nrow(counts$area_cells),
                       ncol = ncol(counts$area_cells))
@@ -1262,4 +1285,129 @@
   terra::values(out) <- as.vector(result)
   names(out) <- paste0(names(raster), "_", metric)
   out
+}
+# Invariant categorical geometry is stored as ordinary arrays for safe worker
+# serialization. Unsupported/malformed inputs retain the reference evaluator.
+.msr_prepare_adjacency <- function(d_list, cov_df, specs, n_cols, events = TRUE) {
+  if (is.null(d_list) || is.null(specs) || is.null(cov_df) ||
+      length(d_list) != length(cov_df) || length(n_cols) != 1L ||
+      !is.finite(n_cols) || n_cols < 1 || n_cols != trunc(n_cols)) return(NULL)
+  original_specs <- specs
+  specs <- specs[specs$type == "landscape" &
+                   specs$metric %in% c(.msr_adjacency_metrics(), "clumpy"), , drop = FALSE]
+  if (!nrow(specs)) return(NULL)
+  # Share invariant vectors across sites. Keep the original specification for
+  # an exact compatibility check when a caller reuses prepared geometry.
+  sources <- unique(specs$source)
+  metadata <- stats::setNames(lapply(sources, function(source)
+    as.list(specs[specs$source == source, , drop = FALSE])), sources)
+  lapply(seq_along(d_list), function(i) {
+    d <- d_list[[i]]; cells <- .msr_extract_cells(cov_df[[i]])
+    if (!length(d) || length(cells) != length(d) || anyNA(cells) ||
+        any(!is.finite(cells) | cells < 1 | cells > .Machine$integer.max - n_cols |
+              cells != trunc(cells)) || anyDuplicated(cells)) return(NULL)
+    out <- list()
+    for (source in unique(specs$source)) {
+      z <- cov_df[[i]][, source]
+      if (!is.numeric(z) || length(z) != length(d)) next
+      classes <- unique(z[is.finite(z)])
+      if (length(classes) > 200L || any(classes != trunc(classes))) next
+      out[[source]] <- msr_adjacency_prepare_cpp(d, as.double(z), as.double(cells), n_cols)
+      if (events) out[[source]] <- msr_adjacency_events_prepare_cpp(out[[source]])
+    }
+    attr(out, "metric_metadata") <- list(specs = original_specs, sources = metadata)
+    out
+  })
+}
+
+# Older serialized contexts retain their geometry scan. New contexts store
+# bounded sorted entry distances, with no cache that grows with radius queries.
+.msr_adjacency_eval <- function(prepared, radii, metrics, bases, focals) {
+  if (identical(prepared$event_version, 1L))
+    msr_adjacency_events_eval_cpp(prepared, radii, metrics, bases, focals)
+  else msr_adjacency_eval_cpp(prepared, radii, metrics, bases, focals)
+}
+
+.msr_eval_prepared_adjacency <- function(prepared, specs, covariates, sigma,
+                                       param_covariates, unit_conv) {
+  result <- numeric(0)
+  if (is.null(prepared)) return(result)
+  metadata <- attr(prepared, "metric_metadata", exact = TRUE)
+  if (!is.null(metadata) && identical(metadata$specs, specs)) {
+    for (source in intersect(names(metadata$sources), names(prepared))) {
+      s <- metadata$sources[[source]]
+      selected <- which(s$covariate %in% covariates)
+      if (!length(selected)) next
+      radii <- s$radius[selected] / unit_conv
+      optimized <- which(s$optimize[selected])
+      if (length(optimized))
+        radii[optimized] <- sigma[match(s$covariate[selected[optimized]], param_covariates)]
+      result <- c(result, stats::setNames(.msr_adjacency_eval(prepared[[source]],
+        radii, s$metric[selected], s$base[selected], s$class[selected]), s$covariate[selected]))
+    }
+    return(result)
+  }
+  # Older serialized contexts or modified specifications use the original path.
+  specs <- specs[specs$covariate %in% covariates & specs$type == "landscape" &
+                   specs$metric %in% c(.msr_adjacency_metrics(), "clumpy"), , drop = FALSE]
+  for (source in intersect(unique(specs$source), names(prepared))) {
+    s <- specs[specs$source == source, , drop = FALSE]
+    radii <- vapply(seq_len(nrow(s)), function(i) if (s$optimize[i])
+      sigma[[match(s$covariate[i], param_covariates)]] else s$radius[i] / unit_conv,
+      numeric(1))
+    result <- c(result, stats::setNames(.msr_adjacency_eval(prepared[[source]],
+      radii, s$metric, s$base, s$class), s$covariate))
+  }
+  result
+}
+
+# A cell enters a circular neighborhood at its distance; a neighboring pair
+# enters at the larger endpoint distance. Sorted thresholds therefore preserve
+# exact <= radius semantics without rebuilding a cell hash at every proposal.
+.msr_prepare_edge_neighbors <- function(d_list, cov_df, specs, resolution, n_cols) {
+  if (is.null(specs) || length(resolution) != 1L ||
+      !is.finite(resolution) || resolution <= 0) return(NULL)
+  selected <- specs[specs$type == "landscape" & specs$metric %in% c("ed","te","lsi"), , drop=FALSE]
+  if (!nrow(selected)) return(NULL)
+  geometry_specs <- selected
+  geometry_specs$metric <- "ai"
+  geometry <- .msr_prepare_adjacency(d_list,cov_df,geometry_specs,n_cols,events=FALSE)
+  if (is.null(geometry)) return(NULL)
+  metadata <- as.list(selected)
+  lapply(geometry,function(site) {
+    if (is.null(site)) return(NULL)
+    counts <- lapply(site,function(p) {
+      i <- rep(seq_along(p$d),2L)
+      j <- c(p$right,p$down)+1L
+      keep <- j > 0L
+      i <- i[keep]; j <- j[keep]
+      thresholds <- pmax(p$d[i],p$d[j])
+      list(cells=sort(p$d),pairs=sort(thresholds),
+           different=sort(thresholds[p$code[i] != p$code[j]]))
+    })
+    list(counts=counts,metadata=metadata,specs=specs,resolution=resolution)
+  })
+}
+
+.msr_eval_edge_neighbors <- function(prepared, specs, covariates, sigma,
+                                     param_covariates, unit_conv) {
+  result <- numeric(0)
+  if (is.null(prepared) || !identical(specs,prepared$specs)) return(result)
+  s <- prepared$metadata
+  for (i in which(s$covariate %in% covariates)) {
+    counts <- prepared$counts[[s$source[i]]]
+    if (is.null(counts)) next
+    radius <- if(s$optimize[i]) sigma[[match(s$covariate[i],param_covariates)]] else s$radius[i]/unit_conv
+    # Leave invalid/empty cases to the original evaluator and its diagnostics.
+    if (!is.finite(radius) || radius <= 0) next
+    n <- findInterval(radius,counts$cells)
+    if (!n) next
+    edges <- findInterval(radius,counts$different)
+    value <- switch(s$metric[i],
+      ed=edges*prepared$resolution/(n*prepared$resolution^2/10000),
+      te=edges*prepared$resolution,
+      lsi=(edges+4*n-2*findInterval(radius,counts$pairs))/.landscape_min_perimeter(n))
+    result[s$covariate[i]] <- value
+  }
+  result
 }

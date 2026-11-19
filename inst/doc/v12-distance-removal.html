@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>12. Fit Distance-Removal Models with Scales of Effect</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">12. Fit Distance-Removal Models with Scales
+of Effect</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#know-what-data-the-model-needs" id="toc-know-what-data-the-model-needs"><span class="toc-section-number">2</span> Know what data the model
+needs</a></li>
+<li><a href="#simulate-a-survey-with-a-known-scale-of-effect" id="toc-simulate-a-survey-with-a-known-scale-of-effect"><span class="toc-section-number">3</span> Simulate a survey with a known scale
+of effect</a></li>
+<li><a href="#prepare-your-own-records" id="toc-prepare-your-own-records"><span class="toc-section-number">4</span> Prepare your own records</a>
+<ul>
+<li><a href="#turn-bird-records-into-the-two-count-tables" id="toc-turn-bird-records-into-the-two-count-tables"><span class="toc-section-number">4.1</span> Turn bird records into the two
+count tables</a></li>
+<li><a href="#check-that-the-records-line-up-with-the-surveys" id="toc-check-that-the-records-line-up-with-the-surveys"><span class="toc-section-number">4.2</span> Check that the records line up
+with the surveys</a></li>
+<li><a href="#add-covariates-for-the-time-intervals" id="toc-add-covariates-for-the-time-intervals"><span class="toc-section-number">4.3</span> Add covariates for the time
+intervals</a></li>
+</ul></li>
+<li><a href="#estimate-the-scale-of-effect" id="toc-estimate-the-scale-of-effect"><span class="toc-section-number">5</span> Estimate the scale of effect</a>
+<ul>
+<li><a href="#fit-a-starting-model" id="toc-fit-a-starting-model"><span class="toc-section-number">5.1</span> Fit a starting model</a></li>
+<li><a href="#run-the-optimizer" id="toc-run-the-optimizer"><span class="toc-section-number">5.2</span> Run the optimizer</a></li>
+</ul></li>
+<li><a href="#read-the-results" id="toc-read-the-results"><span class="toc-section-number">6</span> Read the results</a>
+<ul>
+<li><a href="#read-the-scale-of-effect" id="toc-read-the-scale-of-effect"><span class="toc-section-number">6.1</span> Read the scale of effect</a></li>
+<li><a href="#read-the-abundance-removal-and-distance-components" id="toc-read-the-abundance-removal-and-distance-components"><span class="toc-section-number">6.2</span> Read the abundance, removal, and
+distance components</a></li>
+<li><a href="#plot-the-kernel-and-the-density-response" id="toc-plot-the-kernel-and-the-density-response"><span class="toc-section-number">6.3</span> Plot the kernel and the density
+response</a></li>
+<li><a href="#map-density" id="toc-map-density"><span class="toc-section-number">6.4</span> Map density</a></li>
+</ul></li>
+<li><a href="#refit-from-several-starting-values" id="toc-refit-from-several-starting-values"><span class="toc-section-number">7</span> Refit from several starting
+values</a></li>
+<li><a href="#model-spatial-correlation-among-survey-blocks" id="toc-model-spatial-correlation-among-survey-blocks"><span class="toc-section-number">8</span> Model spatial correlation among
+survey blocks</a></li>
+<li><a href="#current-restrictions" id="toc-current-restrictions"><span class="toc-section-number">9</span> Current restrictions</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">10</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">10.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">10.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p>In a distance-removal point count, the observer records how far away
+each bird was and the part of the count in which it was first detected.
+Those two records let a model separate how many birds were present from
+how many the observer missed. This vignette shows how to estimate the
+scale of effect of a landscape covariate on bird density inside such a
+model, fitted with <code>unmarked::gdistremoval()</code>.</p>
+<p>You will simulate a survey with known values, prepare the data, fit
+the model, estimate the scale of effect, and read the abundance,
+availability, and detection results. The last section lists what is not
+supported yet. Read
+<code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code> first,
+because this vignette builds on its four steps. Experience with
+<code>unmarked</code> helps but is not required.</p>
+</div>
+<div id="know-what-data-the-model-needs" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Know what data the
+model needs</h1>
+<p><code>unmarked</code> stores a distance-removal survey in an
+<code>unmarkedFrameGDR</code> object. A detected bird is removed from
+further counting, so only its first detection is used.</p>
+<table style="width:100%;">
+<colgroup>
+<col width="25%" />
+<col width="37%" />
+<col width="37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Input</th>
+<th align="left">Argument</th>
+<th align="left">Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Distance table</td>
+<td align="left"><code>yDistance</code></td>
+<td align="left">One row per survey and one column per distance band.
+Each entry counts the birds first detected in that band</td>
+</tr>
+<tr class="even">
+<td align="left">Removal table</td>
+<td align="left"><code>yRemoval</code></td>
+<td align="left">One row per survey and one column per time interval.
+Each entry counts the birds first detected in that interval</td>
+</tr>
+<tr class="odd">
+<td align="left">Distance bands</td>
+<td align="left"><code>dist.breaks</code>, <code>unitsIn</code></td>
+<td align="left">Band boundaries starting at zero. The last boundary is
+the survey radius</td>
+</tr>
+<tr class="even">
+<td align="left">Time intervals</td>
+<td align="left"><code>period.lengths</code></td>
+<td align="left">Length of each interval</td>
+</tr>
+<tr class="odd">
+<td align="left">Site covariates</td>
+<td align="left"><code>siteCovs</code></td>
+<td align="left">One row per survey, including the kernel-weighted
+landscape covariates</td>
+</tr>
+</tbody>
+</table>
+<p>Both tables describe the same birds, so the two rows for a survey
+must have the same total. The model has four components, and each takes
+its own formula.</p>
+<table>
+<colgroup>
+<col width="17%" />
+<col width="29%" />
+<col width="12%" />
+<col width="30%" />
+<col width="9%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Component</th>
+<th align="left">Formula argument</th>
+<th align="left"><code>type</code></th>
+<th align="left">What it estimates</th>
+<th align="left">Link</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Abundance</td>
+<td align="left"><code>lambdaformula</code></td>
+<td align="left"><code>&quot;lambda&quot;</code></td>
+<td align="left">Bird density, or abundance per survey circle</td>
+<td align="left">Log</td>
+</tr>
+<tr class="even">
+<td align="left">Availability</td>
+<td align="left"><code>phiformula</code></td>
+<td align="left"><code>&quot;phi&quot;</code></td>
+<td align="left">Probability that a bird is available during a visit.
+Estimated only when points are visited more than once</td>
+<td align="left">Logit</td>
+</tr>
+<tr class="odd">
+<td align="left">Removal</td>
+<td align="left"><code>removalformula</code></td>
+<td align="left"><code>&quot;rem&quot;</code></td>
+<td align="left">Probability, per unit of time, that a bird present is
+first detected</td>
+<td align="left">Logit</td>
+</tr>
+<tr class="even">
+<td align="left">Distance</td>
+<td align="left"><code>distanceformula</code></td>
+<td align="left"><code>&quot;dist&quot;</code></td>
+<td align="left">Scale of the detection function, or how quickly
+detection falls with distance</td>
+<td align="left">Log</td>
+</tr>
+</tbody>
+</table>
+<p><code>multiScaleR</code> estimates a scale of effect for a landscape
+covariate in any component the model estimates. The example below visits
+each point once. Its removal component therefore carries the information
+about how readily birds reveal themselves.</p>
+</div>
+<div id="simulate-a-survey-with-a-known-scale-of-effect" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Simulate a survey with
+a known scale of effect</h1>
+<p>The running count example from the Quick Start does not fit this
+model, so this vignette simulates point counts on the same landscape
+with <code>sim_dat_gdr()</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)                 <span class="co"># 100 survey locations (an sf object)</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)            <span class="co"># convert to a terra SpatVector</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># Binary habitat layer on a 20 m grid, in meters</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>land1 <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>                          <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))[[<span class="st">&quot;land1&quot;</span>]]</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co"># Step 1 of every analysis: extract the raster around each survey point</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>kernel_inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land1,</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>                             <span class="at">max_D =</span> <span class="dv">1700</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>                             <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<p>Density at each point depends on habitat weighted with a Gaussian
+kernel of sigma = 250 m, the true scale of effect. The comments give the
+other true values.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Habitat smoothed at the true scale, then standardized (mean 0, SD 1)</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>land1_250 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(<span class="at">raster_stack =</span> land1, <span class="at">sigma =</span> <span class="dv">250</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>                                 <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>hab_true  <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(terra<span class="sc">::</span><span class="fu">extract</span>(land1_250, pts, <span class="at">ID =</span> <span class="cn">FALSE</span>)[, <span class="dv">1</span>]))</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">sim_dat_gdr</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">density          =</span> <span class="fu">exp</span>(<span class="fu">log</span>(<span class="dv">400</span>) <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> hab_true),  <span class="co"># birds per square km</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">distance_scale   =</span> <span class="dv">40</span>,                <span class="co"># half-normal detection scale (m)</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">removal          =</span> <span class="fl">0.2</span>,               <span class="co"># chance per minute of a first detection</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">dist_breaks      =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">25</span>, <span class="dv">50</span>, <span class="dv">75</span>),  <span class="co"># three bands within a 75 m radius</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">interval_lengths =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>),        <span class="co"># a 10-minute count in three intervals</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="at">interval_units   =</span> <span class="st">&quot;minutes&quot;</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="at">site_covs        =</span> kernel_inputs<span class="sc">$</span>kernel_dat,   <span class="co"># covariates for the model</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="at">event_keys       =</span> <span class="fu">data.frame</span>(<span class="at">survey =</span> <span class="fu">paste0</span>(<span class="st">&quot;pt&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>)),</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="at">seed             =</span> <span class="dv">2</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>)</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>umf <span class="ot">&lt;-</span> sim<span class="sc">$</span>observed              <span class="co"># the unmarkedFrameGDR to analyze</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="fu">head</span>(umf<span class="sc">@</span>yDistance, <span class="dv">3</span>)           <span class="co"># birds by distance band</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt;      [,1] [,2] [,3]</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt; [1,]    1    3    3</span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co">#&gt; [2,]    0    1    0</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#&gt; [3,]    0    2    0</span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="fu">head</span>(umf<span class="sc">@</span>yRemoval, <span class="dv">3</span>)            <span class="co"># the same birds by time interval</span></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co">#&gt;      [,1] [,2] [,3]</span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#&gt; [1,]    2    3    2</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co">#&gt; [2,]    0    0    1</span></span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co">#&gt; [3,]    2    0    0</span></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>sim<span class="sc">$</span>truth[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="fu">c</span>(<span class="st">&quot;expected_density&quot;</span>, <span class="st">&quot;expected_abundance&quot;</span>,</span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>                 <span class="st">&quot;realized_abundance&quot;</span>, <span class="st">&quot;realized_observed&quot;</span>)]</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt;   expected_density expected_abundance realized_abundance realized_observed</span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt; 1         718.3425          12.694160                 13                 7</span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; 2         345.1187           6.098751                  4                 1</span></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co">#&gt; 3         237.0888           4.189705                  4                 2</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Each row is one survey
+point. The first two tables are the data an observer would hand you, and
+their row totals match. The third table is the truth behind them.
+<code>expected_density</code> is in birds per square kilometer.
+Multiplying it by the area of the 75 m circle (0.0177 square kilometers)
+gives <code>expected_abundance</code>, the expected number of birds in
+the circle. <code>realized_abundance</code> is the number simulated
+there, and <code>realized_observed</code> is the number detected. Under
+these settings an observer detects about 42% of the birds present.</p>
+</div>
+<div id="prepare-your-own-records" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Prepare your own
+records</h1>
+<div id="turn-bird-records-into-the-two-count-tables" class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Turn bird records
+into the two count tables</h2>
+<p>Field data usually arrive as one record per bird.
+<code>prepare_gdr_histories()</code> converts those records to the two
+tables. It finds each bird’s first detection before it applies the
+survey radius, so a bird first detected beyond the radius does not enter
+the count when it later moves closer.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Where each column of the record matrix sits: 2 time intervals by 3 distance</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># bands (0-25 m, 25-75 m, and beyond the 75 m radius)</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>cell_map <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(<span class="at">interval =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">distance_bin =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>cell_map<span class="sc">$</span>column <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;cell&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co"># One row per bird, with a 1 where the bird was recorded</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>records <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="at">nrow =</span> <span class="dv">3</span>, <span class="at">ncol =</span> <span class="dv">6</span>, <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="cn">NULL</span>, cell_map<span class="sc">$</span>column))</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>records[<span class="dv">1</span>, <span class="st">&quot;cell1&quot;</span>] <span class="ot">&lt;-</span> <span class="dv">1</span>                 <span class="co"># interval 1, 0-25 m</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>records[<span class="dv">2</span>, <span class="st">&quot;cell4&quot;</span>] <span class="ot">&lt;-</span> <span class="dv">1</span>                 <span class="co"># interval 2, 25-75 m</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>records[<span class="dv">3</span>, <span class="fu">c</span>(<span class="st">&quot;cell5&quot;</span>, <span class="st">&quot;cell2&quot;</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span>     <span class="co"># beyond 75 m first, then 0-25 m</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>linked <span class="ot">&lt;-</span> <span class="fu">prepare_gdr_histories</span>(</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">histories    =</span> records,</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">history_keys =</span> <span class="fu">data.frame</span>(<span class="at">survey =</span> <span class="fu">c</span>(<span class="st">&quot;a&quot;</span>, <span class="st">&quot;a&quot;</span>, <span class="st">&quot;b&quot;</span>),</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>                            <span class="at">bird   =</span> <span class="fu">c</span>(<span class="st">&quot;one&quot;</span>, <span class="st">&quot;two&quot;</span>, <span class="st">&quot;one&quot;</span>)),</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">event_keys   =</span> <span class="fu">data.frame</span>(<span class="at">survey =</span> <span class="fu">c</span>(<span class="st">&quot;a&quot;</span>, <span class="st">&quot;b&quot;</span>, <span class="st">&quot;c&quot;</span>)),   <span class="co"># every survey done</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  <span class="at">event_id =</span> <span class="st">&quot;survey&quot;</span>, <span class="at">individual_id =</span> <span class="st">&quot;bird&quot;</span>, <span class="at">cell_map =</span> cell_map,</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">dist_breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">25</span>, <span class="dv">75</span>, <span class="cn">Inf</span>), <span class="at">radius =</span> <span class="dv">75</span>, <span class="at">units_in =</span> <span class="st">&quot;m&quot;</span>,</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">interval_lengths =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">5</span>), <span class="at">interval_units =</span> <span class="st">&quot;minutes&quot;</span>,</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  <span class="at">surveyed =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">TRUE</span>, <span class="cn">TRUE</span>)         <span class="co"># survey c found no birds</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>)</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>linked<span class="sc">$</span>first[, <span class="fu">c</span>(<span class="st">&quot;.history_row&quot;</span>, <span class="st">&quot;first_interval&quot;</span>, <span class="st">&quot;first_distance_bin&quot;</span>,</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>                 <span class="st">&quot;status&quot;</span>)]</span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt;   .history_row first_interval first_distance_bin               status</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; 1            1              1                  1       retained_first</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; 2            2              2                  2       retained_first</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; 3            3              1                  3 first_outside_radius</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a>linked<span class="sc">$</span>yDistance</span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt;      [,1] [,2]</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; [1,]    1    1</span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; [2,]    0    0</span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; [3,]    0    0</span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a>linked<span class="sc">$</span>yRemoval</span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt;      [,1] [,2]</span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt; [1,]    1    1</span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; [2,]    0    0</span></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt; [3,]    0    0</span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co"># The two tables go straight into an unmarked frame</span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a>toy_umf <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">unmarkedFrameGDR</span>(</span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a>  <span class="at">yDistance =</span> linked<span class="sc">$</span>yDistance, <span class="at">yRemoval =</span> linked<span class="sc">$</span>yRemoval,</span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a>  <span class="at">dist.breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">25</span>, <span class="dv">75</span>), <span class="at">unitsIn =</span> <span class="st">&quot;m&quot;</span>, <span class="at">period.lengths =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">5</span>)</span>
+<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a>)</span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>first</code> has one
+row per bird and <code>status</code> says what happened to it. The two
+birds at survey <code>a</code> are kept. The bird at survey
+<code>b</code> was first detected beyond 75 m, so it is left out, and
+survey <code>b</code> becomes a count of zero. Survey <code>c</code> was
+completed with no birds, which is also a zero. Mark a point that nobody
+visited with <code>surveyed = FALSE</code>, and its counts become
+missing instead.</p>
+</div>
+<div id="check-that-the-records-line-up-with-the-surveys" class="section level2" number="4.2">
+<h2><span class="header-section-number">4.2</span> Check that the
+records line up with the surveys</h2>
+<p><code>validate_unmarked_data()</code> checks a frame against a table
+of survey identifiers before you fit anything.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>checked <span class="ot">&lt;-</span> <span class="fu">validate_unmarked_data</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">object =</span> umf, <span class="at">event_keys =</span> sim<span class="sc">$</span>event_keys, <span class="at">event_id =</span> <span class="st">&quot;survey&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">interval_units =</span> <span class="st">&quot;minutes&quot;</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">effort =</span> <span class="fu">rep</span>(<span class="dv">10</span>, <span class="dv">100</span>)               <span class="co"># minutes surveyed at each point</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>checked<span class="sc">$</span>valid                         <span class="co"># TRUE: no errors were found</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="fu">nrow</span>(checked<span class="sc">$</span>findings)                <span class="co"># number of errors and warnings</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>valid</code> is
+<code>TRUE</code> when the check finds no errors, such as a survey
+identifier used twice or distance and removal totals that disagree.
+<code>findings</code> lists each problem with the survey it belongs to.
+Supply <code>effort</code> so that a count of zero from a completed
+survey is not confused with a survey that never took place.</p>
+</div>
+<div id="add-covariates-for-the-time-intervals" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Add covariates for
+the time intervals</h2>
+<p>A removal formula reads its covariates from a table with one row per
+survey and time interval. <code>expand_gdr_intervals()</code> copies the
+site covariates you name into that table and adds the interval
+number.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>umf_obs <span class="ot">&lt;-</span> umf</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co"># Who ran each count: a covariate recorded once per survey</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>unmarked<span class="sc">::</span><span class="fu">siteCovs</span>(umf_obs)<span class="sc">$</span>observer <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;Ann&quot;</span>, <span class="st">&quot;Bob&quot;</span>), <span class="at">times =</span> <span class="dv">50</span>))</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>expanded <span class="ot">&lt;-</span> <span class="fu">expand_gdr_intervals</span>(</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">object =</span> umf_obs, <span class="at">event_keys =</span> sim<span class="sc">$</span>event_keys, <span class="at">event_id =</span> <span class="st">&quot;survey&quot;</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">interval_units  =</span> <span class="st">&quot;minutes&quot;</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">site_covariates =</span> <span class="fu">c</span>(<span class="at">rem_observer =</span> <span class="st">&quot;observer&quot;</span>)   <span class="co"># new name = source column</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="fu">head</span>(unmarked<span class="sc">::</span><span class="fu">obsCovs</span>(expanded<span class="sc">$</span>data), <span class="dv">4</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt;   interval rem_observer</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; 1        1          Ann</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; 2        2          Ann</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 3        3          Ann</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 4        1          Bob</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The first survey now has
+three rows, one for each interval. With <code>expanded$data</code> as
+the model data, <code>removalformula = ~ rem_observer</code> lets the
+removal probability differ between observers, and
+<code>~ I(interval == 1)</code> lets the first interval differ from the
+rest. Give the copy a new name, as here. A landscape covariate whose
+scale you estimate must not share its name with a column in this table.
+For covariates that change from one interval to the next, use
+<code>prepare_gdr_intervals()</code>.</p>
+</div>
+</div>
+<div id="estimate-the-scale-of-effect" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Estimate the scale of
+effect</h1>
+<div id="fit-a-starting-model" class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> Fit a starting
+model</h2>
+<p>Start with the model you intend to optimize, fitted with
+<code>unmarked::gdistremoval()</code>. Its landscape covariate comes
+from <code>kernel_inputs$kernel_dat</code>, which
+<code>sim_dat_gdr()</code> stored in <code>siteCovs</code> above.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>mod <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">gdistremoval</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">lambdaformula   =</span> <span class="sc">~</span> land1,      <span class="co"># density depends on the landscape covariate</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">removalformula  =</span> <span class="sc">~</span> <span class="dv">1</span>,          <span class="co"># one removal probability</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">distanceformula =</span> <span class="sc">~</span> <span class="dv">1</span>,          <span class="co"># one distance scale</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">data     =</span> umf,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">keyfun   =</span> <span class="st">&quot;halfnorm&quot;</span>,          <span class="co"># half-normal detection function</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">mixture  =</span> <span class="st">&quot;P&quot;</span>,                 <span class="co"># Poisson abundance</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">output   =</span> <span class="st">&quot;density&quot;</span>,           <span class="co"># report density instead of abundance</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">unitsOut =</span> <span class="st">&quot;kmsq&quot;</span>,              <span class="co"># birds per square km</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">K        =</span> <span class="dv">60</span>,                  <span class="co"># largest abundance considered at a point</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="at">starts   =</span> <span class="fu">c</span>(<span class="fu">log</span>(<span class="dv">400</span>), <span class="dv">0</span>, <span class="fu">log</span>(<span class="dv">40</span>), <span class="fu">qlogis</span>(<span class="fl">0.2</span>))  <span class="co"># link-scale starting values</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>)</span></code></pre></div>
+<p><strong>Choosing <code>K</code> and <code>starts</code>:</strong>
+<code>K</code> is the largest number of birds the likelihood considers
+at one point. Set it well above the largest plausible abundance. The
+most birds present at any point in this simulation is 28. The starting
+values follow the order of the coefficients, here the density intercept,
+the <code>land1</code> effect, the distance scale, and the removal
+probability, each on its link scale. They are optional, but supply them
+when you can. One trial data set for this vignette, fitted without them,
+returned a distance scale of tens of thousands of meters. Check that the
+distance scale is a plausible number of meters before you continue.</p>
+</div>
+<div id="run-the-optimizer" class="section level2" number="5.2">
+<h2><span class="header-section-number">5.2</span> Run the
+optimizer</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>opt <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(<span class="at">fitted_mod    =</span> mod,</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>                        <span class="at">kernel_inputs =</span> kernel_inputs,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                        <span class="at">n_cores       =</span> <span class="dv">1</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                        <span class="at">verbose       =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<p>The optimizer refits the whole distance-removal model at each
+candidate sigma, which takes 10 to 20 seconds here.</p>
+</div>
+</div>
+<div id="read-the-results" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Read the results</h1>
+<div id="read-the-scale-of-effect" class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> Read the scale of
+effect</h2>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">summary</span>(opt)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; multiScale_optim(fitted_mod = mod, kernel_inputs = kernel_inputs, </span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;     n_cores = 1, verbose = FALSE)</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; Kernel used:</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; gaussian</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect *****</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;           Mean       SE     2.5%    97.5%</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; land1 249.9219 26.69617 196.9575 302.8864</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; ***** Optimized Scale of Effect -- Distance *****</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; Scale distances (map units) at 90%, two definitions.</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; 2D, radius of the circle for the ideal untruncated kernel (selected):</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;         Mean   2.5%  97.5%</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt; land1 536.32 422.66 649.98</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; 1D, along a line through the point (comparison):</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;         Mean   2.5% 97.5%</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; land1 411.09 323.97 498.2</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt;   ==================================== </span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;  *****     Fitted Model Summary     *****</span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a><span class="co">#&gt; unmarked::gdistremoval(lambdaformula = ~land1, phiformula = ~1, </span></span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a><span class="co">#&gt;     removalformula = ~1, distanceformula = ~1, data = inputs$data, </span></span>
+<span id="cb8-39"><a href="#cb8-39" tabindex="-1"></a><span class="co">#&gt;     keyfun = &quot;halfnorm&quot;, output = &quot;density&quot;, unitsOut = &quot;kmsq&quot;, </span></span>
+<span id="cb8-40"><a href="#cb8-40" tabindex="-1"></a><span class="co">#&gt;     mixture = &quot;P&quot;, K = 60, starts = c(log(400), 0, log(40), qlogis(0.2)))</span></span>
+<span id="cb8-41"><a href="#cb8-41" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-42"><a href="#cb8-42" tabindex="-1"></a><span class="co">#&gt; Abundance (log-scale):</span></span>
+<span id="cb8-43"><a href="#cb8-43" tabindex="-1"></a><span class="co">#&gt;             Estimate     SE     z  P(&gt;|z|)</span></span>
+<span id="cb8-44"><a href="#cb8-44" tabindex="-1"></a><span class="co">#&gt; (Intercept)     6.02 0.1027 58.66 0.00e+00</span></span>
+<span id="cb8-45"><a href="#cb8-45" tabindex="-1"></a><span class="co">#&gt; land1           0.49 0.0574  8.53 1.43e-17</span></span>
+<span id="cb8-46"><a href="#cb8-46" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-47"><a href="#cb8-47" tabindex="-1"></a><span class="co">#&gt; Distance (log-scale):</span></span>
+<span id="cb8-48"><a href="#cb8-48" tabindex="-1"></a><span class="co">#&gt;  Estimate     SE    z P(&gt;|z|)</span></span>
+<span id="cb8-49"><a href="#cb8-49" tabindex="-1"></a><span class="co">#&gt;      3.68 0.0619 59.4       0</span></span>
+<span id="cb8-50"><a href="#cb8-50" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-51"><a href="#cb8-51" tabindex="-1"></a><span class="co">#&gt; Removal (logit-scale):</span></span>
+<span id="cb8-52"><a href="#cb8-52" tabindex="-1"></a><span class="co">#&gt;  Estimate    SE     z  P(&gt;|z|)</span></span>
+<span id="cb8-53"><a href="#cb8-53" tabindex="-1"></a><span class="co">#&gt;     -1.33 0.109 -12.2 3.05e-34</span></span>
+<span id="cb8-54"><a href="#cb8-54" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-55"><a href="#cb8-55" tabindex="-1"></a><span class="co">#&gt; AIC: 1197.456 </span></span>
+<span id="cb8-56"><a href="#cb8-56" tabindex="-1"></a><span class="co">#&gt; Number of sites: 100</span></span>
+<span id="cb8-57"><a href="#cb8-57" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-58"><a href="#cb8-58" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-59"><a href="#cb8-59" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-60"><a href="#cb8-60" tabindex="-1"></a><span class="co">#&gt; ***** Follow-up recommendation *****</span></span>
+<span id="cb8-61"><a href="#cb8-61" tabindex="-1"></a><span class="co">#&gt; Recommended `max_D`: 1700</span></span>
+<span id="cb8-62"><a href="#cb8-62" tabindex="-1"></a><span class="co">#&gt; Recommended starting `sigma` values:</span></span>
+<span id="cb8-63"><a href="#cb8-63" tabindex="-1"></a><span class="co">#&gt;    land1 </span></span>
+<span id="cb8-64"><a href="#cb8-64" tabindex="-1"></a><span class="co">#&gt; 249.9219 </span></span>
+<span id="cb8-65"><a href="#cb8-65" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-66"><a href="#cb8-66" tabindex="-1"></a><span class="co">#&gt; Action:</span></span>
+<span id="cb8-67"><a href="#cb8-67" tabindex="-1"></a><span class="co">#&gt; Use the optimized parameters as efficient starting values if refitting.</span></span></code></pre></div>
+<p><strong>How to read the <code>summary()</code> output:</strong> The
+first two blocks are the same as for any <code>multiScaleR</code> fit.
+The estimated sigma for <code>land1</code> is 250 m, and a Gaussian
+kernel of that width holds 90% of its weight within 536 m of a survey
+point. The fitted model summary then has one block per component,
+labeled with its link scale.</p>
+</div>
+<div id="read-the-abundance-removal-and-distance-components" class="section level2" number="6.2">
+<h2><span class="header-section-number">6.2</span> Read the abundance,
+removal, and distance components</h2>
+<p><code>unmarked::predict()</code> returns each component on its
+natural scale.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> opt<span class="sc">$</span>opt_mod                 <span class="co"># the model refitted at the estimated scale</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>dens <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">predict</span>(fit, <span class="at">type =</span> <span class="st">&quot;lambda&quot;</span>)   <span class="co"># one row per survey point</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>dsig <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">predict</span>(fit, <span class="at">type =</span> <span class="st">&quot;dist&quot;</span>)     <span class="co"># one row per survey point</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>prem <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">predict</span>(fit, <span class="at">type =</span> <span class="st">&quot;rem&quot;</span>)      <span class="co"># one row per point and interval</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co"># First survey point</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="fu">rbind</span>(<span class="at">density =</span> dens[<span class="dv">1</span>, ], <span class="at">distance =</span> dsig[<span class="dv">1</span>, ], <span class="at">removal =</span> prem[<span class="dv">1</span>, ])</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt;            Predicted          SE       lower       upper</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; density  721.9869294 76.96948484 585.8474669 889.7625333</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; distance  39.5339089  2.44584631  35.0193780  44.6304314</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; removal    0.2092183  0.01802931   0.1760664   0.2467431</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co"># Turn the two detection components into probabilities for a 10-minute count</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>p_near  <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="sc">*</span> dsig<span class="sc">$</span>Predicted[<span class="dv">1</span>]<span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> <span class="dv">75</span><span class="sc">^</span><span class="dv">2</span> <span class="sc">*</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>  (<span class="dv">1</span> <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="dv">75</span><span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> dsig<span class="sc">$</span>Predicted[<span class="dv">1</span>]<span class="sc">^</span><span class="dv">2</span>)))    <span class="co"># average over the 75 m circle</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>p_heard <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> (<span class="dv">1</span> <span class="sc">-</span> prem<span class="sc">$</span>Predicted[<span class="dv">1</span>])<span class="sc">^</span><span class="dv">10</span>         <span class="co"># detected at least once</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">c</span>(<span class="at">distance =</span> p_near, <span class="at">removal =</span> p_heard, <span class="at">both =</span> p_near <span class="sc">*</span> p_heard), <span class="dv">2</span>)</span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; distance  removal     both </span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt;     0.46     0.90     0.42</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The <code>density</code> row
+is in birds per square kilometer. Multiply by 0.0177 to get expected
+birds in the 75 m circle, about 12.8 at this point. The
+<code>distance</code> row is the scale of the half-normal detection
+function, in meters. Averaged over the circle, that scale gives a 46%
+chance of detecting a bird that reveals itself. The <code>removal</code>
+row is the chance per minute that a bird present is first detected, or
+90% over ten minutes. Their product, about 42%, is the share of birds an
+observer records. The standard errors and limits in these rows treat the
+estimated sigma as known.</p>
+<p>Because the data are simulated, you can compare the estimates with
+the truth.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>est     <span class="ot">&lt;-</span> <span class="fu">summary</span>(opt)<span class="sc">$</span>opt_scale                    <span class="co"># sigma and 95% limits (m)</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>b       <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">coef</span>(fit)                       <span class="co"># link-scale coefficients</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>ci_lam  <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">confint</span>(fit, <span class="at">type =</span> <span class="st">&quot;lambda&quot;</span>)   <span class="co"># Wald limits, log scale</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>ci_dist <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">confint</span>(fit, <span class="at">type =</span> <span class="st">&quot;dist&quot;</span>)     <span class="co"># log scale</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>ci_rem  <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">confint</span>(fit, <span class="at">type =</span> <span class="st">&quot;rem&quot;</span>)      <span class="co"># logit scale</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>check <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>  <span class="at">Parameter =</span> <span class="fu">c</span>(<span class="st">&quot;Scale of effect, sigma (m)&quot;</span>, <span class="st">&quot;Density at average habitat&quot;</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>                <span class="st">&quot;Effect of land1 (log scale)&quot;</span>, <span class="st">&quot;Distance scale (m)&quot;</span>,</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>                <span class="st">&quot;Removal probability per minute&quot;</span>),</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>  <span class="at">Truth     =</span> <span class="fu">c</span>(<span class="dv">250</span>, <span class="dv">400</span>, <span class="fl">0.5</span>, <span class="dv">40</span>, <span class="fl">0.2</span>),</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>  <span class="at">Estimate  =</span> <span class="fu">c</span>(est[<span class="dv">1</span>, <span class="st">&quot;Mean&quot;</span>], <span class="fu">exp</span>(b[<span class="dv">1</span>]), b[<span class="dv">2</span>], <span class="fu">exp</span>(b[<span class="dv">3</span>]), <span class="fu">plogis</span>(b[<span class="dv">4</span>])),</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  <span class="at">Lower     =</span> <span class="fu">c</span>(est[<span class="dv">1</span>, <span class="st">&quot;2.5%&quot;</span>], <span class="fu">exp</span>(ci_lam[<span class="dv">1</span>, <span class="dv">1</span>]), ci_lam[<span class="dv">2</span>, <span class="dv">1</span>],</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>                <span class="fu">exp</span>(ci_dist[<span class="dv">1</span>, <span class="dv">1</span>]), <span class="fu">plogis</span>(ci_rem[<span class="dv">1</span>, <span class="dv">1</span>])),</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>  <span class="at">Upper     =</span> <span class="fu">c</span>(est[<span class="dv">1</span>, <span class="st">&quot;97.5%&quot;</span>], <span class="fu">exp</span>(ci_lam[<span class="dv">1</span>, <span class="dv">2</span>]), ci_lam[<span class="dv">2</span>, <span class="dv">2</span>],</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>                <span class="fu">exp</span>(ci_dist[<span class="dv">1</span>, <span class="dv">2</span>]), <span class="fu">plogis</span>(ci_rem[<span class="dv">1</span>, <span class="dv">2</span>]))</span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>)</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co"># Does each 95% interval contain the value used to simulate the data?</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>check<span class="sc">$</span>Covered <span class="ot">&lt;-</span> check<span class="sc">$</span>Truth <span class="sc">&gt;=</span> check<span class="sc">$</span>Lower <span class="sc">&amp;</span> check<span class="sc">$</span>Truth <span class="sc">&lt;=</span> check<span class="sc">$</span>Upper</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(check, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="45%" />
+<col width="8%" />
+<col width="13%" />
+<col width="10%" />
+<col width="10%" />
+<col width="11%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Parameter</th>
+<th align="right">Truth</th>
+<th align="right">Estimate</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+<th align="left">Covered</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Scale of effect, sigma (m)</td>
+<td align="right">250.0</td>
+<td align="right">249.92</td>
+<td align="right">196.96</td>
+<td align="right">302.89</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="even">
+<td align="left">Density at average habitat</td>
+<td align="right">400.0</td>
+<td align="right">412.35</td>
+<td align="right">337.20</td>
+<td align="right">504.25</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="odd">
+<td align="left">Effect of land1 (log scale)</td>
+<td align="right">0.5</td>
+<td align="right">0.49</td>
+<td align="right">0.38</td>
+<td align="right">0.60</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="even">
+<td align="left">Distance scale (m)</td>
+<td align="right">40.0</td>
+<td align="right">39.53</td>
+<td align="right">35.02</td>
+<td align="right">44.63</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="odd">
+<td align="left">Removal probability per minute</td>
+<td align="right">0.2</td>
+<td align="right">0.21</td>
+<td align="right">0.18</td>
+<td align="right">0.25</td>
+<td align="left">TRUE</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the table:</strong> Density is back-transformed
+with <code>exp()</code> and the removal probability with
+<code>plogis()</code>, while the <code>land1</code> effect stays on the
+log scale. Its estimate of 0.49 means that a one standard deviation
+increase in kernel-weighted habitat multiplies density by 1.63.
+<code>Covered</code> is <code>TRUE</code> when the 95% interval contains
+the true value. A single simulated data set shows what recovery looks
+like. It cannot show that the intervals are reliable in general.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Report density with
+its units and the survey radius, and report the effective distance for
+the scale of effect. Say that the coefficient intervals are conditional
+on the estimated scale.
+<code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code>
+explains what that leaves out.</p>
+</blockquote>
+</div>
+<div id="plot-the-kernel-and-the-density-response" class="section level2" number="6.3">
+<h2><span class="header-section-number">6.3</span> Plot the kernel and
+the density response</h2>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">plot</span>(opt)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Kernel weight against distance for land1." src="data:image/png;base64,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" alt="Kernel weight against distance for land1." />
+<div class="figcaption"><strong><em>Kernel weight against distance for
+<code>land1</code>.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">plot_marginal_effects</span>(opt, <span class="at">type =</span> <span class="st">&quot;lambda&quot;</span>,</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>                      <span class="at">ylab =</span> <span class="st">&quot;Density (birds per square km)&quot;</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Estimated density across the observed range of kernel-weighted land1." src="data:image/png;base64,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" alt="Estimated density across the observed range of kernel-weighted land1." />
+<div class="figcaption"><strong><em>Estimated density across the
+observed range of kernel-weighted
+<code>land1</code>.</em></strong></div>
+</div>
+<p><strong>How to read these plots:</strong> The first plot shows how
+the weight given to a raster cell declines with distance from the survey
+point. The dashed line marks the radius that holds 90% of the kernel
+weight, and the gray band is its 95% confidence interval. The second
+plot shows density across the kernel-weighted proportion of habitat. Its
+band treats the estimated scale as known. Set <code>type</code> to
+<code>&quot;rem&quot;</code> or <code>&quot;dist&quot;</code> to plot a covariate in one of
+those components.</p>
+</div>
+<div id="map-density" class="section level2" number="6.4">
+<h2><span class="header-section-number">6.4</span> Map density</h2>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># Smooth the raster at the estimated scale, standardized as in the model</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>r_scaled <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(<span class="at">raster_stack =</span> land1, <span class="at">multiScaleR =</span> opt,</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>                                <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>                                <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co"># Density for every raster cell, with its standard error and 95% limits</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>dens_map <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(r_scaled, fit, <span class="at">type =</span> <span class="st">&quot;lambda&quot;</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="fu">names</span>(dens_map)</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Predicted&quot; &quot;SE&quot;        &quot;lower&quot;     &quot;upper&quot;</span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="fu">plot</span>(dens_map<span class="sc">$</span>Predicted, <span class="at">main =</span> <span class="st">&quot;Density (birds per square km)&quot;</span>)</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="fu">points</span>(pts, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.5</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Predicted density, in birds per square kilometer, with survey points." src="data:image/png;base64,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" alt="Predicted density, in birds per square kilometer, with survey points." />
+<div class="figcaption"><strong><em>Predicted density, in birds per
+square kilometer, with survey points.</em></strong></div>
+</div>
+<p><strong>How to read this map:</strong> Each cell holds the density
+the model expects for a count centered there. Detection is already
+accounted for, so the map shows birds present and not birds an observer
+would record. With <code>clamp = TRUE</code>, cells with more or less
+habitat than any survey point are held at the nearest observed
+value.</p>
+</div>
+</div>
+<div id="refit-from-several-starting-values" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Refit from several
+starting values</h1>
+<p>A distance-removal likelihood can have more than one local optimum.
+<code>make_gdr_refitter()</code> builds a refit function for
+<code>multiScale_optim()</code>. At every candidate scale it fits the
+model from the starting model’s coefficients and from each extra set of
+starting values you declare. The search stops with an error when the
+best likelihood comes from a fit that did not converge cleanly, and a
+record of every attempt goes to <code>audit_dir</code>.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># A second set of starting values, named like the model coefficients</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>cold <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">coef</span>(mod)</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>cold[] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">log</span>(<span class="dv">300</span>), <span class="dv">0</span>, <span class="fu">log</span>(<span class="dv">30</span>), <span class="fu">qlogis</span>(<span class="fl">0.4</span>))</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>refit <span class="ot">&lt;-</span> <span class="fu">make_gdr_refitter</span>(<span class="at">model =</span> mod, <span class="at">cold_starts =</span> <span class="fu">list</span>(<span class="at">cold =</span> cold),</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>                           <span class="at">audit_dir =</span> <span class="fu">tempfile</span>(<span class="st">&quot;gdr-audit-&quot;</span>))</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co"># The same search as before, with every candidate scale fitted from both starts</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>opt_checked <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(<span class="at">fitted_mod =</span> mod, <span class="at">kernel_inputs =</span> kernel_inputs,</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>                                <span class="at">refit_fn =</span> refit, <span class="at">n_cores =</span> <span class="dv">1</span>)</span></code></pre></div>
+<p>With one extra start the search takes about twice as long. In this
+example it returns the same sigma as the default search, 250 m, so the
+estimate did not depend on where the coefficients started.</p>
+</div>
+<div id="model-spatial-correlation-among-survey-blocks" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Model spatial
+correlation among survey blocks</h1>
+<p>Counts from neighboring areas are often more alike than the
+covariates explain. A random intercept for each block of surveys absorbs
+that, and <code>fit_gdr_response_field()</code> goes one step further by
+letting nearby blocks have similar intercepts. The correlation between
+two blocks falls with the distance between them as
+<code>exp(-distance / range)</code>. You supply <code>range</code> in
+map units, and the function does not estimate it.</p>
+<p>The stored example groups the 100 points into 16 square blocks and
+simulates block effects with a range of 1500 m. Fit the model with
+independent block effects first, then pass it to
+<code>fit_gdr_response_field()</code> with a second set of starting
+values. The simulated landscape has no real location, so the EPSG code
+below is a placeholder. Use the code of your own projected
+coordinates.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Template: an independent random intercept for each block (TMB engine)</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>template <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">gdistremoval</span>(</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>  <span class="at">lambdaformula =</span> <span class="sc">~</span> land1 <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> block), <span class="at">removalformula =</span> <span class="sc">~</span> <span class="dv">1</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>  <span class="at">distanceformula =</span> <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> umf_blocks, <span class="at">keyfun =</span> <span class="st">&quot;halfnorm&quot;</span>,</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>  <span class="at">mixture =</span> <span class="st">&quot;P&quot;</span>, <span class="at">output =</span> <span class="st">&quot;density&quot;</span>, <span class="at">unitsOut =</span> <span class="st">&quot;kmsq&quot;</span>, <span class="at">K =</span> <span class="dv">80</span>, <span class="at">engine =</span> <span class="st">&quot;TMB&quot;</span>,</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>  <span class="at">starts =</span> <span class="fu">c</span>(<span class="fu">log</span>(<span class="dv">400</span>), <span class="dv">0</span>, <span class="fu">log</span>(<span class="dv">40</span>), <span class="fu">qlogis</span>(<span class="fl">0.2</span>), <span class="fu">log</span>(<span class="fl">0.5</span>))</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>)</span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co"># Extra starting values, named by parameter block and position</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>cold <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;beta_lambda[1]&quot;</span>   <span class="ot">=</span> <span class="fu">log</span>(<span class="dv">300</span>),      <span class="co"># log density at average habitat</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>          <span class="st">&quot;beta_lambda[2]&quot;</span>   <span class="ot">=</span> <span class="dv">0</span>,             <span class="co"># land1 effect</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>          <span class="st">&quot;beta_dist[1]&quot;</span>     <span class="ot">=</span> <span class="fu">log</span>(<span class="dv">30</span>),       <span class="co"># log distance scale</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>          <span class="st">&quot;beta_rem[1]&quot;</span>      <span class="ot">=</span> <span class="fu">qlogis</span>(<span class="fl">0.4</span>),   <span class="co"># logit removal probability</span></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>          <span class="st">&quot;lsigma_lambda[1]&quot;</span> <span class="ot">=</span> <span class="fu">log</span>(<span class="fl">0.3</span>))      <span class="co"># log SD of the block effects</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a>settings <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">method =</span> <span class="st">&quot;BFGS&quot;</span>, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">threads =</span> <span class="dv">1</span><span class="dt">L</span>,</span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>                 <span class="at">control =</span> <span class="fu">list</span>(<span class="at">maxit =</span> <span class="dv">2500</span><span class="dt">L</span>, <span class="at">reltol =</span> <span class="fl">1e-10</span>))</span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a></span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a>field_fit <span class="ot">&lt;-</span> <span class="fu">fit_gdr_response_field</span>(</span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a>  <span class="at">model  =</span> template,</span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a>  <span class="at">coords =</span> block_xy,        <span class="co"># one row per survey: the center of its block</span></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a>  <span class="at">crs    =</span> <span class="dv">32617</span>,           <span class="co"># EPSG code of the projected coordinates</span></span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a>  <span class="at">range  =</span> <span class="dv">1500</span>,            <span class="co"># correlation range, in map units (m)</span></span>
+<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a>  <span class="at">cold_starts =</span> <span class="fu">list</span>(<span class="at">cold =</span> cold), <span class="at">tmb_settings =</span> settings,</span>
+<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a>  <span class="at">audit_dir   =</span> <span class="fu">tempfile</span>(<span class="st">&quot;gdr-field-audit-&quot;</span>)</span>
+<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="18%" />
+<col width="25%" />
+<col width="15%" />
+<col width="19%" />
+<col width="14%" />
+<col width="6%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Model</th>
+<th align="right">Density at average habitat</th>
+<th align="right">Effect of land1</th>
+<th align="right">SD of block effects</th>
+<th align="right">Log likelihood</th>
+<th align="right">AIC</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Independent blocks</td>
+<td align="right">311</td>
+<td align="right">0.51</td>
+<td align="right">0.23</td>
+<td align="right">-514.6</td>
+<td align="right">1039.2</td>
+</tr>
+<tr class="even">
+<td align="left">Correlated field</td>
+<td align="right">323</td>
+<td align="right">0.52</td>
+<td align="right">0.27</td>
+<td align="right">-515.4</td>
+<td align="right">1040.8</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the table:</strong> Density is in birds per
+square kilometer and the SD of the block effects is on the log scale. An
+SD of 0.27 means a block one standard deviation above average has 1.31
+times the typical density. Both models estimate the same number of
+parameters, because the range is supplied. Their AIC values differ by
+1.6, so these data do not favor either model.</p>
+<p><code>unmarked::predict(field_fit, type = &quot;lambda&quot;)</code> returns
+density with the estimated effect of each survey’s block. Add
+<code>re.form = NA</code> to set the field to zero. That prediction
+describes a block with no deviation, and it is not an average over
+blocks. To estimate the scale of effect with the field in place, build a
+refit function with
+<code>make_gdr_refitter(field_fit, list(cold = cold), audit_dir, tmb_settings = settings)</code>
+and pass it to <code>multiScale_optim()</code> as <code>refit_fn</code>
+with <code>n_cores = 1</code>. A search of that kind took about seven
+minutes on data like these. <code>?fit_gdr_response_field</code> gives
+the full requirements.</p>
+</div>
+<div id="current-restrictions" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Current
+restrictions</h1>
+<table>
+<colgroup>
+<col width="42%" />
+<col width="57%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Not supported</th>
+<th align="left">What to do instead</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">An <code>offset()</code> term in the abundance,
+availability, removal, or distance formula</td>
+<td align="left">No alternative yet. Do not drop an offset your model
+needs in order to proceed</td>
+</tr>
+<tr class="even">
+<td align="left">Zero-inflated abundance (<code>mixture = &quot;ZIP&quot;</code>)
+with <code>engine = &quot;TMB&quot;</code></td>
+<td align="left">Use <code>mixture = &quot;P&quot;</code> or <code>&quot;NB&quot;</code>. A
+zero-inflated model without random effects can use
+<code>engine = &quot;C&quot;</code></td>
+</tr>
+<tr class="odd">
+<td align="left">A scale of effect for a covariate that appears only in
+the availability formula of a single-visit design, or only in the
+distance formula with <code>keyfun = &quot;uniform&quot;</code></td>
+<td align="left">Those components are not estimated in such models. Put
+the landscape covariate in a component the model estimates</td>
+</tr>
+<tr class="even">
+<td align="left">A landscape covariate with the same name as a column in
+the yearly or interval covariate tables</td>
+<td align="left">Give each its own name, for example with an alias in
+<code>expand_gdr_intervals()</code></td>
+</tr>
+<tr class="odd">
+<td align="left">Intervals that include uncertainty in the scale of
+effect</td>
+<td align="left">Report intervals as conditional on the estimated
+scale</td>
+</tr>
+<tr class="even">
+<td align="left"><code>cross_validate()</code> for <code>unmarked</code>
+fits</td>
+<td align="left">Compare models fitted to the same surveys with
+<code>aic_tab()</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>sim_dat_gdr()</code> for negative binomial or
+zero-inflated abundance, detection functions other than half-normal, or
+repeat visits</td>
+<td align="left">Simulate those designs with your own code</td>
+</tr>
+<tr class="even">
+<td align="left"><code>make_gdr_refitter()</code> and
+<code>fit_gdr_response_field()</code> with other package versions. They
+require <code>unmarked</code> 1.5.2, and TMB 1.9.25 for models fitted
+with <code>engine = &quot;TMB&quot;</code></td>
+<td align="left">Use the default refit in
+<code>multiScale_optim()</code>, which has no version requirement</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>fit_gdr_response_field()</code> beyond Poisson
+abundance, a half-normal detection function, density per square
+kilometer, one visit per point, a 75 m survey radius, and one random
+intercept for abundance. The range is not estimated</td>
+<td align="left">Fit independent random intercepts with
+<code>engine = &quot;TMB&quot;</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="quick-reference" class="section level1" number="10">
+<h1><span class="header-section-number">10</span> Quick reference</h1>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="fu">library</span>(multiScaleR)</span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="co"># 1. Prepare the kernel inputs</span></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>pts   <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a>land1 <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a>                          <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))[[<span class="st">&quot;land1&quot;</span>]]</span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>kernel_inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land1,</span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a>                             <span class="at">max_D =</span> <span class="dv">1700</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>)</span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a></span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a><span class="co"># 2. Simulate a survey (or build the frame from your own records)</span></span>
+<span id="cb16-13"><a href="#cb16-13" tabindex="-1"></a>land1_250 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(<span class="at">raster_stack =</span> land1, <span class="at">sigma =</span> <span class="dv">250</span>,</span>
+<span id="cb16-14"><a href="#cb16-14" tabindex="-1"></a>                                 <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>)</span>
+<span id="cb16-15"><a href="#cb16-15" tabindex="-1"></a>hab_true  <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(terra<span class="sc">::</span><span class="fu">extract</span>(land1_250, pts, <span class="at">ID =</span> <span class="cn">FALSE</span>)[, <span class="dv">1</span>]))</span>
+<span id="cb16-16"><a href="#cb16-16" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">sim_dat_gdr</span>(<span class="at">density =</span> <span class="fu">exp</span>(<span class="fu">log</span>(<span class="dv">400</span>) <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> hab_true),</span>
+<span id="cb16-17"><a href="#cb16-17" tabindex="-1"></a>                   <span class="at">distance_scale =</span> <span class="dv">40</span>, <span class="at">removal =</span> <span class="fl">0.2</span>,</span>
+<span id="cb16-18"><a href="#cb16-18" tabindex="-1"></a>                   <span class="at">dist_breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">25</span>, <span class="dv">50</span>, <span class="dv">75</span>),</span>
+<span id="cb16-19"><a href="#cb16-19" tabindex="-1"></a>                   <span class="at">interval_lengths =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>), <span class="at">interval_units =</span> <span class="st">&quot;minutes&quot;</span>,</span>
+<span id="cb16-20"><a href="#cb16-20" tabindex="-1"></a>                   <span class="at">site_covs =</span> kernel_inputs<span class="sc">$</span>kernel_dat,</span>
+<span id="cb16-21"><a href="#cb16-21" tabindex="-1"></a>                   <span class="at">event_keys =</span> <span class="fu">data.frame</span>(<span class="at">survey =</span> <span class="fu">paste0</span>(<span class="st">&quot;pt&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>)),</span>
+<span id="cb16-22"><a href="#cb16-22" tabindex="-1"></a>                   <span class="at">seed =</span> <span class="dv">2</span>)</span>
+<span id="cb16-23"><a href="#cb16-23" tabindex="-1"></a>umf <span class="ot">&lt;-</span> sim<span class="sc">$</span>observed</span>
+<span id="cb16-24"><a href="#cb16-24" tabindex="-1"></a></span>
+<span id="cb16-25"><a href="#cb16-25" tabindex="-1"></a><span class="co"># 3. Check the data</span></span>
+<span id="cb16-26"><a href="#cb16-26" tabindex="-1"></a><span class="fu">validate_unmarked_data</span>(<span class="at">object =</span> umf, <span class="at">event_keys =</span> sim<span class="sc">$</span>event_keys,</span>
+<span id="cb16-27"><a href="#cb16-27" tabindex="-1"></a>                       <span class="at">event_id =</span> <span class="st">&quot;survey&quot;</span>, <span class="at">interval_units =</span> <span class="st">&quot;minutes&quot;</span>,</span>
+<span id="cb16-28"><a href="#cb16-28" tabindex="-1"></a>                       <span class="at">effort =</span> <span class="fu">rep</span>(<span class="dv">10</span>, <span class="dv">100</span>))<span class="sc">$</span>valid</span>
+<span id="cb16-29"><a href="#cb16-29" tabindex="-1"></a></span>
+<span id="cb16-30"><a href="#cb16-30" tabindex="-1"></a><span class="co"># 4. Fit a starting model, then estimate the scale of effect</span></span>
+<span id="cb16-31"><a href="#cb16-31" tabindex="-1"></a>mod <span class="ot">&lt;-</span> unmarked<span class="sc">::</span><span class="fu">gdistremoval</span>(<span class="at">lambdaformula =</span> <span class="sc">~</span> land1, <span class="at">removalformula =</span> <span class="sc">~</span> <span class="dv">1</span>,</span>
+<span id="cb16-32"><a href="#cb16-32" tabindex="-1"></a>                              <span class="at">distanceformula =</span> <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> umf,</span>
+<span id="cb16-33"><a href="#cb16-33" tabindex="-1"></a>                              <span class="at">keyfun =</span> <span class="st">&quot;halfnorm&quot;</span>, <span class="at">mixture =</span> <span class="st">&quot;P&quot;</span>,</span>
+<span id="cb16-34"><a href="#cb16-34" tabindex="-1"></a>                              <span class="at">output =</span> <span class="st">&quot;density&quot;</span>, <span class="at">unitsOut =</span> <span class="st">&quot;kmsq&quot;</span>, <span class="at">K =</span> <span class="dv">60</span>,</span>
+<span id="cb16-35"><a href="#cb16-35" tabindex="-1"></a>                              <span class="at">starts =</span> <span class="fu">c</span>(<span class="fu">log</span>(<span class="dv">400</span>), <span class="dv">0</span>, <span class="fu">log</span>(<span class="dv">40</span>), <span class="fu">qlogis</span>(<span class="fl">0.2</span>)))</span>
+<span id="cb16-36"><a href="#cb16-36" tabindex="-1"></a>opt <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(<span class="at">fitted_mod =</span> mod, <span class="at">kernel_inputs =</span> kernel_inputs,</span>
+<span id="cb16-37"><a href="#cb16-37" tabindex="-1"></a>                        <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb16-38"><a href="#cb16-38" tabindex="-1"></a></span>
+<span id="cb16-39"><a href="#cb16-39" tabindex="-1"></a><span class="co"># 5. Read the results</span></span>
+<span id="cb16-40"><a href="#cb16-40" tabindex="-1"></a><span class="fu">summary</span>(opt)                                  <span class="co"># sigma, effective distance, model</span></span>
+<span id="cb16-41"><a href="#cb16-41" tabindex="-1"></a>fit <span class="ot">&lt;-</span> opt<span class="sc">$</span>opt_mod</span>
+<span id="cb16-42"><a href="#cb16-42" tabindex="-1"></a>unmarked<span class="sc">::</span><span class="fu">predict</span>(fit, <span class="at">type =</span> <span class="st">&quot;lambda&quot;</span>)       <span class="co"># density, birds per square km</span></span>
+<span id="cb16-43"><a href="#cb16-43" tabindex="-1"></a>unmarked<span class="sc">::</span><span class="fu">predict</span>(fit, <span class="at">type =</span> <span class="st">&quot;dist&quot;</span>)         <span class="co"># distance scale, m</span></span>
+<span id="cb16-44"><a href="#cb16-44" tabindex="-1"></a>unmarked<span class="sc">::</span><span class="fu">predict</span>(fit, <span class="at">type =</span> <span class="st">&quot;rem&quot;</span>)          <span class="co"># removal probability per minute</span></span>
+<span id="cb16-45"><a href="#cb16-45" tabindex="-1"></a><span class="fu">plot</span>(opt)                                     <span class="co"># kernel weight against distance</span></span>
+<span id="cb16-46"><a href="#cb16-46" tabindex="-1"></a><span class="fu">plot_marginal_effects</span>(opt, <span class="at">type =</span> <span class="st">&quot;lambda&quot;</span>)   <span class="co"># density across the covariate</span></span>
+<span id="cb16-47"><a href="#cb16-47" tabindex="-1"></a></span>
+<span id="cb16-48"><a href="#cb16-48" tabindex="-1"></a><span class="co"># 6. Map density</span></span>
+<span id="cb16-49"><a href="#cb16-49" tabindex="-1"></a>r_scaled <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(<span class="at">raster_stack =</span> land1, <span class="at">multiScaleR =</span> opt,</span>
+<span id="cb16-50"><a href="#cb16-50" tabindex="-1"></a>                                <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb16-51"><a href="#cb16-51" tabindex="-1"></a>dens_map <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(r_scaled, fit, <span class="at">type =</span> <span class="st">&quot;lambda&quot;</span>)</span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="10.1">
+<h2><span class="header-section-number">10.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>sim_dat_gdr()</code></td>
+<td align="left">Simulate distance-removal surveys and keep the true
+values</td>
+</tr>
+<tr class="even">
+<td align="left"><code>prepare_gdr_histories()</code></td>
+<td align="left">Turn one record per bird into the distance and removal
+tables</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>validate_unmarked_data()</code></td>
+<td align="left">Check a frame against the survey identifiers and
+effort</td>
+</tr>
+<tr class="even">
+<td align="left"><code>expand_gdr_intervals()</code></td>
+<td align="left">Copy site or visit covariates into the interval
+table</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>prepare_gdr_intervals()</code></td>
+<td align="left">Add covariates that differ among time intervals</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_optim()</code></td>
+<td align="left">Estimate the scale of effect together with the model
+coefficients</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>plot_marginal_effects()</code></td>
+<td align="left">Plot a covariate’s effect in one component with
+<code>type</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>make_gdr_refitter()</code></td>
+<td align="left">Refit from several starting values at each candidate
+scale</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>fit_gdr_response_field()</code></td>
+<td align="left">Replace independent block effects with a spatially
+correlated field</td>
+</tr>
+<tr class="even">
+<td align="left"><code>aic_tab()</code></td>
+<td align="left">Compare models fitted to the same surveys</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="10.2">
+<h2><span class="header-section-number">10.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow and how to read a fitted model.</li>
+<li><strong><code>vignette(&quot;v02-user-guide&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+other <code>unmarked</code> models, kernels, and model selection.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what an interval includes and what it leaves out.</li>
+<li><strong><code>vignette(&quot;v03-map-predictions&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+mapping beyond the conditions you sampled.</li>
+<li><strong><code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+surveys from several years, each with its own map.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,3 +1,7 @@
+# Skipped on CRAN to keep the package check within CRAN's time limit. CI sets
+# NOT_CRAN and runs this file.
+skip_on_cran()
+
 test_that("kernel_scale.raster supports both fft and focal smoothing", {
   r <- terra::rast(matrix(runif(20 * 20), 20, 20))
   names(r) <- "x"
@@ -117,33 +121,33 @@ test_that("plot helpers return ggplot objects without error", {
   expect_true(all(vapply(marginal_plots, inherits, logical(1), what = "ggplot")))
 })
 
-test_that("plot.multiScaleR includes the updated corner annotation label", {
+test_that("plot.multiScaleR includes the dimensional definition in its caption", {
   fix <- make_core_fixture()
 
   open_null_device()
   on.exit(grDevices::dev.off(), add = TRUE)
 
   opt_plots <- plot(fix$opt, prob = 0.95, add_label = TRUE)
-  text_layer <- opt_plots[[1]]$layers[[3]]
-
-  expect_true(inherits(text_layer$geom, "GeomText"))
-  expect_match(text_layer$aes_params$label, "95% density")
-  expect_match(text_layer$aes_params$label, "95% CI")
+  expect_match(opt_plots[[1]]$labels$caption, "95% of ideal planar weight \\(2D\\)")
+  expect_match(opt_plots[[1]]$labels$caption, "95% CI")
 })
 
 test_that("plot_marginal_effects covers unmarked and zeroinfl models", {
   unmark <- make_unmarked_fixture()
-  zi <- make_zeroinfl_fixture()
 
   open_null_device()
   on.exit(grDevices::dev.off(), add = TRUE)
 
   unmark_plots <- plot_marginal_effects(unmark$obj, type = "state", length.out = 5)
-  zi_plots <- expect_no_warning(plot_marginal_effects(zi$obj, length.out = 5))
-
   expect_length(unmark_plots, 2)
-  expect_length(zi_plots, 1)
   expect_error(plot_marginal_effects(unmark$obj, type = NULL, length.out = 5), "must be specified")
+
+  # pscl is a suggested package; the unmarked checks above run without it.
+  if (requireNamespace("pscl", quietly = TRUE)) {
+    zi <- make_zeroinfl_fixture()
+    zi_plots <- expect_no_warning(plot_marginal_effects(zi$obj, length.out = 5))
+    expect_length(zi_plots, 1)
+  }
 })
 
 test_that("plot_marginal_effects uses nested analysis models for wrapped clogit fits", {
@@ -221,8 +225,10 @@ test_that("plot_marginal_effects mocked branches cover HLfit, missing CI, and nu
     namespace = function(x) invisible("fakepkg"),
     find_predictors = function(x) list(c("x")),
     get_data = function(x, ...) data.frame(y = 1:5, x = seq(1, 5)),
-    link_inverse = function(x) NULL,
-    predict = function(object, newdata, variances = NULL, re.form = NULL) {
+    link_inverse = function(x) identity,
+    predict = function(object, newdata, variances = NULL, re.form = NULL, type = "link") {
+      expect_identical(type, "link")
+      expect_true(variances$fixefVar)
       out <- seq_len(nrow(newdata))
       attr(out, "fixefVar") <- rep(0.25, nrow(newdata))
       out

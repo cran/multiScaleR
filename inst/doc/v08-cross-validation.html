@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>08. Cross-Validate Scale-of-Effect Models</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">08. Cross-Validate Scale-of-Effect
+Models</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#why-the-scales-are-re-estimated-in-every-fold" id="toc-why-the-scales-are-re-estimated-in-every-fold"><span class="toc-section-number">2</span> Why the scales are re-estimated in
+every fold</a></li>
+<li><a href="#prepare-the-data" id="toc-prepare-the-data"><span class="toc-section-number">3</span> Prepare the data</a></li>
+<li><a href="#choose-folds-that-match-your-prediction-question" id="toc-choose-folds-that-match-your-prediction-question"><span class="toc-section-number">4</span> Choose folds that match your
+prediction question</a>
+<ul>
+<li><a href="#hold-out-spatial-blocks" id="toc-hold-out-spatial-blocks"><span class="toc-section-number">4.1</span> Hold out spatial blocks</a></li>
+<li><a href="#add-a-buffer-between-training-and-assessment-points" id="toc-add-a-buffer-between-training-and-assessment-points"><span class="toc-section-number">4.2</span> Add a buffer between training and
+assessment points</a></li>
+<li><a href="#hold-out-whole-groups-or-random-rows" id="toc-hold-out-whole-groups-or-random-rows"><span class="toc-section-number">4.3</span> Hold out whole groups or random
+rows</a></li>
+</ul></li>
+<li><a href="#cross-validate-the-scale-of-effect-model" id="toc-cross-validate-the-scale-of-effect-model"><span class="toc-section-number">5</span> Cross-validate the scale-of-effect
+model</a></li>
+<li><a href="#compare-candidate-models-with-cv_tab" id="toc-compare-candidate-models-with-cv_tab"><span class="toc-section-number">6</span> Compare candidate models with
+<code>cv_tab()</code></a>
+<ul>
+<li><a href="#read-the-pooled-scores" id="toc-read-the-pooled-scores"><span class="toc-section-number">6.1</span> Read the pooled scores</a></li>
+<li><a href="#look-at-each-fold" id="toc-look-at-each-fold"><span class="toc-section-number">6.2</span> Look at each fold</a></li>
+<li><a href="#check-that-every-fold-finished" id="toc-check-that-every-fold-finished"><span class="toc-section-number">6.3</span> Check that every fold
+finished</a></li>
+</ul></li>
+<li><a href="#see-how-the-fold-design-changes-the-answer" id="toc-see-how-the-fold-design-changes-the-answer"><span class="toc-section-number">7</span> See how the fold design changes the
+answer</a></li>
+<li><a href="#validate-other-model-structures" id="toc-validate-other-model-structures"><span class="toc-section-number">8</span> Validate other model structures</a>
+<ul>
+<li><a href="#curved-responses" id="toc-curved-responses"><span class="toc-section-number">8.1</span> Curved responses</a></li>
+<li><a href="#overdispersed-counts-and-positive-responses" id="toc-overdispersed-counts-and-positive-responses"><span class="toc-section-number">8.2</span> Overdispersed counts and positive
+responses</a></li>
+<li><a href="#model-selection-by-information-criterion" id="toc-model-selection-by-information-criterion"><span class="toc-section-number">8.3</span> Model selection by information
+criterion</a></li>
+<li><a href="#repeated-surveys-of-the-same-sites" id="toc-repeated-surveys-of-the-same-sites"><span class="toc-section-number">8.4</span> Repeated surveys of the same
+sites</a></li>
+<li><a href="#step-selection-models" id="toc-step-selection-models"><span class="toc-section-number">8.5</span> Step-selection models</a></li>
+<li><a href="#models-with-a-spatial-random-field" id="toc-models-with-a-spatial-random-field"><span class="toc-section-number">8.6</span> Models with a spatial random
+field</a></li>
+<li><a href="#bayesian-models" id="toc-bayesian-models"><span class="toc-section-number">8.7</span> Bayesian models</a></li>
+</ul></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">9</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">9.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">9.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p>AIC ranks models by how well they fit the data used to estimate them.
+Cross-validation (CV) asks a more direct question. How well does a model
+predict observations it never saw? You set part of the data aside, fit
+the model to the rest, predict the part you set aside, and score those
+predictions.</p>
+<p>This vignette cross-validates the count model from
+<code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code>, which
+you should read first. You will build several kinds of folds,
+re-estimate the scales of effect inside each one, and compare candidate
+models with <code>cv_tab()</code>. Short sections at the end cover
+curved responses, other response families, repeated surveys of the same
+sites, step-selection models, spatial random fields, and Bayesian
+models.</p>
+</div>
+<div id="why-the-scales-are-re-estimated-in-every-fold" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Why the scales are
+re-estimated in every fold</h1>
+<p>A <em>fold</em> is one split of the data into <em>analysis</em> rows,
+which fit the model, and <em>assessment</em> rows, which are held out
+and predicted. The score is honest only if the assessment rows
+contribute nothing to the fitted model.</p>
+<p>In a scale-of-effect model the kernel width, sigma, is estimated like
+any regression coefficient. Suppose you estimated sigma once from all of
+the data and then cross-validated a <code>glm()</code> on the resulting
+covariates. Every held-out count would already have helped choose the
+scale that defines its own predictors. The scores would flatter the
+model. Standardizing a covariate with the full-data mean and standard
+deviation leaks information the same way.</p>
+<p><code>cross_validate()</code> closes both leaks. Within each fold it
+uses the analysis rows alone to estimate sigma, standardize the
+kernel-weighted covariates, and fit the regression. It then applies that
+fitted kernel and standardization to the assessment rows.</p>
+</div>
+<div id="prepare-the-data" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Prepare the data</h1>
+<p>The example uses the simulated counts at 100 survey locations from
+the Quick Start. The true scales of effect are 250 m for
+<code>land1</code> and 500 m for <code>land2</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>)   <span class="co"># counts and one site-level covariate</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)           <span class="co"># survey locations</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>pts  <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)     <span class="co"># convert to a terra SpatVector</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>land <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>, <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># bin = TRUE stores the distance-binned summaries used by the default</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># fitting backend of cross_validate()</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co"># Response data and kernel-weighted covariates, one row per survey point</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs<span class="sc">$</span>kernel_dat)</span></code></pre></div>
+<p>Rows are matched by name. The row names of <code>dat</code> must
+equal those of <code>inputs$kernel_dat</code>, and folds refer to rows
+by the same names (<code>&quot;1&quot;</code> to <code>&quot;100&quot;</code> here).
+<code>cross_validate()</code> rebuilds the landscape columns inside
+every fold, so the values of <code>land1</code> and <code>land2</code>
+stored in <code>dat</code> are never used.</p>
+</div>
+<div id="choose-folds-that-match-your-prediction-question" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Choose folds that match
+your prediction question</h1>
+<p>How you divide the data decides what the scores mean. Choose the
+design from your sampling scheme and the use you have in mind for the
+model, before you look at any scores.</p>
+<table>
+<colgroup>
+<col width="16%" />
+<col width="19%" />
+<col width="63%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Fold design</th>
+<th align="left">Build it with</th>
+<th align="left">The scores tell you how well the model predicts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Random rows</td>
+<td align="left">A list you write yourself</td>
+<td align="left">New observations scattered among the locations you
+sampled</td>
+</tr>
+<tr class="even">
+<td align="left">Whole groups</td>
+<td align="left"><code>grouped_cv_folds()</code></td>
+<td align="left">Sites, animals, or years the model has never seen</td>
+</tr>
+<tr class="odd">
+<td align="left">Spatial blocks</td>
+<td align="left"><code>spatial_cv_folds()</code></td>
+<td align="left">Parts of the landscape away from the training
+locations</td>
+</tr>
+<tr class="even">
+<td align="left">Spatial blocks with a buffer</td>
+<td align="left"><code>spatial_cv_folds(buffer = )</code></td>
+<td align="left">Places at least the buffer distance from every training
+point</td>
+</tr>
+</tbody>
+</table>
+<div id="hold-out-spatial-blocks" class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Hold out spatial
+blocks</h2>
+<p><code>spatial_cv_folds()</code> lays a square grid over the survey
+points and assigns whole grid blocks to folds. It needs coordinates in a
+projected coordinate reference system (CRS), so that
+<code>block_size</code> is a distance.</p>
+<p>The bundled points and raster are simulated and carry no CRS. Their
+coordinates span 0 to 4,000 and stand for meters, so the call below
+declares EPSG:32617, a UTM zone with meter units, only to state those
+units for the example. With your own data, pass an <code>sf</code> or
+<code>SpatVector</code> object that carries its projected CRS and leave
+<code>crs</code> out. Longitude and latitude are rejected.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># 1,000 m blocks assigned to three folds. Coordinates come from terra.</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>folds <span class="ot">&lt;-</span> <span class="fu">spatial_cv_folds</span>(<span class="fu">crds</span>(pts), <span class="at">block_size =</span> <span class="dv">1000</span>, <span class="at">k =</span> <span class="dv">3</span>, <span class="at">crs =</span> <span class="dv">32617</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>folds</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; Cross-validation folds: spatial </span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt;   fold analysis assessment excluded</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt;  fold1       66         34        0</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt;  fold2       67         33        0</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;  fold3       67         33        0</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># One row per survey point: coordinates, block, and assessment fold</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>where <span class="ot">&lt;-</span> <span class="fu">attr</span>(folds, <span class="st">&quot;fold_info&quot;</span>)<span class="sc">$</span>assignment</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>fold_col <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">fold1 =</span> <span class="st">&quot;black&quot;</span>, <span class="at">fold2 =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="at">fold3 =</span> <span class="st">&quot;#B2182B&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">plot</span>(land<span class="sc">$</span>land1, <span class="at">col =</span> <span class="fu">gray</span>(<span class="fu">c</span>(<span class="fl">0.95</span>, <span class="fl">0.75</span>)), <span class="at">legend =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="dv">1000</span> <span class="sc">*</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">h =</span> <span class="dv">1000</span> <span class="sc">*</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">lty =</span> <span class="dv">2</span>)           <span class="co"># block edges</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="fu">points</span>(where<span class="sc">$</span>x, where<span class="sc">$</span>y, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">col =</span> fold_col[where<span class="sc">$</span>fold])</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Survey points over land1, colored by the fold that holds them out (black, fold 1; blue, fold 2; red, fold 3). Dashed lines mark the 1,000 m blocks." src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAnAAAAHgCAMAAAASQ6BPAAAAclBMVEUAAAAAADoAAGYAOpAAZrYhZqw6AAA6ADo6AGY6OpA6kNtmAABmADpmAGZmOjpmOpBmZjpmtv+QOgCQOjqQOmaQtpCQ29uQ2/+yGCu2ZgC2/7a2//++vr6/v7/bkDrb///y8vL/tmb/25D//7b//9v///8RlE+mAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAgAElEQVR4nO2di7bbRpJl056Su+wqT4/tnpGqbdjQw///iyPilXFOnMgESBDu4o1YS5ckMjOeG4jElQiVP1NSLpTyVzuQ8rYkgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VBK4lEslgUu5VJ4L3Mdyk2/eP9VIyr+TPBW4Lz//dHv59P0fz7SS8u8kTwXu84+/mpeUlIuucH9P4FIWee4e7tN3uYdLAcm71JRLJe9SUy6VvEtNuVTyLjXlUsm71JRLJe9SUy6V6+5Sf7tJSfkfJ5cRMMnFd6lllDJMYj/ZY/XTOjL/YR3ru0Irqr5Nv3ZDKRycTEeLVeid0Baq88taa0K8K9445ykWzBmvqE69EnD+LrVEteW0JHBDAndY/F1qiWrLaUnghgTusPi71BLXVtWvlkAlvCUq4VBMnhwrwhpGa+q50dJMLtkTqmU4gq4PXNudm7wScP4utURVTeBahhO4u821qrq+q8nBHuSr3haeL4GLCFZdOTYU6+F5oBsj9b7HsHn3FG49p2/ycsB9+cX8Gq5EwZ8J3GrkmcAVNbft1nHgGnu4BE7J53/Mv+n5tr2Hs/WyiGClcbyVymqEEw/AcXv0bdaTuo0Wruce4KyO7aYhOolW4PS2Ij5WR5w578D4WsB93cP9sOMKl8AlcKfJ79/8v10ttVbNFsFXcU9VqxFev31iQ22FYrzwyF7gOiYgemipmBVrLkIudB7cfTHg/vzy8zcJXF8SuCeZi9Ltk4mt07eGPUX0yIq64JR9hKvKniQaH+/yHuCUe9xuE7gELoE7z5xKsK4hd7zjlVXdUmy0j6pVzt7noFzCwCjcWEeMZl8SuIeBW408E7ji158PXBmEJHCHzKmUc8q4FEfrao2oxHcqqIXabtHrowa875gZmhSXaFuAP48jZ48ncAlcAneeOV+bipitYMREK43rjNJM8PSeTcXKgq4nWmpf3P1Lx2TRUccYtZCLViVwCVwCd545VSF7Y8D4qW3/3ipzuVqtp6HUj9kje2qqdY42SjFoVKKLcYf2EfZdSeASuATuPHNq+4uveyg40sdkMXwNsZ78p2Ue6dBnCc9fZvYiUa7qWcfOISsJ3MPAFTn7XOAKq7cmzgKuJHAPm2tteePU9dNm9RSn1elXleJeZqvty4QmvPsRrHYFnW52wiTFu6d47m8XtJUlkosJuNhcAjcmcFea00FTol26jiHHRrhcoym5w8Q2Rj+2rS1efUxEwx2k3E4aR/9PzFGFjs9+0vPRTgKXwI0J3Gnm4jrU1LRSd48IeOOmqurnOxgqx2MxRU4DTmWIvAv2LEBlOms8S7mSwCVwzrEE7m5zUdhRH8PjmGJZw6C+rhS6ByEoEXS+n6F7epcuXPQ0K8MxTIpzD2U7Nwncw8CxkWcAV+wcdOE84NweLoE7bC4KW1Ve1ZrTq7QVSnNDN5vHKjbcMIGwLnZThysid9GVOoausev4rnVqejsJXAKXwJ1nTmVf1Zbr7OGyScUxYSRo14NVoPtTgFxh9b6a8RkhMyCMu5aqHEUkVY9X2uvnBC6BS+DOMxelOEok1TkoWNR0eayWJkbJqbYVbRvaCVjVHavxoFnl9kzRoPnTEAOqnxM4SEwCl8A9ZK6Vf8RjHxF94W6nSxp0Iax5r0u1nQxH1VINnFfhM9YyxTm+SQInU34EODTyHOAKznoOcMUaT+DuMteuQADDUEsS17QWpphjvWvHLtxw0TSv2BXxda/9WZFsYlm/Jsix1CO2De/lniWBS+ASuPPMtYOPgauJ3xJVCtVxTfZ0/MOHD7YozsbX8VA1Lmfobu+WYaMU36txY6kOy/gW3/S/Y/8q7969sydYXT0f+TrcQI7DTeD2ATc9yxVLYYH78GEuagTcNB4DZ5cL4NZhoxTey/FqyQyr+FbfIuDe3SQGbh4OJYEL09JCbvl/olxNl9J8+GCI8nNw3HehZVi7QsOj17Fq10HBch/ZgNp9g3z3bkHKglYdWIe58Ub6EjhZ5QRukwTuiDmuQZyKe4DbflLRuOet4wNXYxFXcxRNTK26s26ccMA5FWI17+BW4BROy7DBTW8qtkxeTMDF5kR1dVo7wI3MmwGujIPbZRFwdg+nXMHlzg9x/bPA+T1edWID0h5CFdtwsQurrEBp4GbihgRuNqeq69OqYKv1XBJF17cqZbmMcDOFucu+XNxVTOIuMY44UM06buO15nbe2tGF8u3d6nsZhXwd2YCyWaku2LtU5RxKAjfuA47XEnAjQ0Zz6xWpXQ/tEN9AKh0N4LRyfDfGwG1qNHDWSAK3S7AAXIiKEzaODTiZYLtS1il2hg2M25O0cIxXrcaUxkA1wFLkIulQZLwd1k0SuDGBW0aLXJTAHTHXqiynU3SyoJpqFr7iaqGy5ZASZaS1vtNOGZ2YX7uKx+OA/CZjlQQugRsTuNPMxXVR1cH6+gT7eW0CJGiqQ/sRzYV1uRVSMMt7v+8s8DPbK9XxbKkmcY8BV4IUnwlcuQK40s5SArfDXFyXWgB+ZehUGwXggvsBqxUY5koh35btTUqde7QtE3wMnTFatAGc22um7Ub7hv+JuU1NApfAnWSuXxmfIt/hVB0RBlc8gy1Uyx62y6wL+G61oZiO68o2QCp2sKgwKv5U89nyxlXmqiRwLoUJnM9OArfTXL82WCc92m6qXEbbtpa1yKNfoOpjRzwfvbD8XoCGUKGORzusTkQ2HiOXwFGV1GgCl8DtNNevjEqaTRjT4SFTqfV0xQ1usEYt45ZfS0A/GEa5aTQS64iaGTvQcjWBa1RrH3BFpPhs4Nz2qh3MfcCVBO5hc0f6EKcO0xzzUlz5asVdhWTxwypunyVwrar3O6aPRgLHp1x9H5m0M7yDCZyUBC6Bu8vcfbhxVVu0zDDwTJvuAXlUu3CuMq9Q//o7Dg15cTZCBwi48MQZ+lmtq/h4ArcjdTb5PvUJnHbhTQLXrkw7YZxwlXbfWLxFUIS3A9WUrySbsF1KO+C1y/NEn0TR6aSO6lDsWYJQW/cSOCkJXAJ3l7nzWqpO/k6csRZcpdhEtPO2ta6rWs4Ln/0J0kZMu8a6OEw+sxK4jvSBK3uU+ErUkR3AORvPAK4kcA+beww4TBZWsNa7uDW6+q5PIyzehFFSlKaoueI7mImXTDJZ9qHmoYtCxTDnPwlcQ2zl5i9Ch8C577aTqvmryiFwy/fysVZVCX+xnoGzX4QWwE3LY+DWhwJEwE1fhI6BUw9PSuDulI2B6VEP/tyeUjj4ZzXweW+fZeMuDOuzHLhBbrPoWQ2EU/AgCcB1wx0mDXX11rd9j1+e5SBwm0Q+rmtdW+et7xO4pqzALQ+ziYATTyACy+rpSabu27AGjp9Gg2aiR+Vs79G4A64aL1bp5sT6tJoAuO1ZN5S3Nwqcy774pCGzVFjg8DgWLdTPNbcV8MtrvTxwOGdAZBxRzriNi1ej0m2GBK664IFjqPFYAuckgUvg7jZ3HDNbb/MKj1zlnb/dhCnN9MhVrGtd7lFaFCrebC2hIWMQtBwVG+MGRnbP8wbmN97wODfn9VMCJ0YFcDfi4PpQKzpd9z7MN4Ja84APlfbA4W2or63kbQTehxg4+VDp+sk+VFoB5+9S0fx6fUvgDjxyVSDiUuXbxPyzDBHKonwWBt6f2zrZC+g4hg8Yd3Cyk83Y8KSqXxNsS3zqYqZ0sAlcpygJXAJ3wJxGIE6XbwQ2xVzTWUpYZdKFVbD1hwY4ouHKgg7ArkTDIkLPp/lc9uCmc4Cj3pn6msDRWAKXwD1gTtcoFltlRi7Wg3t1HlG1dU3VLo5r541VPfHsTWsMFKuM86AyUUNhF33mEjhKXQKXwD1gTkEQS7scqplEzRRHTJ1s1fZK3+3+2PLaV9/Csu3OHlcTOJey48AVaeNc4Erb7f7YHuDKOjGBu9scFV5ueOuoTi8m0q8uQpd9N9gaWnW2oQ6DqvTmWolr3W+pm00Nz2a64JIoK7GZKENWEjgzmsDZJVFWYjNRhqy8FHAfp7/x/OZ9NUeFb+7Ddc1baV5SaJLcSLy/SXAVD/fprZbaQ3HVO7JyPgVvVCvV7JxGau+25ZWA+/LzT7eXT9//sZnj3Ec1W9ObwHnVCVwkn3/81bxM5vakxHQuUe0+cL5I4r3tUNxW7XTtQisE7RzC2zTBqiPA8CxBU/vllYBbr3B/T+ASuJWAp2r/9F1rD1eTqWsWA2fTrVPdKsOgoNJLYh68y+x6PEeasF4j1/bc4LnKUH/EHnsp4Lw5X5/zgSvj84Er48hze9U+DlyxyxK4HeLvUnuXewbIo8ezmJ7l+8MusZIB7FM4RTG/KS09LVUX90LDD24QONb6DzAxHzoPGICd1ZZXAk7cpSZwCdzzpHOXqgRBYeDsLKykLUYhQrg4AgWsox6BGSYQgiisMm7LpncRNstrwSZrY9IGeC67p1a9EnCdu9ReVRK4BO6gxHepUUXiZOqRFhmeIzJl3+E0JjZW5XHjmf48iaHcjPuF7biUs6hDh/9iwFn57Sbrl/vk623Xcs/4UB/80HyN9LKenl63PrK76gnm9fyo8e6La53fjxfGLyNgkr/q71J7590eaV2G8Gjj6okXichA+wrXWuPHgljsxdZvK3RkSkfbXe/yKwHX+LvUKOlHJAKuuKPnA1f8er3GjwWxCOBK5EQCp0Xcpcbb3dZeOxZVhuKO1LmhGq3a/vTA+ctQVPE+BUpKvNjvab1hte+1IS1GnkmAl6vvUs8DrtDz4Qi46dvpDeD48RukfflyewTcvDoGzn43XtCgnuCGxucQA+C22HwO0fhbA+7AXaqtTsQBjK/bY1GSMtjnb9Rxq48e+IL3msuwu8vcXDCr0YHlHTz9w/a6+f02rKId6sNBim6TVrvP4DqMa2PkXgo4b+4s4EpZiZPAmScMSeD4EUMEHAx74OywAg6fb+SAq8MSuKpdAwfafQbX4TcJ3Mfyzf/9rny7dVTdUmsusfat/VsFDte2i7KJfmrfpkIAZ91C4LwD/EAtmqeNb56ScZRx5NgqQED7WBm3tOPsVwPuyy/vP333U/fvUhO4BO4c+Xp7+uW/fu3+XSpv7m2qo/nbrzADWdsKlDLew7Erehg7sj2GZ8u63NbZORdG5nyTPBPNfLLZlVEeZ3kl4Ja71M//2f493F3AjfOv8BVsZUn70ABOPurbuBLiyKslcMO6idLAhXep9Ro3vRbORF2OKKER69zbAu7PT//x9Qb1Y/8uda2LPh6UBepYR27AcZmwI3ZEueHLxA5YJuwK7mR9AoSR+EpuR+OMtE7flwLOm4tqnMAJ2YwkcHebU3Vs30jEtfEpnl/LgLjtrW/DjPtUVtXVXes6rrQQ9sOqBgsu4Dj3infRSgK3pSeBwwUJ3B3mbErbGNjk6hGPnC5NnOzdYpfj+5Y5Nmtpcapaxo9hxqebddRrT+BEmvVIApfAdc1FVYyTr7b7XIC9xdhTXulAdIwbaWyqjWLXheORoiuxYwmcqO0x4MoFwBUeewZwxS5O4O4yxxf5Xs7bTdWncwXOd7tGlfe4QYuL3YsrDmIt6gzSUrQDe8DDzEWO3T4lcFSjBI4dSOAOmOMK6Pc8R3UoVckKnKr/HS3V1g4GgkBU1XkW1L3pkzGCSvvIVeetSQvc+i6BG/2cBC6Bu9NcLX3r5g+PQYVodivpPslNaRHfXsVVtJXWLu9yyJvyQO2NWaN4e03ggjTr2QlcAtc05y/pmBIeqynkda1k8xFlz1UzmqLaonUP13sq9lvqiI4vjt+CpZry/C6BGx8FrrgjuvI7MZDAFcuAXX8mcIUXJnCHzekaRHXl6vU2yvNrccd2FPfgNWdjwa7jGnvj9hyAmNpGcLmO285BpKxrXhI48ymBYycTuIPm2mXkVlqTiS21hd38/2nswEyj0J85iQgEm6vShedFx73ISAu61gmmEE3gEriukQTukLm9vYu3uZw0nfro1mOnwXPmsUs84rTsN63j91rat1i4NoHbEpXAxYoTuJ3mdFrWlNTjmBhVyXb6H5DHVWCH42PC0bbn/gYKI686Wi5FksA9DFzZh0W7vh1p2jgLuGIdSuDuMncecPZBDwK46LvGq8Tjk7nO8vZw/apyAJz5lraJzGkvxiEb/Tt+NNM6HjuXwNnqypTgMZwz1qfeqhQO4aMcbE39ONSMvlvfX83jeCbYa559DgVkwgzfDpXqlI3PPupBuLg9Z4ID0zvfBG4XcP5hNgBc/LAaU5Tdz5PZt9qNR8BFxpc/dbhYWJA3fFCPdXFdnsBN5rjLWJBa91L4swOcQYJxbVRFEaXHW8BZJPyIJUYMTgYdcJQJAG7P2dDOcwL3MHDjqwC3ZSmBu9ucT5FkxqWF0RsD3iDtjgUqiyTm7mHj4EJEtGPYllefvW/cEmm5XFmN11uN9af9YzUmcPuAG/X1zVbNE4HMxEDdNWwdfLft4GSY63IN3OAurhTkO7uD8/f678wTr988cDZ8TmfcUuMGq4Arm15XykG9lY2TnaRPZRTC54QPUY6j9waRwktxpnKtmoiO2vASuAQugTvXnK9hhI5PsHqVwHX4cUuCWweqJUjRc5EG3+3qKETlo5hZaGVHuWlXowM6jMnIxQRcbC6BS+AuNcfh78ONm02rCOsTMG1SXUOuh1mxr4lVs0nR1fOIxTOMxzqW6CEp0anHzXmfJHANlOzPeJaqOpXrYeDkTG06mgEeR1jFI9aAX9F21cqbAM5WspVYn0y9hmtb53LhNruqMq0O1MdNdTJ2iYKLIlfR6Vc07kPqB5DAUeI4yWpNApfABeaiOvn04rt+/eqs0kiwqOZdIgNRobT3AOEJNB0pCFXLcTwa5cx/fiM3DRx0ApfAPclcu0Kctn2divWUoKAwi+8j4uqo+va+UIUEoIsxEWR2/t8EPXDYWm2mMF+oNToBE7gEbn1XEriHzUVJxkT6FEeiUl+o3qzNCVaDF/mjIwGnNWr3I8C9iekxmwycV7xPfbzBSOAeBk7v/s4FTjhxPnCQjwTuLnNRCnzz8z3Po8dV9pqiLbeAI66Ox0bV0+tjB+w8UB6rxckcjcZNabEt1+pK4BI4ER87lsDtNqcrytta3zpUyqL1BY56LAWjDFyrzU6fC3xSqiURVn9fCp9oNR50yh9h52QQQwIHnxK4BO5hc76CUe41FZh8brTzu2I0eHBD+nw1fI23Y8V+ioSbqmcgiH+ZUPgks65qfLz7PboTOFfH6HMCxw4ncM5cnGRum7ViXFduuS6FVDhbJFNnhiMWj4z/PVy7sWqtdOq4vBQ7uc7sbS08oJxLMHIxARebc5WjZJ0BHNT0ScA5M88AzrmQwB02ZyukkhbVh2t4BDluN0EtWFEbQm/IN017fnSWaoP+5GqpxSBqju07bz2BS+Cc0gTubnOYZJ+CVlNBqV+ExlXL/ybY+SbzaB6WQJv7dVg7EQ1bTahdBBk/J8L6xv9l4eboOu7cmsfX7+377CRw9wNnHvWggOs8q6E+UEsDFy2vRPAwAAfafZChc/PEdXUE3DbObs0zzXMmEriCNdBNJBLHGzzsoTYffFyXbFj4QBiuTfBALV7t3Fo/We3ovlje0F7QvcXBbdyTfDu2Dsc5rkdvPxO4UBK4BO6wOVubVkuNbycYOOyHM3CaGDMPgbN1nSbCcu9KBNwqVbvqaweAs1uP7d2m3WfNA9e+X0ngdgNX93AeuK3mQoPZ9RNvFjhYLmoG2j1w9YFaErhdDwODPABwwwqUz1oFckzgZnO26PW2f7/Uon7lzbSa2lDrNUytW96v44zcOvXI47osrqsWXk5BHtBukNtMbJsFvh3Yhg3ldpaSBK4pSEcDuGDd8t6rI+AOu4Qm/JwjGsVSZSICrs5K4Nw2uJUONeJhw9TepASrjC1ewhR3HSl2FN3glbthcxMLj8cnFQfSzqy1lcDFBRgTuATuoDlfHZU8TLA9zjcHHjcFHLcf6klYnT19SH1rSwfDOuWMAJISz+oZqjN6vCdwCZw0ksDdZa6dMjwWzbSgMTMTcP0exqX3Z8ER4LT7fjQY59uC2Ig+Q1jX4MQ7+AZb6vOA27Fpehi4UGtr9ChwoYoEbrc531Vst1F1x2MqmZzSHbRUddYMv79H4rVSL24R9qjeN8/q420Izk7gErim6gTukDkO2SfBwrWmS69h8LYUyiLAej7kjXfE2OBzJNLsHSHDag+n86XVVw3+U+xYApfAGSMJ3IPm7MYXE1XTiQlej2Nr8NjVEQNDJNqMdkEK2FB9XdsMD8sTqKi5sXM2C/Ys4HcUycUEXGwugdOHE7gnmdMJ5Bbgt7tcW1+eusrVabRaBjSE/fte4FBXZB7PjXB4k2I7tcNxpxG/niK5mICLzcXpOQ+4uBibzYeBa4SxZ9Y+4IYE7mFzHK5PI1OAAEaCGrt1V4bX4b4KpdS6158pDkTbBH1uKDMqC5hVFfBLAfdx+ne537yv5hK4BO558uXnn24vn77/YzPnm6VNJFZapbSF3PqnkCaPr1nia2vrFXJDZw7vCcJ1MizKxOZS0WdGbMKi6N/rxvpKwH3+8VfzMplL4BK458l6hft7BU6nmRnwtVENRxXi9rMIaLFYrosp5VgvqmpxR4ZaVQlUT7grD4P63wR1M7VuWPKt1joLs/ZKwP356Tvew/kkJXDW0wTuZHMqRTaZcTki0JCMuaXuWM915jp1qiv2BrbmD8ukJGipkQnrOnZ3XIm6Xgo4f5fq03o+cLvWQ2WPAycuoVVPFMQBQbcSuH0i7lIxWTFEngq/6dUExXX381yVvAOqtva4X9ViQijyUy0mPjexap0Xdd7Yz68EnLhLTeBYUQJ3noi7VJsyXyeEDNHkEqyPsrGz559lymMpOsF1+RiRPC9v1Xf+2j+pNPM+fPigoTDDg1I86VmG6z9PIoAgNsyRzQzix6f6+vpKwIm71NOAM88WqbMrcNPwqHSZ5TFw9Uk5ErhlGFWaeR8+NImbh0Pg1uEIOIwNczTAk/PeHHBWfrvJmoy13mvumq/zOW1f14cnFTm/jNvDlZp6v75Df9ZircO1eLie7W7rls8fPqzESbvLsPBrsMNfvUf7vbhrXAXm82vN+/R6GQGTXH+Xas83fW1TZy7vbNac2ivD+t4AN7De2jGXEnl3BgNcVW3V1NXWeL3EVuCk4LC77izDQ/R7OHDOC4Qe7HRtX3gl4IK/S7XBWyD4vU0Pf8K02opPLdUPY3lWZHwFRNHodqAOW1fteAzcNK0SBaCt75rA1bPBq55/itBdBmwVXgm44O9SzwBuEEDZC5FPOpZn7SkaOFrOwK3DEXDxHm6oxNk9HL7bhqXw/pSB85l5O8AFd6lRGuweHmtkoVvX1AsUQzcdcxcoqs+6vN4YwP3HgmOweCzbLQWiZJCSNCwz23ep43x9C4EbF9p1U8W7VJ1nm7NXAi64Sz0HOEuLAG7Ao7I4DeDAtF+sXLfAKUtiM6pc8hlS+WoB11rnZ70UcN6cSmdNoP2En+M0el1FHoV2bTFQVUBU7JGl0kXPjATPAwGYhEVcqBRerCvKlHbmpYD7eoX7W7yHYxwYDvs5TqPXlcDpTGlnXgm42x7u47e/4l9t+dRiX+M02aM6rYhrfXoSzoCZGgqerKGZpNSZ2DB74nDD5gjBG+DsdiPGjrPis+lsvBRwE2mff/zvBC6B2wh4pvIvv9xuFz7/7+Bf/HJdVbJiGjCltg2XoLk0mfCVUZXdVBRLfmsu8+Ts+YPbYOFYVTZ8bjhiDgzz9krAfd3D3X4v8rWrbuauAC7azZwJnDB1PnAOmwTusLm42h4Z3QJ8em0l9Tyue0N4kR5Xdfbz2+1WwqRjRQMMUDwX3ykdCVwCF0oCd4c5W4uoOjX1UaV1Etd5RbCwC7c6sdZfYjLU701gjVsBCFsWG1Q2SfERMFZyHYDoreCRBC6oVwKXwN1hrl9x7FHcZi0XPvGzlKAsoVGNlZ65jJQDBkKrEBvHNNBd6jyOhLNjGjzu+YhjApfAJXDnmauJq8ly1aSk2nTpNoKVLAOneCcC3Eq9amahuuiD2oEit0yChYyIGeT0egz1xq379j6BGx8FbrgAODL+HODc1SyBO2yuVpMTr9LJacamgKuj1HZq7uu/quExD5nGjxnoGGxxjMbVCgaL9fk84EmcwCVwCdyZ5jh8jQum06fLs2DHyz0N1fe32LVxeZiN7nR1rSdHmlSRT1KwTSrMYvVt41VTApfAJXDnmeNaqsaJddsDjS3J/CuLujLQ0KqFH3eOlTYrbVfNKmScPpcuks6UOkm1G6skcAlcAneeuZpUW1uVRE5/XypwVqec11Ki3jv3CjLOSLa1mxXeqGmXBT4Z9XuM6dPaB5TAPQwcl0fMaylR75V7zwduwE8J3B3mOG1Rq9hbwR4btnQ7lfgupXDriXKschBG5lXguxoPO1SNYFtV4diRBG7wxxUd+O1zBxx9EbqznJGwwwql4Lvtm6hHhxjg6jedvQvz6iZw27e0NXDzd7wTuMlc3Bpi3Gxhtnf0vAOb9lu68YEuLuXB4xJWIMwTsfDSsUj4NIXKW/3qve+X67NDTKx28jZc+AZAWWcT9kFmvqVa3BZtFxNwsbmzgOMnuhBw8EQXAVzwQJgVLDOsgIufF2N4k49HmnTUp9VI4MzDbCRw7kk7aKIOJ3D0H/Tu3Q6pmwckxjaJ6V9yCCQg8TFw/eHdwIFpU28epsYngLPLdWw1l36YroB0BiVwCVwCd545rgEC1W6zngmbxApVWdM+4nqbeglUNaJoNlVt80abNL9rpz0cOmB2gEU3RWudYdLO6SCXW4yLCbjY3GnAjYV2cBW4Ne1jA7hR8GZr4Wiu44v2Bm/DwBcwtDLoyzNy97oAABZzSURBVN9mStxxQMZKdAe+hd7I3RsDrqYFk9QGjmDB6lFavSa8UQmkM0xMRA7qI1ztAAaOw+Lh+rLLhooYj+iAEjghCVwCd6c52/5qehVkNmXYUhQntli4v8F2u61HPmPgAo7FJikOgpGD+YrClQUFiFK955i1lcA1KsWJSuD6phO4zRzWGJGgmkZlkETYGQUoqmUy/LARhIER8Q6OBBw6Xl0awZrtk9M79NIBUaxzNl5/0ino9NEELoFL4J5nzkJkE6brZ8cYMUy4LVkBnmQ/Y0iQfjQiHSv4Wc1B84qbwP8NoqJARIUqU5gxlcEETsq9wOEF7DnAyUuyP/YYcHxBTOCOm/MJbiGH9fMFUkwgQSr1bgEq8jXpu+eNReIAPLbcK6u5bDkVa07gwnpi/SMiEjjlVKz5DQBnK4tNRCdNJRpHsP0UUzwF5sg06rbXPBsKj3D9vVHtkmuNZkIZxUwds3Ungk9LApfAJXDnmdPpixIkimBW+KO2TirR2+eoGraC+jxYjhTtNnb+OkedWS52fD9uXw3TGahHI8R8eDJbFxNwsTlMlQVBJakmK4FL4O4yp5PWE4FMK4WjKx3biXbT9ki4+La6VOZZT22sVhe3VkO+QmY6Vlgh583+3JM9ma2LCbjYnAq5lSxFRDuBrFPaeRi44QrgRlbIMdqfe7Kn5I0Ap9KAlax15tcj0LH2oCLKoFLnIWMt6CivtJ+ccY9IvG3AuDhepN3nwkoCl8AlcOeZa6cq3iS3047pLMF8qrKvr6qbUnHbwwXsDlztaq0GSKaVknUP5x3UmfBoWpOt/CVwCVwCd545HXSrqcQJtnMYuNY2e2Tc2vtxNjStCYBTIVSNPCNUsCwpvCWIxayS2MXgJXAJXAJ3nrmo2XFFMfVqZpz6IkihFoOGbDUixQRTB7hmO46XIiDzb5fRARV7PyfVAX80gXsYOF2Sc4ELsDkXOLd3S+AOm4sDr7XH9EcU6EcxbLMbT2qYRH1b2FRcfi+/iv4idJ0zf9MZnTIz8HvSqGIc7RehpZBzNW86MzWzUtnFBFxsDlOj07ILuODhH+vs+NkgGzH+eQgVOLUceVPEbXOWZzmgU3UGP1qEgIOHfSlEyDkCzvn+poFrdS2VpFpnHNWPm1lwEMNWx2Cf+CKpltqJNyLOzuHHddk5g3/WDUVYV3N4TefWn80H8Sh1FxNwsbkELoG71NyalhZ00c66rmw/UbAMLWJs0UwPN0DI5daRGDjTMgE42/ckcMaSBM7cGJBzwakIofENiZUEbhdwfqdiUt7chC1pnomxVbFbIb8cPPG8AXD8yFUCTu3hrCn7uC6bk/W1AmVHtk8itDcNnM2/FptcpgHSHqwuCxNcCmN3vc+0jkBblD0LiAt5uX3CXf9qepPW07zGurqwikW9DL0Gs4bmT12VrwRuJ3Dx6ogDAM6e+mxWVSe67GrgtOkdi1tRtWPny6hyWq17E8BFwXP1GbSazjjtWF2te/CTuT6+lkzJfmL8CqGspwSjaOXPOoWmbTjrmgSOUsfpTeA4IzyawBlzVwBXLgCuXAFcUao4Gj+awBlzWNE4bfUPl6N3VXDPblOz/ISqEjdD9T2sKrxeUeFthdBZM5sUFZ8W64aHrJGJBC6Bqyyo+LQkcIE5To6uFSdMzXHl2Y4VSrOYZTtOq3p2OQBZqmrWoQBERwR/cmFpxamOoyHNOK9O4MYEbpHSilMdT+CcOa5ilEaGCvtaXALX+wbWNI3W+ijDqi66gnWuxdK7hG6QdzUiD5B3Qc20pycj1zzxxgRu5IQmcAncA+YwIb3acMo5obHEyE2fxCGxWJn1tdVasBFbAizW5GO7dfI2gzPVE607gXsYuOLSb7WdA1y5AriCyhK4O8xxCuLWgFXclzxbp42Nzmxp3rto1QzLL341ri3NOhhjCrwtdTG+476vHMcAYicTuAQOA0ngHjHnm13UtVopbVe3bGsQXrCtGqmCwffw6V1BDnYzPaJOMkVOFa+cnVQu6/y+0ZaawCVwl5qLmqNOvy2BGuvVFku4c13EAs7whvY61cRDbTJs91bAtVtqL18JXAInY0jg7jLnU7H+5JZa3/lK7a9tXQmlbKlAg7xcr8SxSDuGJsFgFXrDwduFtrQDTuAeBq5AfZ8DXFFrzgauJHAPm4tuGlppixpuuA2GClcrdeVuCatc2uvqav/ZhM0RUVRF+e1d6iHXdjKBEwnTSUzgEriuOZtxVUuNGpeincYCFUZd7eQ7QUSMsoKzNP36mAkZW6MPxPqu3Om30z50LwXcx+lLud+8r+YSuATuefLl559uL5++/2MzdyRRquXgaMwJz+4Wty97qodcRG6Zdz1WfRYwF+jYWwfu84+/mpfJ3HnA2ccdiHJN305vANd53osYtqrir/3PP2/fnW8AZx88IoAzz/qSwC3WI+DcYyjeDHDrFe7vFjibIpWuGL669uvPziOC5mEPHI53lqMYVcHqbXx5OkhUafPoETVlHbZjFpsaG7pVeUPi5llhqM8kwMtzzX36jvdwVBmVsF3AtR5KVerTkSLgWsujYSqpWL2Or88/CoCzD1cSU7Zh+1BpA5yJTeXPhz7PCmN9KgFO/sr/L3Xf1tffLLSAm1Juhr2uSds6Hu3W63KGqU37PI6P63KCwLECflwXnmyjAa52cJtHBG6UViDWiwl4qnZ/l4r1S+ASuDNF3qXynWYLOPotgh0JSj7xMNZ9jrrxGEezScPDMDzw6Oaww5HqSrzhPHp8nFdRnw+Ht0qrotV3mxszz/DWRm0J9ZkEeLn+LvUk4MboErN8p2EjQgO3LdfAjdslRAI3rhX3xmfh58PRrPjyN03dng+ngbN3qQI4c5f61oAL71Jrem1iNHC1cSgMZT23V61P1VgMeLWWW61OkP2IxE5Fp6Y/vfiMse+mc+eZBHj5a+5SfX0SOCUJ3APy203W7Qe8DgO/DsG8AeZFesYR54XrVjvrOOnzdvWr0xfoefS12mM/OO52nkjfZQRM8lfdpdozzV6z/PWLz2i7leIzfn5X3KUouPC0r1betFFU1O5PX0zuFzLC12kfl7rG8QWcr5GvBFxwl1rDXd+ticDK42uMImu0W+YGbqigMcHVaDTfb2mB9Sh0hdVZg1FkeJwh5Zmv1VKDu9Salhp2AieksLoEri2Nu9QWDjalmLJ4vp0RASdaaqRUoQLzip53BLEmq5MU7SQj1bp3EVGbOZORZxLg5a+6S03gErhLzPF2H1PGzZWh8201QisqD+V8Z9eFKvbmsYWHhWPvRDX6eagF3ydwCVxgOIG7wxzeCtR0IXA9bCx4nMS+jGiKK9CrPDLfg1TN2XS0TdnTsYeb1Wbz5DPE2l8JuM//mH4PV77Ff/GLWfeV6QPTBq6oRVyiB4ErVwBXEriD8vmf7/FAcUmFqqjEYkO1wEZSttm+OFDmmvc+PFS/smeNdTQ43lxZeicfb0zQZLzCZuKlgPvz4//6Az4Xm09EKIFzUhK4h81hwFiLdnJ5brwibqlbWWzu+8jgPmD6WdrzfO13Trcj9qmHPlre5ymT9efqAp7ct9cELoEbE7jTzNmgbSWOwLZ/hVoNyLE7Uf2RDs99PN9CXS0JpZFRzpE/5p3ywcT5S+ASOBclvk/gDpjDYLGnHQEOm7KejevC0ur+rmpzrA1rS/W1S7jimfPB0fm4WROfXwncw8CVC4ArbVJiS7b6PeBKAvewOUyM3daqZHIzcfXaAVy/bY12qqKA+R22x+b3xTdiF2y4tvjIraNVmQpGAYcBze8SuARulZLAPWwO8854tY7Z1OEfDdxu2GwFovo7SApW8Th8IlqeugaCkdvIYmT5GObUjiRwCdyYwJ1mTqWPK+BB4gpNrWD7LrJHbpi+3d7Ezn4XWdRse2KWcmAZDmrN2rnu63CI2rAYr56TE+/evbMnLmuYhsmozQJimsDtA279YlwA3PS4hAZw8LQFX/d5uaj1/Mlol1yFz3LYcF2erSSBW41HwL27SQzcPExG3zBwNVSd7hZo9fj8755KNGN5IEzYVNfxahZqty23JqupuloDFz3MZtFStXtgBvswG9fJp/F37wxS3jkYNoaj8yOBexi48irAlQTuYXNYP1sH3BC3cJugKuuXyE0plk8WOJ1khwRN2oa1cYtr2BPd42y2gKxzjnX5QEKwbojyuRxXHsO7mJrZeVUCtwu4+shVCRzt4QLiEAg3HDuwXT41cH4PhxtTOBm8ms24Bm6oVzAF3ExcdDfz5oDj9HEScMR+4vfFPP/NJnP5tYgrqSduxGW1bvPyUY5vyNDe2wbi71IphA9wQ2ONT3/W1SUgHhoqmlmIE5hhMAncYeDsRUMAR2ltCtZc1dE5ZFhQwCkLkh4J3KqiBMANkbnWdQ2DqZl5eeAYJQ+Uq24gNZW2YK2SSoi4JlwRW1lrgnXgCmUtiMGqQ4x0XrTTePopZ9DaKgkcFSKWBC6B65qzeOjEYzVbhdpXVWpTNvtqwNaeq+b7vKr5bth4o6AWehzZGTTSCk6ffAmcK4UuVVxZtYc7G7iC1bUaI7dkFK2IhpLAPWzOItAuRKtarWZhH0hoyyBK2sMjNlH/AaafZ+vOVDVjdq5AtqwTbLati+di4AnckMAtyxO4x83phsqVsWnV8zQ387sSzKdSaHXc53T3tl8T9A5X7VGoImrr37KwcE7QPUTPavS5CcJI4GydErgE7mFzNrW9MmANVToxtVxCLoEpjySQ1LC56D2fJ4om/3l5VxWwG9odzg+qbe0SorwlcJDQBK6dH1SbwDlzUQL3S0SKPR6tA1Z4gPGJxkXvI8cUB1JjXYY/1SLfTBGlKDMKQ/s5getIH7hyAXDlCuAKL7PvErhd5nqttC22IDFyZWQraqarjTXRXjrQ47p0s+2FMlS0hIGJarkoUkbA+REP200SuGaVErhQWQKnzN2Pm4QG6rumuQTUkKbIiKcVKzaXSTvBtfba4BgDR5PlBsQ7Z9+1w/KuJnChJHCDWeM/JXDSnEpaXzhVEX52zNfYQGmr60ik5RopBZjqaFZXyIT3OwYnzp2KmsPyzidwYSoTuATusDndY6L06qK0cVtXqqZqiFBVtBWxSmJzaJBXqzAESx4E74xWpMLQ5w+6bD8lcEFlaqp6wJULgCtW4bOAK4hQAneHOYsO1qDVZi1q/QuO/3o0zxCDtn6MjpBS17Rcspzg/AA5iLW5AbHu8pEebHZOApfAJXDnmesUP5C9wM2zi+tmPuWu6XlwIkO22/XPABumXRPECAwXdo8J1xDiXA4FdSZwCZwxksA9bE4lIUJMvfZxW+euNuQKrpKthKoSrrTv+rihRrF/YLXsQsuMpxe3KlHg1WYCl8CRCwncA+aitEXCPahfTWwnzNCmq5rFyu6RXlXjFTZcF7mOBh1T7/z+oOVaPU/mOQncw8CVC4ArVwBX7Kf4XQLXMKfSxYlX2Hk64soWahzcx0Td9sKzKWkC1z9m4GgAUvpqQZ1Dbs/sBC6BW6X01YK6BM6bi1LmkeO02RLFOm5/CsxXG2ujVO2jvQns0Ro472orVPdRgFKq6RY+CrgoT352ApfAJXDnmWtXAUHzn3yVVUKpfY7IEa3F7bxvfdpJ5Yo6RyIHmy7wxHbMPk/7m28Cl8CJiQncA+aamQ/g8vCtc6O01jL6kjngcChSWx3wHUzr0owHwOEJh1Mj4OxpZdfaMLSDVmMC9zBwxZRDkSBN2goqpQSc2MOdD1zxanldAtcxh/WLKosliLbFevX8axG04VbiAHdx3X3BAwmcpcBfDaU+Vg6ZKW14MJMqQwpSnpXAJXAJ3HnmbOA+Fe0xpiKS4uZgO8akEyBemArVUgPVZMcF5VEASErLMds82bhvtZyHOjuBS+AgkATuIXMxJr4qnNK4du1SMFnGXK1xq0/XFX6tD2E9HkHnrPgNBI74Vx0xx+rPJO9KAufSmMAlcA+Ya+NiR3119sBm9aiKS8G+FCv1qtFFJob7nOyO8UaC41ez1CnqNxO4HgFP4CCV9wBXLgCuXAFcSeAeNhdB4ze4mDBsEmo11Gk8gFu7hsrYMP0DTF9b1cU8hh3vXSDQHNuOqSN8TtkzK4FL4HwgCdwj5my4XEULlq0hp6+VdFOnUSXYHOcq9UEzr8WvRnythQ4rfeDYd706CsXTbx1O4BI4CiSBe8Ccr4dKS1QQW9FWqWzL8PMNg6qDR1JdVzOrRkZth7Qmaor3iSV9IFmPJnAybT75OKITncAlcITAnoTxlteOttbaLTMV4GjlUCGRC4Z8eMctwVI2ojca1R2/Hl2tAcwjCZxI+DHgyrim+HnAFazic4ArCdzD5mJwVI/jNO+rXTEJxnUu+XtLb3v09LNEncrTsEN1FEikFvt7fa9CQncwE5ORiwm42FwCp1RHgSRwD5uzCHFibBIxmXq3jq2hJrSYEiFuVL+9yFknFjUF3Y7J8Lr2HJql7FFnjSow7avYXCRwCdwmCdzj5jxGNnEeHoUdA4QjqgTcmKFB7qk/ngvWAVzlA3tImGD1Dvs9nmB+zK9N4MyRmrYEDl1L4HaaYwwwsRYKPo5i681HOO0e0NGi0cMD0Yxn8/mgR9u2pGl1XGHYA05rTuAeBq5cAFzR884FriRwD5vT3cnjpiFzrZGwmo8UOi4Y2Ft4VGNZ8PN0k+5fGUPT9c6kr1Llz4/yKT5FcjEBF5tL4PZKAneKORusBwyT00LPz6sVL+4oFony3qp5OM+xEIHWOtIxqv+PTM91lJNoO2G3LS9/02ATlMC1jSZwJ5jj8Bk6xFFBFX2yRcBRVZpDYh09vBiM378aXPHtdH1Vp5nPoV2TwCVwXVcSuN3mfGIUUro5tD5hGWo6sUxm5VF4HsEFd/m7W6vuykpJa5MRn9SzJHAPA1cuAK4cW4tc7DXojCRwh83hltWnSSWIUxgdX1NfTHF8mpdX7kwtDKy7ixQc77Fz3xWy+EMWLe+kPlHbG5GXAu5juck376u5BO6AFH8ogWvJl59/ur18+v6PzZzGSyfDVspDxnqqruLK4TTwoV7p3SzBgqIiXL9LnJEobjXWz9qSrWcS4OWp5j7/+Gt9+e0mJeV/nDyTAC+XXOH+/ut65LdnmrvSyMsEco2RKs/l+9N3t1PI7OFeJoUvE8hrAefkZVL4MoEkcP8eRl4mkATu38PIywTy4sClvHVJ4FIulQQu5VJJ4FIulQQu5VJJ4FIulQQu5VK5FLiPpfz0NOXTPxGYLdifJ8qXn0v525Nt/Pnnv5z6p6Tt9x8uMCLkSuA+//O9+Xv8s5X/49tfFwv255kmfv/b7Z8jPNfGnx//djt1nmzk9rfcPzw5W4FcCdyn7//48sv7/rx75Mt//ffXK9xswf48287vPzzfxlfgnm3kyy//54cLsiXkSuC+nrx//utp1+1bS50t2J/nG3m6jd+/9rZnG/n9h68t9emRKEngDtn45/sryoTqn2Dk6/XsLQD33Mv25+e31E//8f7PKxrR0/v277d/pnjB5kDIy9w0TMA9dxs8q3v+TcPXS83z9/O/v4Gbhn/3X4v8a7ouXPBrkSt+Y/EWfi2SkpLApVwrCVzKpZLApVwqCVzKpZLApVwqCVzKpZLApVwqCVzKpZLApVwqCVzKpZLApVwqCVzKpZLApVwqCVzKpZLApVwqCVzKpZLApVwq/x8v0abfnKXJjAAAAABJRU5ErkJggg==" alt="Survey points over land1, colored by the fold that holds them out (black, fold 1; blue, fold 2; red, fold 3). Dashed lines mark the 1,000 m blocks." />
+<div class="figcaption"><strong><em>Survey points over
+<code>land1</code>, colored by the fold that holds them out (black, fold
+1; blue, fold 2; red, fold 3). Dashed lines mark the 1,000 m
+blocks.</em></strong></div>
+</div>
+<p><strong>How to read this output:</strong> Each fold holds out about a
+third of the survey points (<code>assessment</code>) and fits the model
+to the rest (<code>analysis</code>). Every point is held out exactly
+once. On the map a fold is a set of whole blocks, and those blocks need
+not touch. The function balances the number of points per fold and makes
+no random draws, so the same call always returns the same folds.</p>
+<p><strong>Choosing <code>block_size</code>:</strong> Larger blocks put
+more distance between a held-out point and its nearest training point,
+which moves the task closer to predicting a new area. The function stops
+if fewer than <code>k</code> blocks hold points.</p>
+</div>
+<div id="add-a-buffer-between-training-and-assessment-points" class="section level2" number="4.2">
+<h2><span class="header-section-number">4.2</span> Add a buffer between
+training and assessment points</h2>
+<p>Points on either side of a block edge can still be close neighbors. A
+buffer removes training points that lie within a set distance of any
+assessment point. The survey points here sit about 310 m apart, so a 320
+m buffer removes the nearest neighbors.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Drop training blocks that have a point within 320 m of an assessment point</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>folds_buffer <span class="ot">&lt;-</span> <span class="fu">spatial_cv_folds</span>(<span class="fu">crds</span>(pts), <span class="at">block_size =</span> <span class="dv">1000</span>, <span class="at">k =</span> <span class="dv">3</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>                                 <span class="at">buffer =</span> <span class="dv">320</span>, <span class="at">crs =</span> <span class="dv">32617</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>folds_buffer</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; Cross-validation folds: spatial </span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt;   fold analysis assessment excluded</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;  fold1       22         34       44</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt;  fold2       11         33       56</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;  fold3       13         33       54</span></span></code></pre></div>
+<p><strong>How to read this output:</strong> <code>excluded</code>
+counts the points used for neither fitting nor assessment in that fold.
+The buffer removes a whole block when any one of its points falls inside
+the buffer distance, so it can remove far more than a thin strip. Only
+11 to 22 points remain for fitting here, too few to estimate two scales
+and four coefficients. You will see the consequence below.</p>
+</div>
+<div id="hold-out-whole-groups-or-random-rows" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Hold out whole groups
+or random rows</h2>
+<p>When rows share a site, an animal, or a year, keep each group on one
+side of the split, or the model will predict a held-out row with help
+from its own group. <code>grouped_cv_folds()</code> takes one group
+label per row. If the groups also have locations, pass the labels to
+<code>spatial_cv_folds(group = )</code>.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Twelve records from six sites, two visits each</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>site_id <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;C&quot;</span>, <span class="st">&quot;D&quot;</span>, <span class="st">&quot;E&quot;</span>, <span class="st">&quot;F&quot;</span>), <span class="at">each =</span> <span class="dv">2</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>grouped <span class="ot">&lt;-</span> <span class="fu">grouped_cv_folds</span>(site_id, <span class="at">k =</span> <span class="dv">3</span>, <span class="at">ids =</span> <span class="fu">paste0</span>(<span class="st">&quot;visit&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">12</span>))</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>grouped<span class="sc">$</span>fold1<span class="sc">$</span>assessment    <span class="co"># both visits to a site are held out together</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; [1] &quot;visit1&quot; &quot;visit2&quot; &quot;visit7&quot; &quot;visit8&quot;</span></span></code></pre></div>
+<p>A set of folds is a named list. Each element holds two character
+vectors of row names, <code>analysis</code> and <code>assessment</code>.
+You can write that list yourself, which is how you build random
+folds.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>ids  <span class="ot">&lt;-</span> <span class="fu">rownames</span>(dat)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>part <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">length.out =</span> <span class="fu">nrow</span>(dat)))   <span class="co"># random fold label per row</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>folds_random <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="cf">function</span>(k) {</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">analysis =</span> ids[part <span class="sc">!=</span> k], <span class="at">assessment =</span> ids[part <span class="sc">==</span> k])</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>})</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="fu">names</span>(folds_random) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;fold&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>)         <span class="co"># fold names are required</span></span></code></pre></div>
+</div>
+</div>
+<div id="cross-validate-the-scale-of-effect-model" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Cross-validate the
+scale-of-effect model</h1>
+<p><code>cross_validate()</code> takes the model formula, the data, the
+prepared kernel inputs, the folds, and the response family. You do not
+fit a starting model first. The call estimates both scales and all
+coefficients once per fold.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>cv <span class="ot">&lt;-</span> <span class="fu">cross_validate</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2,</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>                     <span class="at">data          =</span> dat,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                     <span class="at">kernel_inputs =</span> inputs,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                     <span class="at">folds         =</span> folds,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>                     <span class="at">family        =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>                     <span class="at">keep_selection =</span> <span class="cn">TRUE</span>)   <span class="co"># needed later for select_cv()</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>cv</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; Cross-validation: 3 of 3 folds scored; 100 of 100 input rows assessed.</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;         metric estimate        unit n_assessment n_scored weight_sum complete</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;           rmse 1.620410 observation          100      100        100     TRUE</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt;            mae 1.217206 observation          100      100        100     TRUE</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt;  neg_log_score 1.631381 observation          100      100        100     TRUE</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt;       deviance 1.296024 observation          100      100        100     TRUE</span></span></code></pre></div>
+<p><strong>How to read this output:</strong> The first line reports how
+many folds finished and how many rows were predicted. Each row of the
+table is one score, pooled over all 100 held-out predictions. Lower is
+better for every score.</p>
+<table>
+<colgroup>
+<col width="18%" />
+<col width="48%" />
+<col width="32%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Score</th>
+<th align="left">What it measures</th>
+<th align="left">Units here</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>rmse</code></td>
+<td align="left">Root mean squared error between observed and predicted
+counts. Large misses weigh heavily</td>
+<td align="left">Animals per survey</td>
+</tr>
+<tr class="even">
+<td align="left"><code>mae</code></td>
+<td align="left">Mean absolute error between observed and predicted
+counts</td>
+<td align="left">Animals per survey</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>neg_log_score</code></td>
+<td align="left">Negative log of the probability the model gave to the
+observed count, averaged over rows</td>
+<td align="left">Log units per survey</td>
+</tr>
+<tr class="even">
+<td align="left"><code>deviance</code></td>
+<td align="left">Poisson deviance of the held-out counts, averaged over
+rows (Poisson only)</td>
+<td align="left">Deviance per survey</td>
+</tr>
+</tbody>
+</table>
+<p>Held-out predictions miss the observed count by about 1.2 animals on
+average, in data whose mean count is 2. The two error scores judge only
+the predicted mean. The negative log score judges the whole predicted
+distribution, so it also penalizes a model that is too confident. A
+score means little alone and becomes useful when you compare
+candidates.</p>
+<p>The result also stores what each fold estimated.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Sigma (m) estimated from the analysis rows of each fold</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">t</span>(<span class="fu">sapply</span>(cv<span class="sc">$</span>training, <span class="cf">function</span>(fold) {</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="fu">setNames</span>(fold<span class="sc">$</span>scale_est<span class="sc">$</span>Mean, <span class="fu">rownames</span>(fold<span class="sc">$</span>scale_est))</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>})))</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;       land1 land2</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; fold1   239   523</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; fold2   247   490</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; fold3   243   509</span></span></code></pre></div>
+<p><strong>How to read this output:</strong> Each row is a separate fit
+to about two thirds of the data. The estimates stay near the true values
+of 250 m and 500 m, so no single block of surveys drives the estimated
+scales. Scales that swing widely among folds would warn you that the
+data identify them poorly.</p>
+</div>
+<div id="compare-candidate-models-with-cv_tab" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Compare candidate
+models with <code>cv_tab()</code></h1>
+<p>A score needs a baseline. <code>cross_validate_glm()</code>
+cross-validates an ordinary GLM that has no scale to estimate. Give it
+the same folds.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Intercept only: predicts the training mean count everywhere</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>null_cv <span class="ot">&lt;-</span> <span class="fu">cross_validate_glm</span>(counts <span class="sc">~</span> <span class="dv">1</span>, dat, folds, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>                              <span class="at">keep_selection =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co"># Site covariate only: no landscape information</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>site_cv <span class="ot">&lt;-</span> <span class="fu">cross_validate_glm</span>(counts <span class="sc">~</span> site, dat, folds, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>                              <span class="at">keep_selection =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>candidates <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">landscape =</span> cv, <span class="at">site_only =</span> site_cv, <span class="at">null =</span> null_cv)</span></code></pre></div>
+<div id="read-the-pooled-scores" class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> Read the pooled
+scores</h2>
+<p><code>cv_tab()</code> ranks the candidates on one score, which you
+must name.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>tab_rmse <span class="ot">&lt;-</span> <span class="fu">cv_tab</span>(candidates, <span class="at">metric =</span> <span class="st">&quot;rmse&quot;</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>tab_nls  <span class="ot">&lt;-</span> <span class="fu">cv_tab</span>(candidates, <span class="at">metric =</span> <span class="st">&quot;neg_log_score&quot;</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>tab_rmse[, <span class="fu">c</span>(<span class="st">&quot;Modnames&quot;</span>, <span class="st">&quot;Rank&quot;</span>, <span class="st">&quot;Score&quot;</span>, <span class="st">&quot;Delta&quot;</span>, <span class="st">&quot;N_scored&quot;</span>, <span class="st">&quot;Warnings&quot;</span>)]</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt;    Modnames Rank    Score     Delta N_scored Warnings</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; 1 landscape    1 1.620410 0.0000000      100        0</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; 2      null    2 2.210604 0.5901935      100        0</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; 3 site_only    3 2.232857 0.6124465      100        0</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>tab_nls[, <span class="fu">c</span>(<span class="st">&quot;Modnames&quot;</span>, <span class="st">&quot;Rank&quot;</span>, <span class="st">&quot;Score&quot;</span>, <span class="st">&quot;Delta&quot;</span>, <span class="st">&quot;N_scored&quot;</span>, <span class="st">&quot;Warnings&quot;</span>)]</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt;    Modnames Rank    Score     Delta N_scored Warnings</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt; 1 landscape    1 1.631381 0.0000000      100        0</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; 2      null    2 2.163750 0.5323688      100        0</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt; 3 site_only    3 2.169778 0.5383968      100        0</span></span></code></pre></div>
+<p><strong>How to read these tables:</strong> The best model is listed
+first. <code>Delta</code> is each model’s distance from it,
+<code>N_scored</code> is the number of held-out predictions behind the
+score, and <code>Warnings</code> counts the warnings recorded while
+fitting.</p>
+<ul>
+<li>The landscape model predicts held-out counts with an RMSE of 1.62
+animals, against 2.21 for the null model. The landscape covariates
+remove about 27% of the prediction error.</li>
+<li>The site-only model scores slightly worse than the null model. The
+<code>site</code> covariate has a true effect in these data, yet used
+alone it does not improve predictions for held-out blocks.</li>
+<li>A difference in negative log score converts to a ratio of
+probabilities with <code>exp()</code>. The landscape model’s advantage
+of 0.53 over the null model means it gave the observed counts 1.7 times
+the probability, as a geometric average per survey.</li>
+</ul>
+<p>The pooled RMSE is the square root of the mean squared error over all
+100 predictions, not the average of the three fold values. These scores
+carry no penalty for model complexity. They are not AIC values or model
+weights.</p>
+</div>
+<div id="look-at-each-fold" class="section level2" number="6.2">
+<h2><span class="header-section-number">6.2</span> Look at each
+fold</h2>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>by_fold <span class="ot">&lt;-</span> <span class="fu">cv_tab</span>(candidates, <span class="at">metric =</span> <span class="st">&quot;rmse&quot;</span>, <span class="at">by_fold =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>by_fold[, <span class="fu">c</span>(<span class="st">&quot;Fold&quot;</span>, <span class="st">&quot;Modnames&quot;</span>, <span class="st">&quot;Rank&quot;</span>, <span class="st">&quot;Score&quot;</span>, <span class="st">&quot;Delta&quot;</span>)]</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt;    Fold  Modnames Rank    Score     Delta</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; 1 fold1 landscape    1 1.232381 0.0000000</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; 2 fold1      null    2 2.017854 0.7854730</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; 3 fold1 site_only    3 2.091114 0.8587336</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; 4 fold2 landscape    1 1.359727 0.0000000</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; 5 fold2      null    2 1.608284 0.2485578</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; 6 fold2 site_only    3 1.620645 0.2609183</span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; 7 fold3 landscape    1 2.131458 0.0000000</span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; 8 fold3 site_only    2 2.824229 0.6927712</span></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt; 9 fold3      null    3 2.833142 0.7016835</span></span></code></pre></div>
+<p><strong>How to read this table:</strong> Each fold is ranked
+separately. The landscape model ranks first in all three, so its
+advantage does not depend on one part of the study area. Every model
+scores worst in <code>fold3</code>, where counts are higher and more
+variable than elsewhere. Use this table to check that a ranking is
+consistent. Three folds are too few, and too dependent on one another,
+to treat their spread as a standard error.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Use the pooled table
+to rank candidates you chose in advance, and report the fold design with
+it. If you then use the scores to choose a kernel, a block size, or new
+candidates, the winning score is optimistic. Confirm the final choice on
+data that played no part in choosing it.</p>
+</blockquote>
+</div>
+<div id="check-that-every-fold-finished" class="section level2" number="6.3">
+<h2><span class="header-section-number">6.3</span> Check that every fold
+finished</h2>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>cv<span class="sc">$</span>complete        <span class="co"># TRUE: every fold was fitted and scored</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>cv<span class="sc">$</span>fold_results    <span class="co"># rows used for fitting and assessment, and the fold status</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt;    fold n_analysis n_assessment status</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt; 1 fold1         66           34 scored</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="co">#&gt; 2 fold2         67           33 scored</span></span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="co">#&gt; 3 fold3         67           33 scored</span></span></code></pre></div>
+<p><strong>How to read this output:</strong>
+<code>complete = TRUE</code> means every planned fold was fitted and
+scored. When a fold fails, <code>complete</code> is <code>FALSE</code>,
+that fold’s <code>status</code> reads <code>&quot;failed&quot;</code>, and the
+pooled scores are <code>NA</code>. <code>cv_tab()</code> then stops with
+an error. It will not rank a candidate on a subset of the folds, because
+a model scored on the easy folds alone would look better than it is. <a href="#curved-responses">Curved responses</a> shows a failed run and how
+to repair it.</p>
+</div>
+</div>
+<div id="see-how-the-fold-design-changes-the-answer" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> See how the fold design
+changes the answer</h1>
+<p>The same model earns a different score under each fold design,
+because each design poses a different prediction task.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># The same landscape model, scored on random rows and on the buffered blocks</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>cv_random <span class="ot">&lt;-</span> <span class="fu">cross_validate</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, dat, inputs,</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>                            folds_random, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>cv_buffer <span class="ot">&lt;-</span> <span class="fu">cross_validate</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, dat, inputs,</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>                            folds_buffer, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>rmse_of <span class="ot">&lt;-</span> <span class="cf">function</span>(x) x<span class="sc">$</span>summary<span class="sc">$</span>estimate[x<span class="sc">$</span>summary<span class="sc">$</span>metric <span class="sc">==</span> <span class="st">&quot;rmse&quot;</span>]</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">design   =</span> <span class="fu">c</span>(<span class="st">&quot;Random rows&quot;</span>, <span class="st">&quot;Spatial blocks&quot;</span>, <span class="st">&quot;Blocks, 320 m buffer&quot;</span>),</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>           <span class="at">rmse     =</span> <span class="fu">round</span>(<span class="fu">c</span>(<span class="fu">rmse_of</span>(cv_random), <span class="fu">rmse_of</span>(cv), <span class="fu">rmse_of</span>(cv_buffer)), <span class="dv">2</span>),</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>           <span class="at">complete =</span> <span class="fu">c</span>(cv_random<span class="sc">$</span>complete, cv<span class="sc">$</span>complete, cv_buffer<span class="sc">$</span>complete))</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#&gt;                 design   rmse complete</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co">#&gt; 1          Random rows   1.55     TRUE</span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="co">#&gt; 2       Spatial blocks   1.62     TRUE</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt; 3 Blocks, 320 m buffer 194.61     TRUE</span></span></code></pre></div>
+<p><strong>How to read this table:</strong> Random rows give the lowest
+error. Every held-out point has close neighbors in the training data,
+which is the easiest task of the three. Spatial blocks ask the model to
+predict areas it has not sampled, and the error rises a little. The
+buffered design fails in a different way. With 11 to 22 training points
+per fold the fitted models extrapolate badly, and the error dwarfs the
+counts themselves. All three runs are complete. A complete result says
+only that the calculations finished, not that the model is sensible.</p>
+<p><code>cv_tab()</code> compares only candidates scored on identical
+folds and stops otherwise, which is why this table is assembled by
+hand.</p>
+</div>
+<div id="validate-other-model-structures" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Validate other model
+structures</h1>
+<p>The CV functions cover GLMs, models with a random intercept for sites
+or other groups, step-selection models, models with a spatial random
+field, and Bayesian models. <code>unmarked</code> and GAM fits have no
+CV function. Every score except the Bayesian one uses each fold’s point
+estimates, so it carries no parameter uncertainty and no standard
+error.</p>
+<div id="curved-responses" class="section level2" number="8.1">
+<h2><span class="header-section-number">8.1</span> Curved responses</h2>
+<p>Formula terms such as <code>scale()</code>, <code>poly()</code>,
+<code>splines::ns()</code>, and <code>splines::bs()</code> learn
+constants from the data, for example spline knots. The CV functions
+learn those constants from the analysis rows of each fold and reuse them
+for the assessment rows. Write the transformation in the formula. Do not
+transform the full data set beforehand.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">library</span>(splines)</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co"># A natural spline in land1 that chooses its knots from the data</span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>df_cv <span class="ot">&lt;-</span> <span class="fu">cross_validate</span>(counts <span class="sc">~</span> site <span class="sc">+</span> <span class="fu">ns</span>(land1, <span class="at">df =</span> <span class="dv">3</span>) <span class="sc">+</span> land2,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                        dat, inputs, folds, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>df_cv<span class="sc">$</span>complete                <span class="co"># FALSE: no fold was scored</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>df_cv<span class="sc">$</span>errors<span class="sc">$</span>fold1<span class="sc">$</span>message    <span class="co"># the reason, recorded for each fold</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Dynamic splines require explicit fixed knots and Boundary.knots, without adaptive df; use the refit backend otherwise.&quot;</span></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co"># The message names the fix</span></span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>curve_cv <span class="ot">&lt;-</span> <span class="fu">cross_validate</span>(counts <span class="sc">~</span> site <span class="sc">+</span> <span class="fu">ns</span>(land1, <span class="at">df =</span> <span class="dv">3</span>) <span class="sc">+</span> land2,</span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>                           dat, inputs, folds, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>                           <span class="at">backend =</span> <span class="st">&quot;refit&quot;</span>)</span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a>curve_cv<span class="sc">$</span>complete</span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="fu">cv_tab</span>(<span class="fu">list</span>(<span class="at">linear =</span> cv, <span class="at">curved =</span> curve_cv),</span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a>       <span class="at">metric =</span> <span class="st">&quot;rmse&quot;</span>)[, <span class="fu">c</span>(<span class="st">&quot;Modnames&quot;</span>, <span class="st">&quot;Rank&quot;</span>, <span class="st">&quot;Score&quot;</span>, <span class="st">&quot;Delta&quot;</span>)]</span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt;   Modnames Rank    Score     Delta</span></span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; 1   curved    1 1.502297 0.0000000</span></span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co">#&gt; 2   linear    2 1.620410 0.1181136</span></span></code></pre></div>
+<p><strong>How to read this output:</strong> The first run fails in
+every fold. The default backend accepts a spline only when you fix its
+<code>knots</code> and <code>Boundary.knots</code> in the formula, and
+the <code>errors</code> element says so. With
+<code>backend = &quot;refit&quot;</code> all folds finish, and the curved model
+ranks first by 0.12 animals per survey. The counts were simulated with a
+straight-line effect of <code>land1</code> on the log scale, so a gap
+this small, from three folds of one data set, is weak evidence for
+curvature. <code>?cross_validate</code> describes the backends.</p>
+</div>
+<div id="overdispersed-counts-and-positive-responses" class="section level2" number="8.2">
+<h2><span class="header-section-number">8.2</span> Overdispersed counts
+and positive responses</h2>
+<p><code>family</code> accepts <code>&quot;gaussian&quot;</code>,
+<code>&quot;poisson&quot;</code>, <code>&quot;binomial&quot;</code>, <code>&quot;nbinom2&quot;</code>,
+and <code>&quot;Gamma&quot;</code>. The negative binomial family
+(<code>&quot;nbinom2&quot;</code>) lets the variance of a count exceed its mean.
+Its variance is <code>mu + mu^2 / theta</code>, where <code>mu</code> is
+the expected count, so a small theta means strong extra variation and a
+very large theta approaches a Poisson model. Theta is estimated from the
+analysis rows of each fold and held fixed when the assessment rows are
+scored.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Negative binomial versions of the site-only and landscape models</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>site_nb <span class="ot">&lt;-</span> <span class="fu">cross_validate_glm</span>(counts <span class="sc">~</span> site, dat, folds, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>land_nb <span class="ot">&lt;-</span> <span class="fu">cross_validate</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, dat, inputs, folds,</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>                          <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>count_models <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">site_poisson =</span> site_cv, <span class="at">site_nb =</span> site_nb,</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>                     <span class="at">landscape_poisson =</span> cv, <span class="at">landscape_nb =</span> land_nb)</span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="fu">cv_tab</span>(count_models,</span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>       <span class="at">metric =</span> <span class="st">&quot;neg_log_score&quot;</span>)[, <span class="fu">c</span>(<span class="st">&quot;Modnames&quot;</span>, <span class="st">&quot;Rank&quot;</span>, <span class="st">&quot;Score&quot;</span>, <span class="st">&quot;Delta&quot;</span>, <span class="st">&quot;Warnings&quot;</span>)]</span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt;            Modnames Rank    Score       Delta Warnings</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt; 1 landscape_poisson    1 1.631381 0.000000000        0</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co">#&gt; 2      landscape_nb    2 1.633579 0.002198079        3</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="co">#&gt; 3           site_nb    3 1.931871 0.300489993        0</span></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co">#&gt; 4      site_poisson    4 2.169778 0.538396773        0</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="co"># Theta estimated in each fold</span></span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">rbind</span>(<span class="at">site_nb      =</span> <span class="fu">sapply</span>(site_nb<span class="sc">$</span>distribution, <span class="cf">function</span>(fold) fold<span class="sc">$</span>theta),</span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a>            <span class="at">landscape_nb =</span> <span class="fu">sapply</span>(land_nb<span class="sc">$</span>distribution, <span class="cf">function</span>(fold) fold<span class="sc">$</span>theta)), <span class="dv">1</span>)</span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="co">#&gt;              fold1 fold2    fold3</span></span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a><span class="co">#&gt; site_nb        1.6   1.4      1.9</span></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="co">#&gt; landscape_nb  31.2  19.0 100000.0</span></span></code></pre></div>
+<p><strong>How to read this output:</strong> Compare count distributions
+with the negative log score, because RMSE and MAE see only the predicted
+mean. Without the landscape covariates the counts look overdispersed.
+Theta is between 1 and 2, and the negative binomial model predicts
+better than the Poisson model. Once the landscape covariates enter,
+theta becomes large and the two families score almost the same. The
+extra variation was unexplained landscape effect, not a property of the
+counts. In <code>fold3</code> theta reached the upper limit of the
+search, which amounts to a Poisson model. The three warnings report that
+theta sits at or near that limit. Read them with
+<code>land_nb$warnings</code>.</p>
+<p>Use <code>family = &quot;Gamma&quot;</code> for a continuous response that is
+strictly positive. It has a log link, so <code>exp()</code> of a
+coefficient is a multiplicative change in the expected response.
+<code>?cross_validate_glm</code> covers the <code>theta</code> and
+<code>dispersion</code> arguments, which fix those parameters at values
+you know in advance.</p>
+</div>
+<div id="model-selection-by-information-criterion" class="section level2" number="8.3">
+<h2><span class="header-section-number">8.3</span> Model selection by
+information criterion</h2>
+<p>Suppose your plan is to fit several models and keep the one with the
+lowest AICc. <code>select_cv()</code> scores that whole procedure. In
+each fold it picks the candidate with the lowest AICc on the analysis
+rows, then uses that candidate’s held-out predictions. It fits no new
+models, but every candidate must have been run with
+<code>keep_selection = TRUE</code>. Candidates may use different
+families, such as Poisson and negative binomial. The procedure is then
+scored only on the metrics they share, which
+<code>selected$selection$metrics</code> lists.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>selected <span class="ot">&lt;-</span> <span class="fu">select_cv</span>(candidates, <span class="at">criterion =</span> <span class="st">&quot;AICc&quot;</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>selected<span class="sc">$</span>selection<span class="sc">$</span>chosen          <span class="co"># model chosen in each fold</span></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="co">#&gt;       fold1       fold2       fold3 </span></span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="co">#&gt; &quot;landscape&quot; &quot;landscape&quot; &quot;landscape&quot;</span></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>selected<span class="sc">$</span>selection<span class="sc">$</span>tables<span class="sc">$</span>fold1    <span class="co"># training AICc table for the first fold</span></span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a><span class="co">#&gt; Model selection based on AICc:</span></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a><span class="co">#&gt;           K   AICc Delta_AICc AICcWt Cum.Wt      LL</span></span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a><span class="co">#&gt; landscape 6 221.70       0.00      1      1 -104.14</span></span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a><span class="co">#&gt; site_only 2 287.62      65.92      0      1 -141.72</span></span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a><span class="co">#&gt; null      1 287.86      66.16      0      1 -142.90</span></span></code></pre></div>
+<p><strong>How to read this output:</strong> The landscape model has the
+lowest training AICc in every fold, so the score for the procedure
+equals that model’s own score. <code>K</code> is the number of estimated
+parameters. The landscape model has six, which are four regression
+coefficients and two scales of effect. Never pick a fold’s model from
+its assessment score and then report that score.</p>
+</div>
+<div id="repeated-surveys-of-the-same-sites" class="section level2" number="8.4">
+<h2><span class="header-section-number">8.4</span> Repeated surveys of
+the same sites</h2>
+<p>When each site is surveyed several times, a <em>random intercept</em>
+for site lets every site have its own baseline count, drawn from a
+common distribution. It accounts for the similarity among visits to one
+site. <code>cross_validate_mixed()</code> cross-validates such a model,
+fitted with <code>glmmTMB</code>. The function is experimental. Decide
+which prediction you want before you build the folds.</p>
+<ul>
+<li><strong>A new site.</strong> Hold out whole sites. The model knows
+nothing about a held-out site, so it averages its prediction over the
+fitted spread of site effects
+(<code>prediction = &quot;new_group&quot;</code>).</li>
+<li><strong>A later visit to a known site.</strong> Hold out the last
+visits at every site. The earlier visits tell the model whether a site
+runs high or low, and the prediction uses that knowledge
+(<code>prediction = &quot;existing_group&quot;</code>).</li>
+</ul>
+<p>The running example has one survey per point, so the example below
+simulates eight visits to each of 18 sites. The habitat effect is 0.4 on
+the log scale, and the site effects have a standard deviation of
+0.7.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>site        <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">sprintf</span>(<span class="st">&quot;site%02d&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">18</span>), <span class="at">each =</span> <span class="dv">8</span>))   <span class="co"># 18 sites</span></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>habitat     <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="fu">length</span>(site))                       <span class="co"># standardized habitat</span></span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>site_effect <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="fu">nlevels</span>(site), <span class="at">sd =</span> <span class="fl">0.7</span>)[site]      <span class="co"># one value per site</span></span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>surveys <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, habitat, <span class="at">visit =</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>, <span class="fu">nlevels</span>(site)))</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>surveys<span class="sc">$</span>count <span class="ot">&lt;-</span> <span class="fu">rpois</span>(<span class="fu">nrow</span>(surveys), <span class="fu">exp</span>(<span class="fl">0.9</span> <span class="sc">+</span> <span class="fl">0.4</span> <span class="sc">*</span> habitat <span class="sc">+</span> site_effect))</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a><span class="co"># New sites: all eight visits to a site are held out together</span></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>new_sites <span class="ot">&lt;-</span> <span class="fu">grouped_cv_folds</span>(surveys<span class="sc">$</span>site, <span class="at">k =</span> <span class="dv">3</span>, <span class="at">ids =</span> <span class="fu">rownames</span>(surveys))</span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>habitat_new   <span class="ot">&lt;-</span> <span class="fu">cross_validate_mixed</span>(count <span class="sc">~</span> habitat <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), surveys,</span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a>                                      new_sites, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a>                                      <span class="at">prediction =</span> <span class="st">&quot;new_group&quot;</span>)</span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a>intercept_new <span class="ot">&lt;-</span> <span class="fu">cross_validate_mixed</span>(count <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), surveys,</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a>                                      new_sites, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a>                                      <span class="at">prediction =</span> <span class="st">&quot;new_group&quot;</span>)</span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a>mixed_tab <span class="ot">&lt;-</span> <span class="fu">cv_tab</span>(<span class="fu">list</span>(<span class="at">habitat =</span> habitat_new, <span class="at">intercept =</span> intercept_new),</span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a>                    <span class="at">metric =</span> <span class="st">&quot;neg_log_score&quot;</span>)</span>
+<span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a>mixed_tab[, <span class="fu">c</span>(<span class="st">&quot;Modnames&quot;</span>, <span class="st">&quot;Rank&quot;</span>, <span class="st">&quot;Score&quot;</span>, <span class="st">&quot;Delta&quot;</span>, <span class="st">&quot;Unit&quot;</span>)]</span>
+<span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a><span class="co">#&gt;    Modnames Rank    Score    Delta                        Unit</span></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="co">#&gt; 1   habitat    1 1.986689 0.000000 joint_group_density_per_row</span></span>
+<span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a><span class="co">#&gt; 2 intercept    2 2.208725 0.222036 joint_group_density_per_row</span></span></code></pre></div>
+<p><strong>How to read this table:</strong> The score is <em>joint</em>
+for each held-out site. All eight visits share one unknown site effect,
+so the model scores them together and then divides by the number of
+held-out surveys. Lower is better, as before. The habitat model ranks
+first. Its advantage of 0.22 means it gave the observed counts at new
+sites 1.25 times the probability, as a geometric average per survey.
+<code>cv_tab()</code> compares a mixed-model result only with other
+mixed-model results on the same folds, because a joint score and the
+per-survey score of <code>cross_validate_glm()</code> are on different
+footings.</p>
+<p>The same model answers the second question with different folds.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># Later visits: train on visits 1 to 6, predict visits 7 and 8 at every site</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>ids <span class="ot">&lt;-</span> <span class="fu">rownames</span>(surveys)</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>later_visits <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">later =</span> <span class="fu">list</span>(<span class="at">analysis   =</span> ids[surveys<span class="sc">$</span>visit <span class="sc">&lt;=</span> <span class="dv">6</span>],</span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>                                  <span class="at">assessment =</span> ids[surveys<span class="sc">$</span>visit <span class="sc">&gt;</span> <span class="dv">6</span>]))</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>habitat_later <span class="ot">&lt;-</span> <span class="fu">cross_validate_mixed</span>(count <span class="sc">~</span> habitat <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), surveys,</span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>                                      later_visits, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>                                      <span class="at">prediction =</span> <span class="st">&quot;existing_group&quot;</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>habitat_later<span class="sc">$</span>summary[, <span class="fu">c</span>(<span class="st">&quot;metric&quot;</span>, <span class="st">&quot;estimate&quot;</span>, <span class="st">&quot;n_assessment&quot;</span>)]</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="co">#&gt;          metric estimate n_assessment</span></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a><span class="co">#&gt; 1 neg_log_score 2.118291           36</span></span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a><span class="co">#&gt; 2          rmse 2.553329           36</span></span></code></pre></div>
+<p><strong>How to read this output:</strong> Later visits to known sites
+are predicted with an RMSE of 2.55 animals per survey, against 2.89 for
+new sites. The earlier visits reveal whether a site runs high or low.
+The two designs hold out different surveys, so read them as answers to
+two questions, not as a ranking.</p>
+<p>Supply <code>kernel_inputs</code> to re-estimate the scales of effect
+in every fold, as <code>cross_validate()</code> does. Gaussian models
+may also include a random slope. Poisson, binomial, negative binomial,
+and Gamma models allow one random intercept.
+<code>?cross_validate_mixed</code> lists the remaining options.</p>
+</div>
+<div id="step-selection-models" class="section level2" number="8.5">
+<h2><span class="header-section-number">8.5</span> Step-selection
+models</h2>
+<p>A step-selection model predicts which of several available steps an
+animal used. Each <em>choice set</em> has one used step and one or more
+available steps, and the set must stay together in a fold.
+<code>cross_validate_clogit()</code> scores the probability the model
+gave to the used step. The artificial example below has 24 choice sets
+of three steps each.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="fu">library</span>(survival)   <span class="co"># provides strata()</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">72</span></span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>choices <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>  <span class="at">step    =</span> (i <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%/%</span> <span class="dv">3</span> <span class="sc">+</span> <span class="dv">1</span>,          <span class="co"># choice set label, 1 to 24</span></span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>  <span class="at">used    =</span> <span class="fu">as.numeric</span>(i <span class="sc">%%</span> <span class="dv">3</span> <span class="sc">==</span> <span class="dv">1</span>),    <span class="co"># the first step of each set was used</span></span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>  <span class="at">habitat =</span> <span class="fu">sin</span>(i <span class="sc">*</span> <span class="fl">1.7</span>)                <span class="co"># covariate unrelated to use</span></span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a>)</span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>choice_folds <span class="ot">&lt;-</span> <span class="fu">grouped_cv_folds</span>(choices<span class="sc">$</span>step, <span class="at">k =</span> <span class="dv">3</span>)   <span class="co"># whole sets held out</span></span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a></span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a>choice_models <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a>  <span class="at">null    =</span> <span class="fu">cross_validate_clogit</span>(used <span class="sc">~</span> <span class="fu">strata</span>(step), choices, choice_folds),</span>
+<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a>  <span class="at">habitat =</span> <span class="fu">cross_validate_clogit</span>(used <span class="sc">~</span> habitat <span class="sc">+</span> <span class="fu">strata</span>(step), choices,</span>
+<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a>                                  choice_folds))</span>
+<span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a><span class="fu">cv_tab</span>(choice_models,</span>
+<span id="cb19-16"><a href="#cb19-16" tabindex="-1"></a>       <span class="at">metric =</span> <span class="st">&quot;neg_log_score&quot;</span>)[, <span class="fu">c</span>(<span class="st">&quot;Modnames&quot;</span>, <span class="st">&quot;Rank&quot;</span>, <span class="st">&quot;Score&quot;</span>, <span class="st">&quot;Delta&quot;</span>, <span class="st">&quot;Unit&quot;</span>)]</span>
+<span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a><span class="co">#&gt;   Modnames Rank    Score      Delta       Unit</span></span>
+<span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a><span class="co">#&gt; 1     null    1 1.098612 0.00000000 choice_set</span></span>
+<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a><span class="co">#&gt; 2  habitat    2 1.126067 0.02745496 choice_set</span></span></code></pre></div>
+<p><strong>How to read this table:</strong> The score is the negative
+log probability of the used step, averaged over held-out choice sets.
+The null model gives each of three steps a probability of one third, and
+<code>-log(1/3)</code> is 1.099. A useful covariate would lower that
+score, and <code>habitat</code> does not. To test transfer to new
+animals, build the folds from animal labels.</p>
+<p>To estimate a scale of effect inside each fold, pass the prepared
+<code>kernel_inputs</code>, as with <code>cross_validate()</code>. For a
+landscape metric with a hard radius, set <code>backend = &quot;refit&quot;</code>
+and list candidate radii with
+<code>optim_args = list(radius_grid = c(80, 140, 200))</code>. Each fold
+then refits the model at every radius and keeps the one with the highest
+training likelihood.
+<code>vignette(&quot;v04-landscape-metrics&quot;, package = &quot;multiScaleR&quot;)</code>
+shows the same search on a full data set, and
+<code>?cross_validate_clogit</code> gives the details.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> A better held-out
+score does not show that the data locate a scale. In simulated
+step-selection data with a weak habitat effect, adding habitat improved
+the held-out score by about 0.015 log units per choice set. Yet only 22
+of 96 bandwidth estimates fell within 25% of the true value, and 27
+stopped at a search limit. Judge the scale itself with a likelihood
+profile.</p>
+</blockquote>
+</div>
+<div id="models-with-a-spatial-random-field" class="section level2" number="8.6">
+<h2><span class="header-section-number">8.6</span> Models with a spatial
+random field</h2>
+<p><code>cross_validate_field()</code> cross-validates a model that
+includes a spatial random field, or a smooth surface of spatially
+correlated variation that the covariates do not explain. Set
+<code>family</code> to <code>&quot;gaussian&quot;</code>, <code>&quot;poisson&quot;</code>,
+<code>&quot;nbinom2&quot;</code>, <code>&quot;binomial&quot;</code> (zeros and ones), or
+<code>&quot;Gamma&quot;</code>. In each fold the function estimates the regression
+coefficients, the correlation range of the field, its standard
+deviation, and the observation dispersion for the Gaussian, negative
+binomial, and Gamma families. It keeps every visit to one location in
+the same part of the split and scores the held-out observations jointly,
+which accounts for the correlation among neighboring held-out points.
+<code>cv_tab()</code> therefore compares field models only with other
+field models, such as a Poisson and a negative binomial model on the
+same folds.</p>
+<p>For Gaussian responses the score is exact at the fitted parameters.
+The other families are experimental, and their score rests on an
+approximation, which in small simulated fields with known parameters
+stayed within 0.05 log units per held-out observation of an exact
+calculation. The predicted spread of new observations is less reliable
+once the parameters are estimated. In simulations that held out buffered
+locations, squared prediction errors averaged 1.5 to 2.7 times the
+predicted variance, where a well-calibrated prediction gives 1. The
+function requires the <code>glmmTMB</code> package and runs far longer
+than the examples above. See <code>?cross_validate_field</code>.</p>
+</div>
+<div id="bayesian-models" class="section level2" number="8.7">
+<h2><span class="header-section-number">8.7</span> Bayesian models</h2>
+<p><code>cross_validate_bayes()</code> refits a Bayesian model from
+<code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code> in
+every fold, so each fold samples its own posterior. It scores the
+held-out observations with the posterior predictive density, which
+averages over uncertainty in the coefficients, the scales of effect, and
+the group effects. It is the only CV score in the package that carries
+parameter uncertainty. The function is experimental, like the Bayesian
+interface it builds on. Every fold runs the sampler, so a run takes
+about as long as one full fit per fold.</p>
+<p>Choose the folds from the prediction you have in mind. To forecast a
+new year, train on the earlier years and hold out the next one. To
+predict new sites, build the folds with <code>grouped_cv_folds()</code>
+on the site labels. The model then averages over a site effect it has
+never seen, and the observations that share that effect are scored
+together. <code>select_cv()</code> does not apply to these results,
+because a posterior has no training AIC.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> The average over
+unseen group effects uses a finite number of simulated effects, set by
+<code>new_group_draws</code>. In simulations, the default put 3 of 32
+pairs of models in the wrong order, each with a score difference below
+0.005 per survey. When two candidates score that closely, rerun both
+with a larger <code>new_group_draws</code> and the same
+<code>seed</code>. Treat the comparison as unresolved if the ranking
+changes.</p>
+</blockquote>
+</div>
+</div>
+<div id="quick-reference" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Quick reference</h1>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="fu">library</span>(multiScaleR)</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a><span class="co"># 1. Prepare the data</span></span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>); <span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>pts  <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>land <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>, <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a></span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a><span class="co"># 2. Build folds that match the prediction question</span></span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a>folds <span class="ot">&lt;-</span> <span class="fu">spatial_cv_folds</span>(<span class="fu">crds</span>(pts), <span class="at">block_size =</span> <span class="dv">1000</span>, <span class="at">k =</span> <span class="dv">3</span>, <span class="at">crs =</span> <span class="dv">32617</span>)</span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a>folds_buffer <span class="ot">&lt;-</span> <span class="fu">spatial_cv_folds</span>(<span class="fu">crds</span>(pts), <span class="at">block_size =</span> <span class="dv">1000</span>, <span class="at">k =</span> <span class="dv">3</span>,</span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a>                                 <span class="at">buffer =</span> <span class="dv">320</span>, <span class="at">crs =</span> <span class="dv">32617</span>)</span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a>site_id <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;C&quot;</span>, <span class="st">&quot;D&quot;</span>, <span class="st">&quot;E&quot;</span>, <span class="st">&quot;F&quot;</span>), <span class="at">each =</span> <span class="dv">2</span>)   <span class="co"># group per row</span></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a>grouped <span class="ot">&lt;-</span> <span class="fu">grouped_cv_folds</span>(site_id, <span class="at">k =</span> <span class="dv">3</span>, <span class="at">ids =</span> <span class="fu">paste0</span>(<span class="st">&quot;visit&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">12</span>))</span>
+<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a></span>
+<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a><span class="co"># 3. Cross-validate: scales and coefficients are re-estimated in every fold</span></span>
+<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a>cv <span class="ot">&lt;-</span> <span class="fu">cross_validate</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">data =</span> dat,</span>
+<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a>                     <span class="at">kernel_inputs =</span> inputs, <span class="at">folds =</span> folds,</span>
+<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a>                     <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>, <span class="at">keep_selection =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-23"><a href="#cb20-23" tabindex="-1"></a>cv                      <span class="co"># pooled scores, lower is better</span></span>
+<span id="cb20-24"><a href="#cb20-24" tabindex="-1"></a>cv<span class="sc">$</span>complete             <span class="co"># TRUE: every fold was fitted and scored</span></span>
+<span id="cb20-25"><a href="#cb20-25" tabindex="-1"></a>cv<span class="sc">$</span>training             <span class="co"># scales and coefficients estimated in each fold</span></span>
+<span id="cb20-26"><a href="#cb20-26" tabindex="-1"></a></span>
+<span id="cb20-27"><a href="#cb20-27" tabindex="-1"></a><span class="co"># 4. Reference models on the same folds</span></span>
+<span id="cb20-28"><a href="#cb20-28" tabindex="-1"></a>null_cv <span class="ot">&lt;-</span> <span class="fu">cross_validate_glm</span>(counts <span class="sc">~</span> <span class="dv">1</span>, dat, folds, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb20-29"><a href="#cb20-29" tabindex="-1"></a>                              <span class="at">keep_selection =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-30"><a href="#cb20-30" tabindex="-1"></a>site_cv <span class="ot">&lt;-</span> <span class="fu">cross_validate_glm</span>(counts <span class="sc">~</span> site, dat, folds, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb20-31"><a href="#cb20-31" tabindex="-1"></a>                              <span class="at">keep_selection =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-32"><a href="#cb20-32" tabindex="-1"></a>candidates <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">landscape =</span> cv, <span class="at">site_only =</span> site_cv, <span class="at">null =</span> null_cv)</span>
+<span id="cb20-33"><a href="#cb20-33" tabindex="-1"></a></span>
+<span id="cb20-34"><a href="#cb20-34" tabindex="-1"></a><span class="co"># 5. Compare</span></span>
+<span id="cb20-35"><a href="#cb20-35" tabindex="-1"></a><span class="fu">cv_tab</span>(candidates, <span class="at">metric =</span> <span class="st">&quot;rmse&quot;</span>)                   <span class="co"># pooled, in counts</span></span>
+<span id="cb20-36"><a href="#cb20-36" tabindex="-1"></a><span class="fu">cv_tab</span>(candidates, <span class="at">metric =</span> <span class="st">&quot;neg_log_score&quot;</span>)          <span class="co"># whole distribution</span></span>
+<span id="cb20-37"><a href="#cb20-37" tabindex="-1"></a><span class="fu">cv_tab</span>(candidates, <span class="at">metric =</span> <span class="st">&quot;rmse&quot;</span>, <span class="at">by_fold =</span> <span class="cn">TRUE</span>)   <span class="co"># is the ranking consistent?</span></span>
+<span id="cb20-38"><a href="#cb20-38" tabindex="-1"></a></span>
+<span id="cb20-39"><a href="#cb20-39" tabindex="-1"></a><span class="co"># 6. Score an AICc selection rule</span></span>
+<span id="cb20-40"><a href="#cb20-40" tabindex="-1"></a>selected <span class="ot">&lt;-</span> <span class="fu">select_cv</span>(candidates, <span class="at">criterion =</span> <span class="st">&quot;AICc&quot;</span>)</span>
+<span id="cb20-41"><a href="#cb20-41" tabindex="-1"></a>selected<span class="sc">$</span>selection<span class="sc">$</span>chosen                             <span class="co"># model chosen per fold</span></span>
+<span id="cb20-42"><a href="#cb20-42" tabindex="-1"></a></span>
+<span id="cb20-43"><a href="#cb20-43" tabindex="-1"></a><span class="co"># 7. Repeated surveys: choose the prediction target, then compare candidates</span></span>
+<span id="cb20-44"><a href="#cb20-44" tabindex="-1"></a>new_sites <span class="ot">&lt;-</span> <span class="fu">grouped_cv_folds</span>(surveys<span class="sc">$</span>site, <span class="at">k =</span> <span class="dv">3</span>, <span class="at">ids =</span> <span class="fu">rownames</span>(surveys))</span>
+<span id="cb20-45"><a href="#cb20-45" tabindex="-1"></a>habitat_new <span class="ot">&lt;-</span> <span class="fu">cross_validate_mixed</span>(count <span class="sc">~</span> habitat <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), surveys,</span>
+<span id="cb20-46"><a href="#cb20-46" tabindex="-1"></a>                                    new_sites, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb20-47"><a href="#cb20-47" tabindex="-1"></a>                                    <span class="at">prediction =</span> <span class="st">&quot;new_group&quot;</span>)   <span class="co"># unseen sites</span></span>
+<span id="cb20-48"><a href="#cb20-48" tabindex="-1"></a>intercept_new <span class="ot">&lt;-</span> <span class="fu">cross_validate_mixed</span>(count <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), surveys,</span>
+<span id="cb20-49"><a href="#cb20-49" tabindex="-1"></a>                                      new_sites, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb20-50"><a href="#cb20-50" tabindex="-1"></a>                                      <span class="at">prediction =</span> <span class="st">&quot;new_group&quot;</span>)</span>
+<span id="cb20-51"><a href="#cb20-51" tabindex="-1"></a><span class="fu">cv_tab</span>(<span class="fu">list</span>(<span class="at">habitat =</span> habitat_new, <span class="at">intercept =</span> intercept_new),</span>
+<span id="cb20-52"><a href="#cb20-52" tabindex="-1"></a>       <span class="at">metric =</span> <span class="st">&quot;neg_log_score&quot;</span>)                    <span class="co"># joint score per survey</span></span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="9.1">
+<h2><span class="header-section-number">9.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>spatial_cv_folds()</code></td>
+<td align="left">Build folds from whole grid blocks, with an optional
+buffer</td>
+</tr>
+<tr class="even">
+<td align="left"><code>grouped_cv_folds()</code></td>
+<td align="left">Build folds that keep each sampling group together</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>cross_validate()</code></td>
+<td align="left">Re-estimate scales and coefficients in each fold and
+score held-out predictions</td>
+</tr>
+<tr class="even">
+<td align="left"><code>cross_validate_glm()</code></td>
+<td align="left">Cross-validate a GLM that has no scale to estimate</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>cv_tab()</code></td>
+<td align="left">Rank candidates on one score, pooled or per fold</td>
+</tr>
+<tr class="even">
+<td align="left"><code>select_cv()</code></td>
+<td align="left">Score a selection rule based on training AIC, AICc, or
+BIC</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>cross_validate_mixed()</code></td>
+<td align="left">Cross-validate a model with a random intercept, for new
+groups or later visits to known groups</td>
+</tr>
+<tr class="even">
+<td align="left"><code>cross_validate_clogit()</code></td>
+<td align="left">Cross-validate a step-selection model on whole choice
+sets</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>cross_validate_field()</code></td>
+<td align="left">Cross-validate a model with a spatial random field</td>
+</tr>
+<tr class="even">
+<td align="left"><code>cross_validate_bayes()</code></td>
+<td align="left">Refit a Bayesian model in every fold and score the
+posterior predictive density</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="9.2">
+<h2><span class="header-section-number">9.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow and the data used here.</li>
+<li><strong><code>vignette(&quot;v02-user-guide&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+model selection with AIC and BIC.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what each estimate and interval includes.</li>
+<li><strong><code>vignette(&quot;v07-fitting-methods&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+which covariate types each fitting backend accepts.</li>
+<li><strong><code>vignette(&quot;v04-landscape-metrics&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+estimating the radius of a landscape metric, including a search over a
+grid of radii.</li>
+<li><strong><code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+preparing inputs when groups of surveys have their own maps, which
+<code>cross_validate()</code> also accepts.</li>
+<li><strong><code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the Bayesian models that <code>cross_validate_bayes()</code>
+refits.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

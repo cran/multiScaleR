@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>14. Predict New Sites and Years from a Bayesian Model</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">14. Predict New Sites and Years from a
+Bayesian Model</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#choose-the-prediction-your-question-needs" id="toc-choose-the-prediction-your-question-needs"><span class="toc-section-number">2</span> Choose the prediction your question
+needs</a></li>
+<li><a href="#load-the-example" id="toc-load-the-example"><span class="toc-section-number">3</span> Load the example</a></li>
+<li><a href="#predict-another-survey-at-known-sites-and-years" id="toc-predict-another-survey-at-known-sites-and-years"><span class="toc-section-number">4</span> Predict another survey at known
+sites and years</a></li>
+<li><a href="#predict-the-scale-of-effect-in-a-new-year" id="toc-predict-the-scale-of-effect-in-a-new-year"><span class="toc-section-number">5</span> Predict the scale of effect in a new
+year</a></li>
+<li><a href="#predict-counts-at-new-sites-and-in-new-years" id="toc-predict-counts-at-new-sites-and-in-new-years"><span class="toc-section-number">6</span> Predict counts at new sites and in
+new years</a></li>
+<li><a href="#predict-what-you-might-record-and-add-up-a-total" id="toc-predict-what-you-might-record-and-add-up-a-total"><span class="toc-section-number">7</span> Predict what you might record, and
+add up a total</a></li>
+<li><a href="#map-the-expected-count" id="toc-map-the-expected-count"><span class="toc-section-number">8</span> Map the expected count</a></li>
+<li><a href="#check-before-you-rely-on-a-prediction" id="toc-check-before-you-rely-on-a-prediction"><span class="toc-section-number">9</span> Check before you rely on a
+prediction</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">10</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">10.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">10.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p>A fitted model can answer several prediction questions, and each has
+its own interval. You may want the scale of effect in a year you have
+not surveyed, the expected count at a site, the count an observer could
+record there, or the total across a set of sites. The answer also
+depends on whether the site and the year were in the data.</p>
+<p>This vignette works through those predictions with a model fitted by
+<code>multiScale_bayes()</code>. You will predict at surveyed sites, at
+new sites and in new years, add up a total, and draw a map. Every
+example uses a stored fit, so nothing here needs sampling software. Read
+<code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code>
+first for priors and model fitting.</p>
+</div>
+<div id="choose-the-prediction-your-question-needs" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Choose the prediction
+your question needs</h1>
+<table>
+<colgroup>
+<col width="23%" />
+<col width="15%" />
+<col width="36%" />
+<col width="23%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Your question</th>
+<th align="left">Function</th>
+<th align="left">The interval includes</th>
+<th align="left">It leaves out</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">What is the scale of effect in this year, or in a year
+not yet surveyed?</td>
+<td align="left"><code>predict_scales()</code></td>
+<td align="left">Posterior uncertainty in the scale, plus year-to-year
+variation for a new year</td>
+<td align="left">Observation noise</td>
+</tr>
+<tr class="even">
+<td align="left">What is the expected response at these sites?</td>
+<td align="left"><code>predict()</code></td>
+<td align="left">Posterior uncertainty in scales, coefficients, and site
+and year effects</td>
+<td align="left">Observation noise</td>
+</tr>
+<tr class="odd">
+<td align="left">What might I record on a survey?</td>
+<td align="left"><code>simulate()</code></td>
+<td align="left">Everything above and observation noise</td>
+<td align="left">Nothing</td>
+</tr>
+<tr class="even">
+<td align="left">What is the total across several sites?</td>
+<td align="left"><code>simulate()</code>, then sum each replicate</td>
+<td align="left">Everything above, with effects shared among sites</td>
+<td align="left">Nothing</td>
+</tr>
+</tbody>
+</table>
+<p>The <em>expected response</em> is the model’s mean for a site, which
+is an expected count for Poisson and negative binomial models, a
+probability for binomial models, and a mean for Gaussian models.
+<em>Observation noise</em> is the scatter of individual records around
+that mean.</p>
+</div>
+<div id="load-the-example" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Load the example</h1>
+<p>The example data are simulated counts from 25 sites surveyed over
+five years (2021 to 2025), with a different habitat raster each year and
+distances in meters. In the stored model, the scale of effect of
+<code>habitat</code> differs among years, and each site and each year
+has its own baseline count.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>forecast_fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  count <span class="sc">~</span> habitat <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> year),   <span class="co"># site and year baselines</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">inputs =</span> annual<span class="sc">$</span>inputs, <span class="at">data =</span> annual<span class="sc">$</span>data,</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">scales =</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="sc">~</span><span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> year)),    <span class="co"># scale of effect varies by year</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">priors =</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="dv">250</span>),           <span class="co"># prior median scale, in meters</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">iter =</span> <span class="dv">8000</span>, <span class="at">warmup =</span> <span class="dv">4000</span>, <span class="at">seed =</span> <span class="dv">630127</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>  <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.99</span>, <span class="at">max_treedepth =</span> <span class="dv">12</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Survey data and prepared landscape inputs for 2021 to 2025</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>annual <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;bayesian-annual-example.rds&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co"># The stored fit, with future surveys and their prepared landscape inputs</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>example <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;bayesian-prediction-example.rds&quot;</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>                               <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>forecast_fit <span class="ot">&lt;-</span> example<span class="sc">$</span>fit</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="fu">summary</span>(forecast_fit)<span class="sc">$</span>diagnostics<span class="sc">$</span>passed   <span class="co"># TRUE: sampling checks passed</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>The terms <code>(1 | site)</code> and <code>(1 | year)</code> are
+<em>random intercepts</em>, or baseline shifts drawn from a common
+distribution, one per site or year. They are what make prediction for a
+new site or year possible, because the model has estimated how much
+sites and years differ.</p>
+</div>
+<div id="predict-another-survey-at-known-sites-and-years" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Predict another survey
+at known sites and years</h1>
+<p>Start with three site-years that are in the data. The model has
+estimated an effect for each of these sites and years, so you make no
+choice about new groups.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Three surveyed site-years. Leave out the response, which is not an input.</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>surveys <span class="ot">&lt;-</span> annual<span class="sc">$</span>data[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="fu">c</span>(<span class="st">&quot;site&quot;</span>, <span class="st">&quot;year&quot;</span>, <span class="st">&quot;site_year&quot;</span>)]</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># Expected count: uncertainty about the mean only</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>expected <span class="ot">&lt;-</span> <span class="fu">predict</span>(forecast_fit, surveys, <span class="at">kernel_inputs =</span> annual<span class="sc">$</span>inputs,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>                    <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co"># Replicated counts: 1,000 simulated surveys, with observation noise</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>replicated <span class="ot">&lt;-</span> <span class="fu">simulate</span>(forecast_fit, <span class="at">nsim =</span> <span class="dv">1000</span>, <span class="at">seed =</span> <span class="dv">11</span>, <span class="at">newdata =</span> surveys,</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>                       <span class="at">kernel_inputs =</span> annual<span class="sc">$</span>inputs, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>recorded <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">apply</span>(<span class="fu">as.matrix</span>(replicated), <span class="dv">1</span>, quantile,</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>                    <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>)))</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>known <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(expected[<span class="fu">c</span>(<span class="st">&quot;point_id&quot;</span>, <span class="st">&quot;median&quot;</span>, <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>)],</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>                    recorded[, <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">3</span>)])</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(known, <span class="at">digits =</span> <span class="dv">1</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Site and year&quot;</span>, <span class="st">&quot;Expected count&quot;</span>, <span class="st">&quot;Lower&quot;</span>, <span class="st">&quot;Upper&quot;</span>,</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>                           <span class="st">&quot;Recorded count&quot;</span>, <span class="st">&quot;Lower&quot;</span>, <span class="st">&quot;Upper&quot;</span>))</span></code></pre></div>
+<table>
+<colgroup>
+<col width="20%" />
+<col width="22%" />
+<col width="8%" />
+<col width="8%" />
+<col width="22%" />
+<col width="8%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Site and year</th>
+<th align="right">Expected count</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+<th align="right">Recorded count</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">s1_2021</td>
+<td align="right">3.3</td>
+<td align="right">1.9</td>
+<td align="right">5.6</td>
+<td align="right">3</td>
+<td align="right">0</td>
+<td align="right">9</td>
+</tr>
+<tr class="even">
+<td align="left">s2_2021</td>
+<td align="right">4.2</td>
+<td align="right">2.6</td>
+<td align="right">6.6</td>
+<td align="right">4</td>
+<td align="right">0</td>
+<td align="right">11</td>
+</tr>
+<tr class="odd">
+<td align="left">s3_2021</td>
+<td align="right">16.6</td>
+<td align="right">11.0</td>
+<td align="right">25.3</td>
+<td align="right">15</td>
+<td align="right">5</td>
+<td align="right">37</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the table:</strong> Each row is one site in one
+year. The first three numeric columns give the posterior median and 95%
+interval for the expected count. The last three give the median and
+central 95% range of counts a single survey could record.
+<code>kernel_inputs</code> supplies the prepared landscape, and
+<code>row_id</code> names the column that matches each row to it.</p>
+<p><strong>In a report.</strong> “At site s3 in 2021, the expected count
+was 16.6 animals per survey (95% credible interval 11.0 to 25.3), and a
+single survey would record between 5 and 37 animals with 95%
+probability.”</p>
+</div>
+<div id="predict-the-scale-of-effect-in-a-new-year" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Predict the scale of
+effect in a new year</h1>
+<p>The model describes each year’s scale of effect, <span class="math inline">\(D_y\)</span>, as a typical value shifted by a
+year-specific deviation.</p>
+<p><span class="math display">\[
+\log D_y = a + \tau z_y, \qquad z_y \sim N(0, 1)
+\]</span></p>
+<p>Here <span class="math inline">\(a\)</span> is the log of the typical
+scale, tau (<span class="math inline">\(\tau\)</span>) is the spread of
+log scales among years, and <span class="math inline">\(z_y\)</span> is
+the deviation for year <span class="math inline">\(y\)</span>. For the
+Gaussian kernel, <span class="math inline">\(D_y\)</span> is sigma. A
+surveyed year has an estimated deviation. A new year does not, and
+<code>new_levels</code> states what to do about that.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>years <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">year =</span> <span class="fu">c</span>(<span class="st">&quot;2025&quot;</span>, <span class="st">&quot;2026&quot;</span>))    <span class="co"># 2025 surveyed, 2026 not</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co"># Draw a deviation for the new year from the estimated spread among years</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>scale_new <span class="ot">&lt;-</span> <span class="fu">predict_scales</span>(forecast_fit, years, <span class="at">new_levels =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>                            <span class="at">seed =</span> <span class="dv">801</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co"># Reference: set the new year&#39;s deviation to zero</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>scale_ref <span class="ot">&lt;-</span> <span class="fu">predict_scales</span>(forecast_fit, years[<span class="dv">2</span>, , <span class="at">drop =</span> <span class="cn">FALSE</span>],</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>                            <span class="at">new_levels =</span> <span class="st">&quot;zero&quot;</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">rbind</span>(scale_new, scale_ref)[<span class="fu">c</span>(<span class="st">&quot;group&quot;</span>, <span class="st">&quot;distribution&quot;</span>, <span class="st">&quot;median&quot;</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>                                           <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>, <span class="st">&quot;p_below_min_D&quot;</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>                                           <span class="st">&quot;p_above_max_D&quot;</span>)],</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>             <span class="at">digits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">3</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Year&quot;</span>, <span class="st">&quot;Distribution&quot;</span>, <span class="st">&quot;Median (m)&quot;</span>, <span class="st">&quot;Lower&quot;</span>,</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>                           <span class="st">&quot;Upper&quot;</span>, <span class="st">&quot;Below 100 m&quot;</span>, <span class="st">&quot;Above 1,200 m&quot;</span>))</span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="11%" />
+<col width="29%" />
+<col width="13%" />
+<col width="7%" />
+<col width="7%" />
+<col width="14%" />
+<col width="16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Year</th>
+<th align="left">Distribution</th>
+<th align="right">Median (m)</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+<th align="right">Below 100 m</th>
+<th align="right">Above 1,200 m</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">year=2025</td>
+<td align="left">conditional_posterior</td>
+<td align="right">155</td>
+<td align="right">54</td>
+<td align="right">375</td>
+<td align="right">0.18</td>
+<td align="right">0.000</td>
+</tr>
+<tr class="even">
+<td align="left">year=2026</td>
+<td align="left">new_group_predictive</td>
+<td align="right">161</td>
+<td align="right">38</td>
+<td align="right">469</td>
+<td align="right">0.20</td>
+<td align="right">0.001</td>
+</tr>
+<tr class="odd">
+<td align="left">year=2026</td>
+<td align="left">zero_deviation_reference</td>
+<td align="right">159</td>
+<td align="right">54</td>
+<td align="right">408</td>
+<td align="right">0.16</td>
+<td align="right">0.000</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the output:</strong> The
+<code>Distribution</code> column names the question each row
+answers.</p>
+<ul>
+<li><code>conditional_posterior</code> is the estimate for a surveyed
+year, using that year’s estimated deviation.</li>
+<li><code>new_group_predictive</code> is the range of scales a new year
+could have. Its interval carries the uncertainty in the typical scale
+and in tau, and the variation among years, which makes it the widest of
+the three.</li>
+<li><code>zero_deviation_reference</code> assumes the new year sits
+exactly at the typical scale. It is a reference value, and its narrower
+interval does not mean a more precise forecast.</li>
+</ul>
+<p>The last two columns give the posterior probability that sigma falls
+outside the range of the prepared inputs, from <code>min_D</code> (the
+raster cell size, 100 m) to <code>max_D</code> (1,200 m). About 20% of
+the new-year distribution lies below 100 m, which is finer than the
+raster can show. Read the lower limit as “smaller than a raster cell”,
+not as a precise distance.</p>
+<p><strong>In a report.</strong> “For a year not yet surveyed, the
+predicted scale of effect of habitat was sigma = 161 m (95% prediction
+interval 38 to 469 m), which places 90% of the kernel weight within 347
+m of a survey point.”</p>
+<p>Years are exchangeable in this model, meaning it has no trend and no
+memory from one year to the next. Every new year therefore receives the
+same distribution.</p>
+</div>
+<div id="predict-counts-at-new-sites-and-in-new-years" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Predict counts at new
+sites and in new years</h1>
+<p>A prediction for a new survey needs a data frame with the covariates
+and grouping columns in the model formula, and the prepared landscape
+around each location. Build the landscape inputs with
+<code>kernel_prep()</code> or <code>kernel_prep_by_group()</code>, as in
+<code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code>,
+using the kernel, raster layers, and map units of the fitted model. Do
+not standardize new covariates yourself, because prediction reuses the
+mean and standard deviation from the fitted data.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>new_surveys   <span class="ot">&lt;-</span> example<span class="sc">$</span>newdata         <span class="co"># two known sites, two new, two years</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>future_inputs <span class="ot">&lt;-</span> example<span class="sc">$</span>kernel_inputs   <span class="co"># prepared landscape for these 8 rows</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">head</span>(new_surveys, <span class="dv">4</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt;         site year       site_year</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; 1         s1 2026         s1_2026</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; 2         s2 2026         s2_2026</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; 3 new_site_A 2026 new_site_A_2026</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; 4 new_site_B 2026 new_site_B_2026</span></span></code></pre></div>
+<p>The landscapes in <code>future_inputs</code> are artificial scenarios
+built from the 2025 map by the script at
+<code>system.file(&quot;examples&quot;, &quot;bayesian-prediction-data.R&quot;, package = &quot;multiScaleR&quot;)</code>.
+A prediction is conditional on the landscape you supply and carries no
+uncertainty about how the landscape will change.</p>
+<p>A new site or year has no estimated effect, so you must say how to
+treat it. The scale part of the model and the response part take
+separate instructions, because a year effect on the scale changes how
+the landscape is weighted and a year effect on the response changes the
+baseline count.</p>
+<table>
+<colgroup>
+<col width="18%" />
+<col width="27%" />
+<col width="34%" />
+<col width="20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Choice</th>
+<th align="left">Scale part</th>
+<th align="left">Response part</th>
+<th align="left">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Stop</td>
+<td align="left"><code>new_scale_levels = &quot;error&quot;</code></td>
+<td align="left"><code>new_response_levels = &quot;error&quot;</code></td>
+<td align="left">The default. A new group stops the prediction</td>
+</tr>
+<tr class="even">
+<td align="left">Predict a new group</td>
+<td align="left"><code>new_scale_levels = &quot;sample&quot;</code></td>
+<td align="left"><code>new_response_levels = &quot;sample&quot;</code></td>
+<td align="left">Draw the new group’s effect from the estimated spread
+among groups</td>
+</tr>
+<tr class="odd">
+<td align="left">Use a typical group</td>
+<td align="left"><code>new_scale_levels = &quot;zero&quot;</code></td>
+<td align="left"><code>new_response_levels = &quot;zero&quot;</code></td>
+<td align="left">Set new effects to zero and keep the effects of known
+groups</td>
+</tr>
+<tr class="even">
+<td align="left">Drop all group effects</td>
+<td align="left"><code>scale_re.form = NA</code></td>
+<td align="left"><code>re.form = NA</code></td>
+<td align="left">Set known and new effects in that part to zero</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Expected counts, drawing an effect for each new site and year</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>future_mean <span class="ot">&lt;-</span> <span class="fu">predict</span>(forecast_fit, new_surveys,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                       <span class="at">kernel_inputs =</span> future_inputs, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                       <span class="at">new_scale_levels =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                       <span class="at">new_response_levels =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">seed =</span> <span class="dv">802</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co"># The same rows with new effects set to zero (a typical site and year)</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>future_typical <span class="ot">&lt;-</span> <span class="fu">predict</span>(forecast_fit, new_surveys,</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>                          <span class="at">kernel_inputs =</span> future_inputs, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>                          <span class="at">new_scale_levels =</span> <span class="st">&quot;zero&quot;</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>                          <span class="at">new_response_levels =</span> <span class="st">&quot;zero&quot;</span>)</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>future <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(future_mean[<span class="fu">c</span>(<span class="st">&quot;point_id&quot;</span>, <span class="st">&quot;median&quot;</span>, <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>)],</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>                     future_typical[<span class="fu">c</span>(<span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>)])</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(future, <span class="at">digits =</span> <span class="dv">1</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Site and year&quot;</span>, <span class="st">&quot;Expected count&quot;</span>, <span class="st">&quot;Lower&quot;</span>, <span class="st">&quot;Upper&quot;</span>,</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>                           <span class="st">&quot;Typical lower&quot;</span>, <span class="st">&quot;Typical upper&quot;</span>))</span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="22%" />
+<col width="21%" />
+<col width="8%" />
+<col width="8%" />
+<col width="19%" />
+<col width="19%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Site and year</th>
+<th align="right">Expected count</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+<th align="right">Typical lower</th>
+<th align="right">Typical upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">s1_2026</td>
+<td align="right">2.9</td>
+<td align="right">1.3</td>
+<td align="right">6.0</td>
+<td align="right">1.6</td>
+<td align="right">4.8</td>
+</tr>
+<tr class="even">
+<td align="left">s2_2026</td>
+<td align="right">12.2</td>
+<td align="right">6.4</td>
+<td align="right">24.6</td>
+<td align="right">7.3</td>
+<td align="right">20.0</td>
+</tr>
+<tr class="odd">
+<td align="left">new_site_A_2026</td>
+<td align="right">20.4</td>
+<td align="right">8.5</td>
+<td align="right">47.4</td>
+<td align="right">15.1</td>
+<td align="right">26.6</td>
+</tr>
+<tr class="even">
+<td align="left">new_site_B_2026</td>
+<td align="right">4.2</td>
+<td align="right">1.6</td>
+<td align="right">9.9</td>
+<td align="right">2.8</td>
+<td align="right">5.9</td>
+</tr>
+<tr class="odd">
+<td align="left">s1_2027</td>
+<td align="right">3.2</td>
+<td align="right">1.5</td>
+<td align="right">6.7</td>
+<td align="right">1.7</td>
+<td align="right">5.3</td>
+</tr>
+<tr class="even">
+<td align="left">s2_2027</td>
+<td align="right">13.8</td>
+<td align="right">6.5</td>
+<td align="right">26.8</td>
+<td align="right">8.1</td>
+<td align="right">22.1</td>
+</tr>
+<tr class="odd">
+<td align="left">new_site_A_2027</td>
+<td align="right">22.3</td>
+<td align="right">8.5</td>
+<td align="right">54.8</td>
+<td align="right">16.4</td>
+<td align="right">30.0</td>
+</tr>
+<tr class="even">
+<td align="left">new_site_B_2027</td>
+<td align="right">4.6</td>
+<td align="right">1.8</td>
+<td align="right">11.7</td>
+<td align="right">3.2</td>
+<td align="right">6.4</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">attr</span>(future_mean, <span class="st">&quot;new_groups&quot;</span>)   <span class="co"># which new groups were drawn</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt;   component covariate group      level action</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; 1     scale   habitat  year       2026 sample</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; 2     scale   habitat  year       2027 sample</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; 3  response            site new_site_A sample</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; 4  response            site new_site_B sample</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; 5  response            year       2026 sample</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; 6  response            year       2027 sample</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The first interval allows
+the new year, and any new site, to differ from the average. Because the
+second assumes every new group is exactly average, it is narrower. Sites
+<code>s1</code> and <code>s2</code> keep their estimated site effects in
+both. In the <code>new_groups</code> attribute, each row is one new
+group and what was done with it. Year appears twice because the model
+has one year effect on the scale and another on the response.</p>
+<p><strong>In a report.</strong> “At a new site with the landscape of
+scenario new_site_A_2026, the expected count was 20.4 animals per survey
+(95% prediction interval 8.5 to 47.4), allowing for unknown site and
+year effects.”</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Report the
+<code>&quot;sample&quot;</code> interval when you forecast a site or year you did
+not survey. The <code>&quot;zero&quot;</code> interval describes a hypothetical
+average group and understates how far a real new site or year can depart
+from the model’s mean.</p>
+</blockquote>
+<p>A year entered as a fixed factor, such as <code>factor(year)</code>,
+has one coefficient per surveyed year and none for a new one.
+<code>predict()</code> then stops with an error under every policy. Use
+a random intercept for year, as <code>forecast_fit</code> does, when you
+intend to predict years you have not surveyed.</p>
+</div>
+<div id="predict-what-you-might-record-and-add-up-a-total" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Predict what you might
+record, and add up a total</h1>
+<p><code>simulate()</code> returns one row per survey and one column per
+replicate. Each replicate is a complete simulated data set, in which
+surveys from the same new year share that year’s effect.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># 1,000 replicate data sets for the eight future surveys</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>future_counts <span class="ot">&lt;-</span> <span class="fu">simulate</span>(forecast_fit, <span class="at">nsim =</span> <span class="dv">1000</span>, <span class="at">seed =</span> <span class="dv">803</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                          <span class="at">newdata =</span> new_surveys, <span class="at">kernel_inputs =</span> future_inputs,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>                          <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">new_scale_levels =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                          <span class="at">new_response_levels =</span> <span class="st">&quot;sample&quot;</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co"># Range of counts each survey could record (first four shown)</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>by_survey <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">apply</span>(<span class="fu">as.matrix</span>(future_counts), <span class="dv">1</span>, quantile,</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>                     <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>)))</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="fu">rownames</span>(by_survey) <span class="ot">&lt;-</span> new_surveys<span class="sc">$</span>site_year</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="fu">head</span>(by_survey, <span class="dv">4</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;                 2.5% 50% 97.5%</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; s1_2026            0   2     9</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; s2_2026            3  11    32</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; new_site_A_2026    5  19    58</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; new_site_B_2026    0   4    15</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co"># Total over the eight surveys: sum within each replicate, then summarize</span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>total <span class="ot">&lt;-</span> <span class="fu">quantile</span>(<span class="fu">colSums</span>(future_counts), <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>))</span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>total</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt;    2.5%     50%   97.5% </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt;  43.000  84.000 161.025</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co"># Not an interval for the total: the survey limits added together</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="fu">colSums</span>(by_survey)</span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt;   2.5%    50%  97.5% </span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;  16.00  76.00 235.05</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The first table gives the
+counts a single survey could record. For the total, sum each column
+first and take quantiles of the sums. Adding the survey limits gives 16
+to 235, far wider than the correct interval of 43 to 161, because the
+eight surveys will not all fall at their lower limits together.</p>
+<p><strong>In a report.</strong> “Across the eight planned surveys we
+predict a total of 84 animals (95% prediction interval 43 to 161).”</p>
+<p>Put every survey that enters a total into one call. Separate calls
+draw separate effects for the same new year, which breaks the link among
+its surveys. For a total of expected counts, use
+<code>predict(..., summary = FALSE)</code>. It returns one row per
+posterior draw and one column per survey, the reverse of
+<code>simulate()</code>, so sum with <code>rowSums()</code>.</p>
+<p>For a binomial model fitted to
+<code>cbind(successes, failures)</code>, <code>simulate()</code> also
+needs the number of trials at each new survey, for example
+<code>trials = rep(10L, nrow(new_surveys))</code>. It returns numbers of
+successes, while <code>predict()</code> returns probabilities.</p>
+</div>
+<div id="map-the-expected-count" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Map the expected
+count</h1>
+<p><code>multiScale_bayes()</code> fits have no raster method. To draw a
+map, treat a grid of locations as new sites, prepare the landscape
+around each one, and predict. The first chunk rebuilds the artificial
+2025 habitat raster of the example. With your own data, read the raster
+you used for fitting.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Rebuild the example&#39;s 2025 habitat map (60 x 60 cells of 100 m)</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">521</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>blank <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="at">nrows =</span> <span class="dv">60</span>, <span class="at">ncols =</span> <span class="dv">60</span>, <span class="at">xmin =</span> <span class="dv">0</span>, <span class="at">xmax =</span> <span class="dv">6000</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>              <span class="at">ymin =</span> <span class="dv">0</span>, <span class="at">ymax =</span> <span class="dv">6000</span>, <span class="at">crs =</span> <span class="st">&quot;EPSG:26915&quot;</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>xy <span class="ot">&lt;-</span> <span class="fu">xyFromCell</span>(blank, <span class="fu">seq_len</span>(<span class="fu">ncell</span>(blank)))</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>) {            <span class="co"># the five yearly maps share one random stream</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  habitat_2025 <span class="ot">&lt;-</span> <span class="fu">setValues</span>(blank, <span class="fu">sin</span>(xy[, <span class="dv">1</span>] <span class="sc">/</span> <span class="dv">400</span> <span class="sc">+</span> j <span class="sc">/</span> <span class="dv">4</span>) <span class="sc">+</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>                              <span class="fu">cos</span>(xy[, <span class="dv">2</span>] <span class="sc">/</span> <span class="dv">550</span>) <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(xy), <span class="at">sd =</span> <span class="fl">0.2</span>))</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>}</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="fu">names</span>(habitat_2025) <span class="ot">&lt;-</span> <span class="st">&quot;habitat&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># A grid of locations every 200 m across the surveyed area</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>grid     <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(<span class="at">x =</span> <span class="fu">seq</span>(<span class="dv">1400</span>, <span class="dv">4600</span>, <span class="at">by =</span> <span class="dv">200</span>),</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>                        <span class="at">y =</span> <span class="fu">seq</span>(<span class="dv">1400</span>, <span class="dv">4600</span>, <span class="at">by =</span> <span class="dv">200</span>))</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>grid_pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(grid, <span class="at">geom =</span> <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">crs =</span> <span class="st">&quot;EPSG:26915&quot;</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co"># Prepare the landscape around each location, with the settings used in fitting</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>grid_inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> grid_pts, <span class="at">raster_stack =</span> habitat_2025,</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>                           <span class="at">max_D =</span> <span class="dv">1200</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">sigma =</span> <span class="dv">250</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>                           <span class="at">nbins =</span> <span class="dv">48</span>, <span class="at">store_cell_data =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co"># Each location is a new site in a surveyed year</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>grid_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">cell =</span> grid_inputs<span class="sc">$</span>binned<span class="sc">$</span>point_ids,</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>                        <span class="at">site =</span> <span class="fu">paste0</span>(<span class="st">&quot;cell_&quot;</span>, <span class="fu">seq_len</span>(<span class="fu">nrow</span>(grid))),</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>                        <span class="at">year =</span> <span class="st">&quot;2025&quot;</span>)</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co"># Expected count at a typical site (site effect set to zero)</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>grid_pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(forecast_fit, grid_data, <span class="at">kernel_inputs =</span> grid_inputs,</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>                     <span class="at">row_id =</span> <span class="st">&quot;cell&quot;</span>, <span class="at">new_response_levels =</span> <span class="st">&quot;zero&quot;</span>)</span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co"># Put the posterior median and the ratio of the interval limits on a raster</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>map <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">cbind</span>(grid, <span class="at">median =</span> grid_pred<span class="sc">$</span>median,</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a>                  <span class="at">ratio =</span> grid_pred<span class="sc">$</span>upper <span class="sc">/</span> grid_pred<span class="sc">$</span>lower), <span class="at">type =</span> <span class="st">&quot;xyz&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># The 25 survey sites sit on a regular 800 m grid</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>sites <span class="ot">&lt;-</span> <span class="fu">vect</span>(<span class="fu">expand.grid</span>(<span class="at">x =</span> <span class="fu">seq</span>(<span class="dv">1400</span>, <span class="dv">4600</span>, <span class="at">by =</span> <span class="dv">800</span>),</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>                          <span class="at">y =</span> <span class="fu">seq</span>(<span class="dv">1400</span>, <span class="dv">4600</span>, <span class="at">by =</span> <span class="dv">800</span>)),</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>              <span class="at">geom =</span> <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">crs =</span> <span class="st">&quot;EPSG:26915&quot;</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="fu">plot</span>(map, <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;Expected count&quot;</span>, <span class="st">&quot;Upper limit / lower limit&quot;</span>),</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>     <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="fl">2.5</span>, <span class="dv">2</span>, <span class="dv">5</span>), <span class="at">pax =</span> <span class="fu">list</span>(<span class="at">cex.axis =</span> <span class="fl">0.7</span>),</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>     <span class="at">fun =</span> <span class="cf">function</span>() <span class="fu">points</span>(sites, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.5</span>))</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Expected count in 2025 at a typical site (left) and the ratio of its upper to its lower 95% limit (right). Points are the survey sites." src="data:image/png;base64,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" alt="Expected count in 2025 at a typical site (left) and the ratio of its upper to its lower 95% limit (right). Points are the survey sites." />
+<div class="figcaption"><strong><em>Expected count in 2025 at a typical
+site (left) and the ratio of its upper to its lower 95% limit (right).
+Points are the survey sites.</em></strong></div>
+</div>
+<p><strong>How to read these plots:</strong> The left panel is the
+posterior median of the expected count for 2025 at a site with an
+average site effect. It ranges from 3.4 to 183 animals per survey. The
+right panel divides the upper 95% limit by the lower one, so a value of
+2 means the upper limit is twice the lower. Here the ratio runs from 1.6
+to 2.5, and it is highest where habitat is most or least abundant. Each
+interval describes one location. The map holds no information about a
+total across cells.</p>
+<p>Unlike <code>kernel_scale.raster()</code>, <code>predict()</code> for
+a Bayesian fit has no <code>clamp</code> argument. The peak of this map
+lies between survey sites, where a few locations hold more habitat than
+any surveyed site, so the highest values are extrapolated. Treat them
+with caution.</p>
+</div>
+<div id="check-before-you-rely-on-a-prediction" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Check before you rely
+on a prediction</h1>
+<ul>
+<li><strong>Sampling diagnostics.</strong> Prediction passes the fitted
+posterior forward and cannot repair a fit that failed its checks.
+Inspect <code>summary(fit)$diagnostics</code> first, as described in
+<code>vignette(&quot;v15-bayesian-computation&quot;, package = &quot;multiScaleR&quot;)</code>.</li>
+<li><strong>Landscape support.</strong> A new kernel uses only the
+landscape you prepared. A predicted scale larger than <code>max_D</code>
+cannot draw on cells beyond it.</li>
+<li><strong>The level you predict.</strong> To test predictions, hold
+out data at the level you intend to predict. A held-out visit at a
+surveyed site is easier to predict than a whole new site or year.
+<code>cross_validate_bayes()</code> refits the model without the
+held-out rows and scores them, as described in
+<code>vignette(&quot;v08-cross-validation&quot;, package = &quot;multiScaleR&quot;)</code>.</li>
+<li><strong>Formula transformations.</strong> <code>scale()</code> and
+<code>poly()</code> keep the values learned from the fitted data. An
+expression such as <code>I(x - mean(x))</code> takes its mean from the
+new rows instead, so compute that covariate before fitting.</li>
+</ul>
+</div>
+<div id="quick-reference" class="section level1" number="10">
+<h1><span class="header-section-number">10</span> Quick reference</h1>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># 0. Stored fit, surveys to predict, and their prepared landscape inputs</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>forecast_fit  <span class="ot">&lt;-</span> example<span class="sc">$</span>fit</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>surveys       <span class="ot">&lt;-</span> annual<span class="sc">$</span>data[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="fu">c</span>(<span class="st">&quot;site&quot;</span>, <span class="st">&quot;year&quot;</span>, <span class="st">&quot;site_year&quot;</span>)]</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>years         <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">year =</span> <span class="fu">c</span>(<span class="st">&quot;2025&quot;</span>, <span class="st">&quot;2026&quot;</span>))</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>new_surveys   <span class="ot">&lt;-</span> example<span class="sc">$</span>newdata</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>future_inputs <span class="ot">&lt;-</span> example<span class="sc">$</span>kernel_inputs</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co"># 1. Known sites and years: expected count, then counts you might record</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>expected   <span class="ot">&lt;-</span> <span class="fu">predict</span>(forecast_fit, surveys, <span class="at">kernel_inputs =</span> annual<span class="sc">$</span>inputs,</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>                      <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>)</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>replicated <span class="ot">&lt;-</span> <span class="fu">simulate</span>(forecast_fit, <span class="at">nsim =</span> <span class="dv">1000</span>, <span class="at">seed =</span> <span class="dv">11</span>, <span class="at">newdata =</span> surveys,</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>                       <span class="at">kernel_inputs =</span> annual<span class="sc">$</span>inputs, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>)</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co"># 2. Scale of effect in a surveyed year and a new year</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>scale_new <span class="ot">&lt;-</span> <span class="fu">predict_scales</span>(forecast_fit, years, <span class="at">new_levels =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>                            <span class="at">seed =</span> <span class="dv">801</span>)                  <span class="co"># new-year forecast</span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a>scale_ref <span class="ot">&lt;-</span> <span class="fu">predict_scales</span>(forecast_fit, years[<span class="dv">2</span>, , <span class="at">drop =</span> <span class="cn">FALSE</span>],</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a>                            <span class="at">new_levels =</span> <span class="st">&quot;zero&quot;</span>)         <span class="co"># typical-year reference</span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co"># 3. Expected counts at new sites and in new years</span></span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a>future_mean <span class="ot">&lt;-</span> <span class="fu">predict</span>(forecast_fit, new_surveys,</span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a>                       <span class="at">kernel_inputs =</span> future_inputs, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>,</span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a>                       <span class="at">new_scale_levels =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a>                       <span class="at">new_response_levels =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">seed =</span> <span class="dv">802</span>)</span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a><span class="fu">attr</span>(future_mean, <span class="st">&quot;new_groups&quot;</span>)                          <span class="co"># what was drawn</span></span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a></span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co"># 4. Counts you might record, and a total across surveys</span></span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a>future_counts <span class="ot">&lt;-</span> <span class="fu">simulate</span>(forecast_fit, <span class="at">nsim =</span> <span class="dv">1000</span>, <span class="at">seed =</span> <span class="dv">803</span>,</span>
+<span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a>                          <span class="at">newdata =</span> new_surveys, <span class="at">kernel_inputs =</span> future_inputs,</span>
+<span id="cb12-30"><a href="#cb12-30" tabindex="-1"></a>                          <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">new_scale_levels =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb12-31"><a href="#cb12-31" tabindex="-1"></a>                          <span class="at">new_response_levels =</span> <span class="st">&quot;sample&quot;</span>)</span>
+<span id="cb12-32"><a href="#cb12-32" tabindex="-1"></a><span class="fu">quantile</span>(<span class="fu">colSums</span>(future_counts), <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>))   <span class="co"># interval for the total</span></span>
+<span id="cb12-33"><a href="#cb12-33" tabindex="-1"></a></span>
+<span id="cb12-34"><a href="#cb12-34" tabindex="-1"></a><span class="co"># 5. Map: prepare a grid of locations and predict at a typical site</span></span>
+<span id="cb12-35"><a href="#cb12-35" tabindex="-1"></a>grid_inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> grid_pts, <span class="at">raster_stack =</span> habitat_2025,</span>
+<span id="cb12-36"><a href="#cb12-36" tabindex="-1"></a>                           <span class="at">max_D =</span> <span class="dv">1200</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">sigma =</span> <span class="dv">250</span>,</span>
+<span id="cb12-37"><a href="#cb12-37" tabindex="-1"></a>                           <span class="at">nbins =</span> <span class="dv">48</span>, <span class="at">store_cell_data =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb12-38"><a href="#cb12-38" tabindex="-1"></a>grid_pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(forecast_fit, grid_data, <span class="at">kernel_inputs =</span> grid_inputs,</span>
+<span id="cb12-39"><a href="#cb12-39" tabindex="-1"></a>                     <span class="at">row_id =</span> <span class="st">&quot;cell&quot;</span>, <span class="at">new_response_levels =</span> <span class="st">&quot;zero&quot;</span>)</span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="10.1">
+<h2><span class="header-section-number">10.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>predict_scales()</code></td>
+<td align="left">Scale of effect for surveyed groups, new groups, or a
+typical group</td>
+</tr>
+<tr class="even">
+<td align="left"><code>predict()</code></td>
+<td align="left">Expected response, or the linear predictor with
+<code>type = &quot;link&quot;</code>, at fitted or new surveys</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>simulate()</code></td>
+<td align="left">Replicate observations with observation noise, for
+single surveys and totals</td>
+</tr>
+<tr class="even">
+<td align="left"><code>kernel_prep()</code>,
+<code>kernel_prep_by_group()</code></td>
+<td align="left">Prepare the landscape around new survey or map
+locations</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>kernel_dist()</code></td>
+<td align="left">Convert sigma to the distance that holds a chosen share
+of the kernel weight</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="10.2">
+<h2><span class="header-section-number">10.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+priors, model fitting, and reading a Bayesian fit.</li>
+<li><strong><code>vignette(&quot;v15-bayesian-computation&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+choosing a computation method and checking its diagnostics.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what each interval includes and leaves out.</li>
+<li><strong><code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+preparing landscape inputs when each year has its own map.</li>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

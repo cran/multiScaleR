@@ -60,7 +60,8 @@ format_max_distance_warning <- function(diagnostics) {
 # `print.summary_multiScaleR()`. `dist_2d` is NULL for summary objects created
 # before the planar distance was added; those print the one-dimensional table
 # alone, as before.
-.msr_print_distance <- function(dist_1d, dist_2d, prob, hard_radius) {
+.msr_print_distance <- function(dist_1d, dist_2d, prob, hard_radius,
+                                dimension = "2d") {
   pct <- paste0(prob * 100, "%")
   cat("\n\n***** Optimized Scale of Effect -- Distance *****\n")
   weighted <- setdiff(rownames(dist_1d), hard_radius)
@@ -81,21 +82,48 @@ format_max_distance_warning <- function(diagnostics) {
   if (length(hard_radius)) {
     cat("Hard-radius covariates show their radius in both tables.\n")
   }
-  cat("\n1D, along a line through the point (`kernel_dist()` default):\n")
-  print(dist_1d)
-  cat("\n2D, radius of the circle for the ideal untruncated kernel (`dimension = \"2d\"`):\n")
-  print(dist_2d)
+  tables <- list("2d" = dist_2d, "1d" = dist_1d)
+  labels <- c("2d" = "2D, radius of the circle for the ideal untruncated kernel",
+              "1d" = "1D, along a line through the point")
+  for (dim in c(dimension, setdiff(names(tables), dimension))) {
+    cat("\n", labels[[dim]], if (dim == dimension) " (selected)" else " (comparison)",
+        ":\n", sep = "")
+    print(tables[[dim]])
+  }
   invisible(NULL)
 }
 
-#' @title Print method for summary_multiScaleR
-#' @description Print method for objects of class \code{summary_multiScaleR}.
-#' @param x A \code{summary_multiScaleR} object
-#' @param ... Ignored
+#' @title Print a summary of a multiScaleR fit
+#' @description Prints the object returned by [summary.multiScaleR()]: the
+#'   estimated scales with their intervals, the scale distances under both
+#'   definitions, the fitted model, any warnings, and the follow-up
+#'   recommendation.
+#' @param x A `summary_multiScaleR` object from [summary.multiScaleR()].
+#' @param dimension Character, `"2d"` or `"1d"`. Selects which distance table
+#'   is printed first. The default, `NULL`, uses the definition stored in `x`;
+#'   summaries saved before this choice existed print the 1D table first.
+#' @param ... Ignored.
+#' @return Invisibly returns `x`.
+#' @seealso [summary.multiScaleR()], [kernel_dist()] for the two distance
+#'   definitions.
+#' @examples
+#' data(pts)
+#' data(count_data)
+#' hab <- terra::rast(system.file("extdata", "hab.tif",
+#'                                package = "multiScaleR"))
+#' inputs <- kernel_prep(pts = pts, raster_stack = hab, max_D = 250,
+#'                       kernel = "gaussian", verbose = FALSE)
+#' fit <- multiScale_optim(glm(y ~ hab, family = poisson, data = count_data),
+#'                         inputs, verbose = FALSE)
+#' s <- summary(fit)
+#' print(s, dimension = "1d")   # line-based distances first
 #' @export
 #' @method print summary_multiScaleR
-#' @return Invisibly returns the input \code{summary_multiScaleR} object
-print.summary_multiScaleR <- function(x, ...){
+print.summary_multiScaleR <- function(x, dimension = NULL, ...){
+  if (is.null(dimension)) {
+    dimension <- if (is.null(x$dimension)) "1d" else x$dimension
+  }
+  dimension <- match.arg(dimension, c("2d", "1d"))
   cat("\nCall:\n")
   print(x$call)
 
@@ -108,13 +136,24 @@ print.summary_multiScaleR <- function(x, ...){
   if (length(hard_radius)) {
     cat("\nRadius (map units) for: ", paste(hard_radius, collapse = ", "), ".\n", sep = "")
     cat("Hard-radius effects change in steps as cells enter the buffer. ")
-    cat("Hessian standard errors are omitted; use `summary(x, profile = TRUE)` ")
-    cat("for profile-likelihood limits.\n")
+    if (is.null(x$diagnostics$radius_profile)) {
+      cat("Hessian standard errors are omitted; use `summary(x, profile = TRUE)` ")
+      cat("for profile-likelihood limits.\n")
+    } else {
+      cat("Inspect the candidate likelihoods in the radius_profile diagnostics table.\n")
+      if (any(x$diagnostics$refit_hessian$active))
+        cat("Smooth standard errors and Wald limits condition on the selected hard radii.\n")
+    }
   }
+  .msr_print_refit_bounds(x$diagnostics)
   scale_ci_method <- attr(x$opt_scale, "interval_method")
-  if (!is.null(scale_ci_method) && any(scale_ci_method != "wald")) {
+  if (!is.null(scale_ci_method) && any(grepl("^profile", scale_ci_method))) {
     cat("\nProfile-likelihood confidence limits were used for `sigma` where available;\n")
     cat("reported standard errors remain Hessian-based approximations.\n")
+    if (any(scale_ci_method == "profile-bound-limited"))
+      cat("Some profile limits reach search bounds; those limits are not fully resolved.\n")
+  } else if (!is.null(scale_ci_method) && any(scale_ci_method == "log_wald")) {
+    cat("\nScale confidence limits use joint observed information on the log scale.\n")
   }
   cat("\n\n  ==================================== ")
 
@@ -124,14 +163,24 @@ print.summary_multiScaleR <- function(x, ...){
     cat("\n\n  ==================================== ")
   }
 
-  .msr_print_distance(dist_1d = x$opt_dist,
+  .msr_print_distance(dist_1d = if (is.null(x$opt_dist_1d)) x$opt_dist else x$opt_dist_1d,
                       dist_2d = x$opt_dist_2d,
                       prob = x$prob,
-                      hard_radius = hard_radius)
+                      hard_radius = hard_radius,
+                      dimension = dimension)
   cat("\n\n  ==================================== ")
 
 
   cat('\n\n *****     Fitted Model Summary     *****\n\n')
+  if (identical(x$backend, "conditional_logit"))
+    cat("Coefficient uncertainty conditions on fitted kernel scales; scale uncertainty is unavailable.\n")
+  if (.msr_analytic_backend(x)) {
+    cat("Coefficient summary below is conditional on fitted kernel parameters.\n")
+    cat("Use vcov(fit) and predict(fit, se.fit = TRUE) for joint uncertainty.\n")
+    if (length(x$diagnostics$profile_glm$reasons))
+      cat("Joint Wald uncertainty unavailable: ",
+          paste(x$diagnostics$profile_glm$reasons, collapse = "; "), ".\n", sep = "")
+  }
   if(any(grepl("^unmarked", class(x$fitted_mod)))) {
     print(x$fitted_mod)
   } else {
@@ -170,43 +219,139 @@ print.summary_multiScaleR <- function(x, ...){
         " of ", x$diagnostics$sample_size$prepared_n,
         " prepared observations entered the fitted model.\n", sep = "")
   }
+  .msr_print_start_stall(x$diagnostics)
   .msr_print_next_run(x$next_run)
   invisible(x)
 }
 
-#' Summarize multiScaleR objects
+#' Summarize a multiScaleR fit
 #'
-#' Summarizes output from \code{multiScale_optim}.
+#' Summarizes a fit from [multiScale_optim()]: the estimated scales of effect
+#' with standard errors and intervals, the distances that contain most of each
+#' kernel's weight, and the fitted model at those scales.
 #'
-#' @param object An object of class \code{multiScaleR}.
-#' @param profile Logical. If \code{TRUE}, use profile-likelihood confidence
-#'   limits for `sigma` when feasible. Defaults to \code{FALSE} so summaries
-#'   remain fast; profile results are cached for repeated calls on the same
-#'   fitted object during the current R session.
-#' @param ... Optional arguments passed to the method (e.g., \code{prob} for cumulative kernel weight threshold).
+#' @param object An object of class `multiScaleR` from [multiScale_optim()].
+#' @param profile Logical. If `TRUE`, report profile-likelihood confidence
+#'   limits for sigma where feasible instead of Wald limits. Default: `FALSE`,
+#'   which keeps summaries fast. See "Profile-likelihood intervals" below.
+#' @param dimension Character. `"2d"` (default) reports, as the selected
+#'   distance, the radius that holds `prob` of the weight of an ideal kernel on
+#'   a plane. `"1d"` restores the original distance along a line. Both
+#'   definitions remain in the returned object and the printed output.
+#' @param ... Optional arguments. `prob`, a number strictly between 0 and 1,
+#'   sets the proportion of cumulative kernel weight used for the distances.
+#'   Default: `0.9`.
 #'
-#' @return An object of class \code{summary_multiScaleR}. Kernel-scale limits
-#'   default to Wald intervals. Scale distances, in map units, come in two
-#'   forms: \code{opt_dist} (also \code{opt_distance}) holds the
-#'   one-dimensional distance from \code{\link{kernel_dist}}, the distance at
-#'   which the kernel's cumulative density along a line through the point
-#'   reaches \code{prob} (about 1.65 sigma for a Gaussian kernel at 90\%).
-#'   \code{opt_dist_2d} holds the two-dimensional distance, the radius of the
-#'   circle around the point that holds \code{prob} of the weight of an ideal,
-#'   untruncated kernel on a plane (about 2.15 sigma for a Gaussian kernel at
-#'   90\%). Both tables have columns
-#'   \code{Mean}, \code{2.5\%}, and \code{97.5\%}, and hard-radius covariates
-#'   report their radius in both. See \code{\link{kernel_dist}} for when to
-#'   use each. For hard-radius landscape and unweighted
-#'   surface metrics, Hessian standard errors and Wald limits are shown as
-#'   \code{NA}; use \code{profile = TRUE} for profile-likelihood limits.
-#'   Profiling errors are reported instead of silently returning invalid limits.
+#' @return An object of class `summary_multiScaleR`, a list that prints as a
+#'   report. Its elements:
+#'   * `opt_scale`: data frame with one row per optimized covariate and columns
+#'     `Mean` (estimated sigma, map units), `SE`, `2.5%`, and `97.5%`. Its
+#'     `interval_method` attribute records `"wald"` or `"profile"` for each
+#'     row.
+#'   * `opt_shape`: the same table for the shape parameter under
+#'     `kernel = "expow"`, otherwise `NULL`.
+#'   * `opt_dist_1d`: distances in map units, with columns `Mean`, `2.5%`, and
+#'     `97.5%`, at which a kernel's cumulative weight along a line through the
+#'     point reaches `prob` (about 1.65 sigma for a Gaussian kernel at 90%).
+#'   * `opt_dist_2d`: the radius, in map units and with the same columns, of
+#'     the circle around the point that holds `prob` of the weight of an ideal,
+#'     untruncated kernel on a plane (about 2.15 sigma for a Gaussian kernel at
+#'     90%).
+#'   * `opt_dist` and `opt_distance`: two names for the distance table selected
+#'     by `dimension` (2D by default, rather than the 1D definition used
+#'     through version 0.7.3).
+#'   * `dimension`: the selected definition, `"2d"` or `"1d"`.
+#'   * `prob`: the cumulative weight proportion used for the distances.
+#'   * `fitted_mod`: the model refit at the estimated scales (`opt_mod` of the
+#'     fit).
+#'   * `kernel`: the kernel name.
+#'   * `hard_radius`: names of covariates whose scale is a hard radius.
+#'   * `diagnostics`, `warn_message`, `next_run`, `call`: copied from the fit;
+#'     see [multiScaleR-class].
+#'   * `backend`: the backend name, present for the analytic and
+#'     conditional-logistic backends.
+#'
+#' @details
+#' # Read the summary
+#'
+#' Sigma is the kernel's scale parameter, and it is not itself a distance you
+#' can report. The distance tables translate it into the distance that holds
+#' 90 percent (by default) of the kernel's weight, which is usually the number
+#' to report as the scale of effect. Hard-radius covariates report their
+#' radius in both tables. See [kernel_dist()] and [multiScaleR-kernels] for
+#' when to use each definition and for the formulas.
+#'
+#' Kernel-scale limits default to Wald intervals from the Hessian. For
+#' hard-radius landscape and unweighted surface metrics, and every radius
+#' estimated under `kernel = "fixed"`, Hessian standard errors and Wald limits
+#' are shown as `NA`; use `profile = TRUE` for profile-likelihood limits. An
+#' error during profiling is reported rather than returning invalid limits.
+#'
+#' Set `dimension = "1d"` to keep the original `opt_dist` and `opt_distance`
+#' values in existing scripts. For extraction that does not depend on the
+#' setting, use `opt_dist_1d` or `opt_dist_2d`. Neither choice changes the
+#' fitted sigma, coefficients, or likelihood. The 2D radius is for an ideal
+#' continuous kernel; `max_D`, raster edges, missing cells, and cell geometry
+#' can change the realized weight in the prepared data.
+#'
+#' # Profile-likelihood intervals
+#'
+#' The default refit backend caches profile results during the current R
+#' session; the analytic backends recompute them. Set
+#' `options(multiScaleR.profile_cache_max_bytes = 64 * 1024^2)` to bound the
+#' retained cache entries (64 MiB by default), or set it to zero to disable
+#' caching and clear retained entries at the next profile request. Oversized
+#' entries and custom refits are computed without the cache. A failure to
+#' store a cache key warns and computes the same intervals directly, while
+#' numerical profile failures still raise errors. The returned refit scale
+#' table records cache availability in its `profile_cache` attribute. The
+#' option bounds retained entries, not temporary key construction or the
+#' memory used by the numerical profile.
+#'
+#' # Analytic backends
+#'
+#' For `backend = "profile_glm"` or `"joint_nb2"`, default scale limits use
+#' joint information on the log scale and are omitted when the
+#' identifiability checks fail (see [multiScaleR-fitting-methods]). A returned
+#' Wald interval describes the local curvature around the selected optimum
+#' and can extend beyond the searched scale range. Coverage can fall below the
+#' nominal level even for an interior fit, so inspect the likelihood over the
+#' admissible range when scale inference matters.
+#'
+#' With `profile = TRUE`, the analytic summary follows the connected
+#' likelihood region around the fitted scale, and an endpoint at a search
+#' bound is labeled bound-limited. For a supported one-scale NB2 fit,
+#' [scale_inference()] checks the full range and reports the regions it
+#' detects. If a full-range profile suggests a competing optimum, compare
+#' additional starts, including both bounds. The printed coefficient summary
+#' still conditions on the estimated kernels; use [vcov.multiScaleR()] for the
+#' joint covariance.
+#' @seealso [multiScale_optim()], [print.summary_multiScaleR()],
+#'   [profile_sigma()], [kernel_dist()], and
+#'   `vignette("v09-estimates-and-intervals", package = "multiScaleR")`.
+#' @examples
+#' data(pts)
+#' data(count_data)
+#' hab <- terra::rast(system.file("extdata", "hab.tif",
+#'                                package = "multiScaleR"))
+#' inputs <- kernel_prep(pts = pts, raster_stack = hab, max_D = 250,
+#'                       kernel = "gaussian", verbose = FALSE)
+#' fit <- multiScale_optim(glm(y ~ hab, family = poisson, data = count_data),
+#'                         inputs, verbose = FALSE)
+#' s <- summary(fit)
+#' s$opt_scale     # sigma with Wald limits, in map units
+#' s$opt_dist_2d   # radius holding 90 percent of the kernel weight
+#'
+#' # Profile-likelihood limits instead of Wald limits
+#' summary(fit, profile = TRUE)$opt_scale
 #' @export
 #' @method summary multiScaleR
-summary.multiScaleR <- function(object, profile = FALSE, ...){
+summary.multiScaleR <- function(object, profile = FALSE,
+                                dimension = c("2d", "1d"), ...){
 
   param_list <- list(...)
   prob <- 0.9
+  dimension <- match.arg(dimension)
 
   if (!inherits(object, "multiScaleR")) {
     stop("`object` must inherit from class 'multiScaleR'.")
@@ -220,6 +365,9 @@ summary.multiScaleR <- function(object, profile = FALSE, ...){
   if (!is.logical(profile) || length(profile) != 1L || is.na(profile)) {
     stop("`profile` must be TRUE or FALSE.")
   }
+  object <- .msr_refit_bound_view(object)
+  if (identical(object$backend, "conditional_logit"))
+    object$opt_mod <- .analysis_model(object$opt_mod)
 
   if(any(class(object$opt_mod) == 'gls')){
     df <- object$opt_mod$dims$N - object$opt_mod$dims$p
@@ -252,10 +400,11 @@ summary.multiScaleR <- function(object, profile = FALSE, ...){
 
   object_profile <- object
   object_profile$profile_scale_est <- tab_scale
-  opt_distance <- kernel_dist(object_profile, prob = prob)
+  opt_distance <- kernel_dist(object_profile, prob = prob, dimension = "1d")
   opt_distance_2d <- kernel_dist(object_profile, prob = prob, dimension = "2d")
   hard_radius <- intersect(rownames(tab_scale),
-                           .msr_hard_radius_covariates(object$kernel_inputs$scale_vars))
+                           .msr_hard_radius_covariates(object$kernel_inputs$scale_vars,
+                             object$kernel_inputs$kernel, rownames(tab_scale)))
   if (length(hard_radius)) {
     tab_scale[hard_radius, "SE"] <- NA_real_
     interval_method <- attr(tab_scale, "interval_method")
@@ -272,12 +421,16 @@ summary.multiScaleR <- function(object, profile = FALSE, ...){
                          df = df,
                          min_D = NULL,
                          names = row.names(object$shape_est))
+    if (.msr_analytic_backend(object))
+      tab_shape <- .msr_profile_wald_table(object, shape = TRUE)
 
     out <- list(opt_scale = tab_scale,
                 opt_shape = tab_shape,
-                opt_dist = opt_distance,
-                opt_distance = opt_distance,
+                opt_dist = if (dimension == "2d") opt_distance_2d else opt_distance,
+                opt_distance = if (dimension == "2d") opt_distance_2d else opt_distance,
+                opt_dist_1d = opt_distance,
                 opt_dist_2d = opt_distance_2d,
+                dimension = dimension,
                 fitted_mod = object$opt_mod,
                 prob = prob,
                 kernel = object$kernel_inputs$kernel,
@@ -289,9 +442,11 @@ summary.multiScaleR <- function(object, profile = FALSE, ...){
   } else {
     out <- list(opt_scale = tab_scale,
                 opt_shape = NULL,
-                opt_dist = opt_distance,
-                opt_distance = opt_distance,
+                opt_dist = if (dimension == "2d") opt_distance_2d else opt_distance,
+                opt_distance = if (dimension == "2d") opt_distance_2d else opt_distance,
+                opt_dist_1d = opt_distance,
                 opt_dist_2d = opt_distance_2d,
+                dimension = dimension,
                 fitted_mod = object$opt_mod,
                 prob = prob,
                 kernel = object$kernel_inputs$kernel,
@@ -303,19 +458,40 @@ summary.multiScaleR <- function(object, profile = FALSE, ...){
   }
 
 
+  out$backend <- object$backend
   class(out) <- c('summary_multiScaleR')
   if (sys.nframe() == 1L) print(out)
   out
 }
 
-#' @title Print method for multiScaleR
-#' @description Print method for objects of class \code{multiScaleR}.
-#' @param x A \code{multiScaleR} object
-#' @param ... Ignored
+#' @title Print a multiScaleR fit
+#' @description Prints a fit from [multiScale_optim()]: the kernel, the
+#'   estimated scales with their standard errors, the scale distances, the
+#'   fitted model, any warnings, and the follow-up recommendation. Use
+#'   [summary.multiScaleR()] for intervals.
+#' @param x A `multiScaleR` object.
+#' @param dimension Character. `"2d"` (default) prints the ideal planar radius
+#'   first; `"1d"` prints the original line-based distance first.
+#' @param prob Numeric between 0 and 1 (exclusive). Proportion of cumulative
+#'   kernel weight used for the distances. Default: `0.9`.
+#' @param ... Ignored.
+#' @return Invisibly returns `x`.
+#' @seealso [multiScaleR-class], [summary.multiScaleR()].
+#' @examples
+#' data(pts)
+#' data(count_data)
+#' hab <- terra::rast(system.file("extdata", "hab.tif",
+#'                                package = "multiScaleR"))
+#' inputs <- kernel_prep(pts = pts, raster_stack = hab, max_D = 250,
+#'                       kernel = "gaussian", verbose = FALSE)
+#' fit <- multiScale_optim(glm(y ~ hab, family = poisson, data = count_data),
+#'                         inputs, verbose = FALSE)
+#' fit                      # same as print(fit)
+#' print(fit, prob = 0.5)   # distances holding half of each kernel's weight
 #' @export
 #' @method print multiScaleR
-#' @return Invisibly returns the input \code{multiScaleR} object
-print.multiScaleR <- function(x, ...){
+print.multiScaleR <- function(x, dimension = c("2d", "1d"), prob = 0.9, ...){
+  dimension <- match.arg(dimension)
   cat("\nCall:\n")
   print(x$call)
 
@@ -323,34 +499,48 @@ print.multiScaleR <- function(x, ...){
   cat(x$kernel_inputs$kernel)
 
   hard_radius <- intersect(rownames(x$scale_est),
-                           .msr_hard_radius_covariates(x$kernel_inputs$scale_vars))
-  display_scale <- x$scale_est
+                           .msr_hard_radius_covariates(x$kernel_inputs$scale_vars,
+                             x$kernel_inputs$kernel, rownames(x$scale_est)))
+  display_fit <- .msr_refit_bound_view(x)
+  display_scale <- display_fit$scale_est
   if (length(hard_radius)) display_scale[hard_radius, "SE"] <- NA_real_
   cat("\n\n***** Optimized Scale of Effect *****\n\n")
   print(display_scale)
+  .msr_print_refit_bounds(display_fit$diagnostics)
   if (length(hard_radius)) {
-    cat("\nRadius (map units) for: ", paste(hard_radius, collapse = ", "),
-        ". Use `summary(x, profile = TRUE)` for radius intervals.\n", sep = "")
+    cat("\nRadius (map units) for: ", paste(hard_radius, collapse = ", "), ". ", sep = "")
+    if (is.null(x$diagnostics$radius_profile)) {
+      cat("Use `summary(x, profile = TRUE)` for radius intervals.\n")
+    } else {
+      cat("Use `diagnostics(x)$radius_profile` for candidate likelihoods.\n")
+    }
   }
 
   if(x$kernel_inputs$kernel == 'expow'){
     cat("\n\n***** Optimized Kernel Shape Parameter *****\n\n")
-    print(x$shape_est)
+    print(display_fit$shape_est)
   }
 
-  display_distance <- kernel_dist(x)
-  display_distance_2d <- kernel_dist(x, dimension = "2d")
+  display_distance <- kernel_dist(x, prob = prob, dimension = "1d")
+  display_distance_2d <- kernel_dist(x, prob = prob, dimension = "2d")
   if (length(hard_radius)) {
     display_distance[hard_radius, c("2.5%", "97.5%")] <- NA_real_
     display_distance_2d[hard_radius, c("2.5%", "97.5%")] <- NA_real_
   }
   .msr_print_distance(dist_1d = display_distance,
                       dist_2d = display_distance_2d,
-                      prob = 0.9,
-                      hard_radius = hard_radius)
+                      prob = prob,
+                      hard_radius = hard_radius,
+                      dimension = dimension)
 
   cat("\n  ==================================== ")
   cat("\n\n ***** Fitted Model *****\n")
+  if (.msr_analytic_backend(x)) {
+    cat("Conditional GLM at the optimized kernel parameters.\n")
+    if (length(x$uncertainty$reasons))
+      cat("Joint Wald uncertainty unavailable: ",
+          paste(x$uncertainty$reasons, collapse = "; "), ".\n", sep = "")
+  }
   print(x$opt_mod)
 
 
@@ -385,17 +575,28 @@ print.multiScaleR <- function(x, ...){
         " of ", x$diagnostics$sample_size$prepared_n,
         " prepared observations entered the fitted model.\n", sep = "")
   }
+  .msr_print_start_stall(x$diagnostics)
   .msr_print_next_run(x$next_run)
   invisible(x)
 }
 
-#' @title Print method for multiScaleR_data
-#' @description Print method for objects of class \code{multiScaleR_data}.
-#' @param x A \code{multiScaleR_data} object
-#' @param ... Ignored
+#' @title Print prepared multiScaleR inputs
+#' @description Prints a short report of a [kernel_prep()] object: the number
+#'   of points and covariates, the kernel, the binning, and the distance
+#'   bounds.
+#' @param x A `multiScaleR_data` object.
+#' @param ... Ignored.
+#' @return Invisibly returns `x`.
+#' @seealso [multiScaleR_data-class], [kernel_prep()].
+#' @examples
+#' data(pts)
+#' hab <- terra::rast(system.file("extdata", "hab.tif",
+#'                                package = "multiScaleR"))
+#' inputs <- kernel_prep(pts = pts, raster_stack = hab, max_D = 250,
+#'                       kernel = "gaussian", verbose = FALSE)
+#' inputs
 #' @export
 #' @method print multiScaleR_data
-#' @return Invisibly returns the input \code{multiScaleR_data} object
 print.multiScaleR_data <- function(x, ...){
   cat("\nThere are ")
   cat(paste0(nrow(x$kernel_dat)," observations at ", ncol(x$kernel_dat), ' spatial covariate(s): \n'))
@@ -423,4 +624,24 @@ print.multiScaleR_data <- function(x, ...){
   cat("\nUnit Conversion:\n")
   cat(x$unit_conv)
   invisible(x)
+}
+
+# A refit search that never left its starting values reports them as
+# estimates. Repeat the stored explanation wherever the fit is reported.
+.msr_print_start_stall <- function(diagnostics) {
+  stall <- diagnostics$start_stall
+  if (isTRUE(stall$triggered)) {
+    cat(red("\n WARNING!!!\n", stall$message, "\n\n"))
+  }
+  invisible(NULL)
+}
+
+# Print only on explicit reporting, or when the fit's verbose switch permits it.
+.msr_print_refit_bounds <- function(diagnostics) {
+  if (isTRUE(diagnostics$refit_hessian$bounds$active_boundary)) {
+    cat("\nA smooth kernel parameter reaches an optimization bound. ")
+    cat("Outer Wald SEs and limits are withheld.\n")
+    cat("Coefficient uncertainty still conditions on the selected kernels.\n")
+  }
+  invisible(NULL)
 }

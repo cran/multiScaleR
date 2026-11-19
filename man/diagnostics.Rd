@@ -15,7 +15,7 @@ diagnostics(object, ...)
 \item{...}{Additional arguments passed to methods.}
 }
 \value{
-A named list with four elements:
+A named list with the following elements:
 \describe{
   \item{\code{max_distance}}{A list describing whether the estimated scale of
     effect approaches or exceeds \code{max_D}. Fields include:
@@ -43,6 +43,55 @@ A named list with four elements:
     \code{triggered} is \code{TRUE}
     when the fitted model uses fewer observations. Candidate scales that
     change the initial model's sample are rejected during optimization.}
+  \item{\code{start_stall}}{For the default refit backend, present only when
+    the optimizer returned its starting values, so the reported scales are
+    those starts. A search from the default start is flagged whenever it
+    returns that start. A user-supplied or screened start is flagged only
+    when the search stopped after one evaluation, because such a start may
+    already be an optimum. Fields include \code{reason}, \code{screened}
+    (whether the start came from \code{start_strategy = "screen"}),
+    \code{start} (starting sigma values in map units),
+    \code{function_evaluations}, and \code{message}, which names the remedy.
+    \code{reason} is \code{"hard_radius"} when every optimized scale is a
+    hard radius, as under \code{kernel = "fixed"}. Its likelihood changes in
+    steps, so the gradient is zero almost everywhere. \code{reason} is
+    \code{"refit_failed"} when no refitted model gave a finite
+    log-likelihood at the start. A glmmTMB model with a
+    non-positive-definite Hessian reports none. \code{reason} is
+    \code{"no_progress"} otherwise. A warning gives the same message when
+    the fit is made, and \code{print()} and \code{summary()} repeat it.}
+  \item{\code{refit_hessian}}{For the default refit backend, retains
+    the outer curvature status and active smooth-parameter mask. A bound table
+    records estimates, lower/upper bounds in reporting units, and bound flags.
+    If any active parameter is within \code{1e-5} log units of a positive
+    bound, joint outer Wald SEs are withheld. A zero lower bound is flagged
+    only when reached. The original curvature status is retained separately.
+    A status of \code{"hessian_includes_failed_refit"} means a refit failed
+    at one of the finite-difference points used for the Hessian, so its
+    curvature reflects the failure penalty; Wald SEs are withheld and a
+    warning is given.
+    This is a numerical support flag, not a test of identification or a
+    calibrated confidence limit. Native coefficient covariance and parameter
+    counts are unchanged.}
+  \item{\code{radius_profile}}{For a declared radius grid, one row per
+    combination. \code{radius}, or one \code{radius:<predictor>} column per
+    hard radius, uses map units. Any \code{sigma:<predictor>} and
+    \code{shape:<predictor>} columns hold the reoptimized smooth bandwidths
+    in map units and unitless shapes, respectively. The table also reports
+    native \code{log_likelihood}, \code{status} (scored or failed), any
+    failure \code{message}, and a logical \code{selected} flag. With smooth
+    predictors, \code{smooth_starts} holds a table of optimizer and
+    convergence diagnostics for each combination that reached the
+    smooth search. An all-failed search carries the profile table on the
+    error condition.}
+  \item{\code{profile_glm}}{Present for both opt-in analytic GLM backends.
+    Includes \code{uncertainty_available}, explanatory \code{reasons},
+    \code{weak_identifiability}, \code{boundary}, \code{condition_number},
+    log-kernel standard errors, competing-mode flags, and attempted/eligible
+    start counts. \code{poisson_limit} marks negligible fitted NB2 extra
+    variance; \code{poisson_compatible} and \code{poisson_deviance} compare
+    the NB2 fit with a Poisson fit at the selected kernel scales. See
+    \code{\link{multiScale_optim}} for thresholds and limitations.}
 }
 }
 \description{
@@ -54,8 +103,13 @@ optimization result.
 \details{
 These diagnostics are evaluated automatically at the end of
 \code{\link{multiScale_optim}}. Console warnings are printed when any
-diagnostic is triggered. \code{diagnostics()} provides programmatic access
+diagnostic is triggered and \code{verbose = TRUE}. \code{diagnostics()} provides programmatic access
 to the same information without re-running the model.
+These stored diagnostics retain the historical 1D 90\% distance and
+threshold, independently of the new 2D reporting default in plots and
+summaries. Changing \code{dimension} when reporting a fit does not
+recompute its stored diagnostics. Use \code{kernel_dist(object)} to inspect
+the ideal planar radius separately.
 
 When \code{max_distance} is triggered, consider re-running
 \code{\link{kernel_prep}} with a larger \code{max_D} value. The suggested

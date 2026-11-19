@@ -1,0 +1,356 @@
+# Resolve native R argument abbreviations before policy/data checks, using the
+# same exact-first matching as the underlying method. Values are never evaluated.
+.msr_native_control_names <- function(model, controls, newdata = TRUE) {
+  if (!length(controls) || is.null(model)) return(controls)
+  method <- NULL
+  unmarked <- methods::is(model, "unmarkedFit")
+  if (unmarked) {
+    if (!class(model)[1L] %in% c("unmarkedFitOccu", "unmarkedFitPCount")) return(controls)
+    ns <- asNamespace("unmarked")
+    selected <- methods::selectMethod("predict_internal", class(model)[1L],
+      fdef = methods::getGeneric("predict_internal", where = ns))
+    # Match the real S4 .local signature, without evaluating its arguments.
+    method <- .msr_unmarked_local_method(selected, list())
+  } else {
+    kinds <- class(model)
+    if (isS4(model)) kinds <- unique(c(kinds, methods::extends(class(model))))
+    for (kind in kinds) {
+      method <- utils::getS3method("predict", kind, optional = TRUE,
+        envir = asNamespace("stats"))
+      if (!is.null(method)) break
+    }
+  }
+  if (is.null(method)) return(controls)
+  if (inherits(model, "bam") && requireNamespace("mgcv", quietly = TRUE) &&
+      identical(method, get("predict.bam", envir = asNamespace("mgcv")))) {
+    # Native BAM forwards these controls through dots to GAM. Resolve their
+    # abbreviations for policy/provenance too. This signature is for matching
+    # only; the actual provider function is never changed or executed here.
+    delegated <- formals(get("predict.gam", envir = asNamespace("mgcv")))
+    signature <- formals(method)
+    added <- delegated[setdiff(names(delegated), names(signature))]
+    formals(method) <- c(signature[names(signature) != "..."], added, signature["..."])
+  }
+  fixed <- c("object", "type", if (!unmarked) "se.fit", if (newdata) "newdata")
+  tokens <- paste0(".msr_native_control_", seq_along(controls))
+  values <- stats::setNames(lapply(tokens, as.name), names(controls))
+  call <- as.call(c(list(as.name(".native_predict")),
+    stats::setNames(rep(list(NULL), length(fixed)), fixed), values))
+  matched <- as.list(match.call(definition = method, call = call, expand.dots = TRUE))[-1L]
+  index <- match(vapply(matched, function(value)
+    if (is.symbol(value)) as.character(value) else "", ""), tokens)
+  used <- !is.na(index)
+  names(controls)[index[used]] <- names(matched)[used]
+  if (any(names(controls) %in% c("object", "newdata", "type", "se.fit")))
+    stop("Native controls cannot replace wrapper object, newdata, type or se.fit; use the wrapper arguments.", call. = FALSE)
+  controls
+}
+
+# Recognize documented zero-effect controls without comparing formula environments.
+# This describes conditioning at zero, never integration over random effects.
+.msr_native_zero_random_effects <- function(model, controls, kind = NULL) {
+  if (methods::is(model, "unmarkedFit") || identical(kind, "unmarked"))
+    return(!is.null(controls[["re.form"]]))
+  if (inherits(model, "lme") || identical(kind, "lme")) {
+    level <- controls[["level"]]
+    return(is.numeric(level) && length(level) == 1L && !is.na(level) && level == 0)
+  }
+  if (!inherits(model, c("merMod", "glmmTMB", "HLfit")) &&
+      !methods::is(model, "unmarkedFit") &&
+      !isTRUE(kind %in% c("glmmTMB", "unmarked", "merMod", "lmerMod", "glmerMod", "HLfit")))
+    return(FALSE)
+  value <- controls[["re.form"]]
+  (is.atomic(value) && length(value) == 1L && is.na(value)) ||
+    (inherits(value, "formula") && length(value) == 2L &&
+      is.numeric(value[[2L]]) && length(value[[2L]]) == 1L &&
+      !is.na(value[[2L]]) && value[[2L]] == 0)
+}
+
+# Partial selection is documented for lme4 and spaMM. Other providers validate their own
+# controls without borrowing lme4's row requirements.
+.msr_native_selected_random_effects <- function(model, controls, kind = NULL) {
+  (inherits(model, c("merMod", "HLfit")) || isTRUE(kind %in% c("merMod", "lmerMod", "glmerMod", "HLfit"))) &&
+    inherits(controls[["re.form"]], "formula") &&
+    !.msr_native_zero_random_effects(model, controls, kind)
+}
+
+# Native lm interval columns refer to response predictions. Term components
+# keep their existing native fit/SE interface rather than borrowing that target.
+.msr_native_lm_interval <- function(model, controls, type = NULL) {
+  if (!inherits(model, "lm") || inherits(model, "glm") || is.null(controls[["interval"]]))
+    return("none")
+  interval <- match.arg(controls[["interval"]], c("none", "confidence", "prediction"))
+  if (interval != "none" && !is.null(type) && !type %in% c("response", "link"))
+    stop("Native lm intervals require response predictions, not term components.", call. = FALSE)
+  interval
+}
+
+# Shared native-refit transformation. Keep physical scales, source definitions,
+# fitted parameter order, and training normalization identical across models.
+.msr_refit_spatial_values <- function(object, inputs, covs) {
+  train <- object$kernel_inputs
+  if (is.null(train) || !length(covs) || anyDuplicated(covs))
+    stop("The fit must retain spatial inputs and named training standardization.", call. = FALSE)
+  if (!inherits(inputs, "multiScaleR_data") || !identical(inputs$kernel, train$kernel))
+    stop("Supply kernel_prep() inputs with the fitted kernel.", call. = FALSE)
+  validate_scalar_numeric(inputs$unit_conv, "kernel_inputs$unit_conv", positive = TRUE)
+  if (!isTRUE(all.equal(inputs$max_D, object$max_D)) ||
+      !isTRUE(all.equal(inputs$min_D, object$min_D)))
+    stop("Prediction buffer extent must match the fitted min_D and max_D.", call. = FALSE)
+  if (!isTRUE(all.equal(inputs$resolution, train$resolution)))
+    stop("Prediction raster resolution must match the fit.", call. = FALSE)
+  specs <- train$scale_vars
+  actual <- inputs$scale_vars
+  if (is.null(specs) != is.null(actual))
+    stop("Spatial source and metric definitions must match the fit.", call. = FALSE)
+  if (!is.null(specs)) {
+    specs <- specs[match(covs, specs$covariate), , drop = FALSE]
+    actual <- actual[match(covs, actual$covariate), , drop = FALSE]
+    if (anyNA(specs$covariate) || anyNA(actual$covariate) ||
+        any(!specs$optimize) ||
+        !isTRUE(all.equal(as.data.frame(specs), as.data.frame(actual),
+                          check.attributes = FALSE)))
+      stop("Spatial source and metric definitions must match the fit.", call. = FALSE)
+  }
+  center <- object$scl_params$mean[covs]
+  spread <- object$scl_params$sd[covs]
+  if (any(!is.finite(center)) || length(spread) != length(covs) ||
+      any(!is.finite(spread) | spread <= 0))
+    stop("Training means and positive standard deviations must be finite.", call. = FALSE)
+  n <- if (!is.null(inputs$d_list)) length(inputs$d_list) else inputs$binned$n_points
+  if (length(n) != 1L || !is.finite(n) || n < 1L)
+    stop("Prediction inputs must contain prepared spatial sites.", call. = FALSE)
+  # Keep the fit's parameter order; fixed-radius metrics have no parameter.
+  optimized <- if (is.null(specs)) covs else specs$covariate[specs$optimize]
+  sigma <- object$scale_est[optimized, "Mean"] / inputs$unit_conv
+  if (length(sigma) != length(optimized) || any(!is.finite(sigma) | sigma <= 0))
+    stop("Finite positive fitted spatial scales are required.", call. = FALSE)
+  par <- sigma
+  if (inputs$kernel == "expow") {
+    shape <- .msr_shape_values(object)[optimized]
+    if (length(shape) != length(optimized) || any(!is.finite(shape) | shape <= 0))
+      stop("Finite positive fitted kernel shapes are required.", call. = FALSE)
+    par <- c(par, shape)
+  }
+  stored <- object$optim_results$par
+  if (!is.null(stored)) {
+    # Reuse the actual fitted parameters without a report-unit round trip.
+    # Reported scales must still agree exactly with that retained parameter set.
+    validate_scalar_numeric(train$unit_conv, "fitted unit_conv", positive = TRUE)
+    parameter_names <- rownames(object$scale_est)
+    p <- length(parameter_names)
+    expected_length <- p * if (inputs$kernel == "expow") 2L else 1L
+    if (length(stored) != expected_length || any(!is.finite(stored)) ||
+        !isTRUE(all.equal(unname(stored[seq_len(p)] * train$unit_conv),
+          unname(object$scale_est$Mean), tolerance = 0, check.attributes = FALSE)))
+      stop("Stored fitted parameters disagree with reported spatial scales.", call. = FALSE)
+    idx <- match(optimized, parameter_names)
+    par <- stored[idx] * (train$unit_conv / inputs$unit_conv)
+    if (inputs$kernel == "expow") {
+      shape <- stored[p + idx]
+      active <- !optimized %in% .msr_hard_radius_covariates(specs, inputs$kernel, optimized)
+      if (!isTRUE(all.equal(unname(shape[active]), unname(object$shape_est[optimized[active], "Mean"]),
+                            tolerance = 0, check.attributes = FALSE)))
+        stop("Stored fitted parameters disagree with reported kernel shapes.", call. = FALSE)
+      par <- c(par, shape)
+    }
+  }
+  binned_covs <- function(x) intersect(covs, x$binned$covariates)
+  if (!setequal(binned_covs(inputs), binned_covs(train)))
+    stop("Prediction binned versus exact kernel evaluation must match the fit.", call. = FALSE)
+  # Use the same transform evaluator as refitting, with no model-row filtering.
+  # Each site is evaluated once before repeated native scenario rows are joined.
+  context <- list(covs = covs, n_covs = length(optimized), scale_vars = specs,
+    unit_conv = inputs$unit_conv, resolution = inputs$resolution,
+    n_cols = inputs$n_cols, binned = inputs$binned)
+  raw <- .msr_kernel_cov_w(par, inputs$d_list, inputs$raw_cov, inputs$kernel, context)
+  if (any(is.infinite(raw))) stop("Spatial prediction values cannot be infinite.", call. = FALSE)
+  scaled <- sweep(sweep(raw, 2L, center), 2L, spread, "/")
+  list(value = scaled, n_sites = n, context = context, par = par)
+}
+
+# Construct native prediction data without refitting or restandardizing the
+# prediction sample. Explicit keys allow multiple scenario rows for one site.
+.msr_refit_prediction_data <- function(object, newdata, kernel_inputs,
+                                       join_by = NULL, include_fixed = FALSE) {
+  validate_scalar_logical(include_fixed, "include_fixed")
+  if (!is.data.frame(newdata) || !nrow(newdata) || anyDuplicated(names(newdata)))
+    stop("Supply nonempty newdata and matching kernel_inputs together.", call. = FALSE)
+  model <- .analysis_model(object$opt_mod)
+  variables <- if (methods::is(model, "unmarkedFit"))
+    .unmarked_model_predictors(model) else .model_predictors(model)
+  covs <- intersect(rownames(object$scale_est), variables)
+  spatial <- .msr_refit_spatial_values(object, kernel_inputs, covs)
+  if (is.null(join_by)) {
+    rows <- .msr_profile_input_rows(newdata, kernel_inputs)
+  } else {
+    if (any(covs %in% names(join_by)))
+      stop("join_by key columns cannot be spatial predictors.", call. = FALSE)
+    rows <- .unmarked_site_map(newdata, join_by, spatial$n_sites)
+  }
+  newdata[covs] <- as.data.frame(spatial$value[rows, , drop = FALSE])
+  if (include_fixed)
+    newdata <- .msr_fixed_prediction_data(object, newdata, kernel_inputs, rows,
+      spatial$context, spatial$par, join_by)
+  newdata
+}
+
+# Native model classes keep their own prediction targets. Their uncertainty is
+# conditional on estimated spatial parameters; no joint covariance is invented.
+.msr_predict_refit <- function(object, newdata, kernel_inputs, type, se.fit,
+                               uncertainty, interval, ...) {
+  validate_scalar_logical(se.fit, "se.fit")
+  if (interval != "none" || (se.fit && uncertainty != "conditional"))
+    stop("Refit predictions support native conditional SEs only; use uncertainty = 'conditional' and interval = 'none'.", call. = FALSE)
+  model <- .analysis_model(object$opt_mod)
+  if (is.null(model)) stop("The fit must retain its native opt_mod.", call. = FALSE)
+  dots <- list(...)
+  native_args <- dots$native_args
+  dots$native_args <- NULL
+  if (!is.null(native_args)) {
+    if (!is.list(native_args) || (length(native_args) &&
+        (is.null(names(native_args)) || anyNA(names(native_args)) ||
+         any(!nzchar(names(native_args))) || anyDuplicated(names(native_args)) ||
+         any(names(native_args) %in% c("object", "newdata", "type", "se.fit",
+                                       "join_by", "include_fixed", "native_args")))))
+      stop("native_args must uniquely name native controls, excluding wrapper controls.", call. = FALSE)
+    if (any(names(native_args) %in% names(dots)))
+      stop("Native prediction controls must not be supplied twice.", call. = FALSE)
+    dots <- c(dots, native_args)
+  }
+  dots <- .msr_native_control_names(model, dots, newdata = !is.null(newdata))
+  native_uncertainty <- .msr_native_lm_interval(model, dots, type) != "none" ||
+    isTRUE(as.logical(dots[["cov.fit"]])) ||
+    (inherits(model, "HLfit") && (length(dots[["intervals"]]) ||
+      any(vapply(dots[["variances"]], function(x) !identical(x, FALSE), logical(1)))))
+  if (native_uncertainty && uncertainty != "conditional")
+    stop("Native covariance/variance controls require uncertainty = 'conditional'; kernel uncertainty is not included.", call. = FALSE)
+  join_by <- dots$join_by
+  include_fixed <- if (is.null(dots$include_fixed)) FALSE else dots$include_fixed
+  dots[c("join_by", "include_fixed")] <- NULL
+  validate_scalar_logical(include_fixed, "include_fixed")
+  if (is.null(newdata) != is.null(kernel_inputs))
+    stop("Supply newdata and matching kernel_inputs together, or omit both for fitted rows.", call. = FALSE)
+  if (is.null(newdata) && (!is.null(join_by) || include_fixed))
+    stop("join_by and include_fixed require explicit newdata and kernel_inputs.", call. = FALSE)
+  if (!is.null(newdata)) {
+    newdata <- .msr_refit_prediction_data(object, newdata, kernel_inputs,
+                                          join_by, include_fixed)
+
+  }
+  .msr_native_prediction_rows(object, newdata, type, se.fit, dots)
+}
+
+# glmmTMB stops with "subscript out of bounds" when a spatial response field
+# (exp, gau or mat covariance) meets positions or groups it was not fitted at
+# and allow.new.levels is not TRUE. Name the two supported routes before the
+# native call. A supplied re.form leaves the choice of effects to the user.
+.msr_check_new_field_positions <- function(model, newdata, dots) {
+  if (!inherits(model, "glmmTMB") || !is.data.frame(newdata) ||
+      isTRUE(dots[["allow.new.levels"]]) || !is.null(dots[["re.form"]]))
+    return(invisible(NULL))
+  blocks <- model$modelInfo$reStruc$condReStruc
+  code <- vapply(blocks, function(x) if (is.numeric(x$blockCode) &&
+    length(x$blockCode) == 1L) as.integer(x$blockCode) else NA_integer_, 1L)
+  for (term in names(blocks)[code %in% c(5L, 6L, 7L)]) {
+    variables <- all.vars(tryCatch(str2lang(term), error = function(e) NULL))
+    for (v in intersect(variables, intersect(names(newdata), names(model$frame)))) {
+      unseen <- setdiff(unique(as.character(newdata[[v]])),
+                        unique(as.character(model$frame[[v]])))
+      if (length(unseen))
+        stop("newdata has ", length(unseen), " value(s) of `", v, "` that the ",
+             "fitted spatial field (", term, ") did not include. Set ",
+             "allow.new.levels = TRUE to predict the field at new positions, or ",
+             "re.form = NA to set the field to zero.", call. = FALSE)
+    }
+  }
+  invisible(NULL)
+}
+
+# Shared native target for prepared point rows and checked raster chunks.
+# Default prediction type for an unmarked fit: its first estimate type, which
+# is the state process. That is "state" for occu() and pcount(), "lambda" for
+# pcountOpen() and distance-removal models, and "psi" for colext(). A fixed
+# "state" default is not a valid type for every class.
+.msr_unmarked_default_type <- function(model) {
+  types <- tryCatch(names(model@estimates@estimates), error = function(e) NULL)
+  if (length(types) && nzchar(types[[1L]])) types[[1L]] else "state"
+}
+
+.msr_native_prediction_rows <- function(object, newdata, type, se.fit, dots = list(),
+    unmarked_predictor = NULL) {
+  model <- .msr_native_active_metadata(
+    .msr_native_fixed_metadata(.analysis_model(object$opt_mod), nested = TRUE))
+  unmarked <- methods::is(model, "unmarkedFit")
+  dots <- .msr_native_control_names(model, dots, newdata = !is.null(newdata))
+  # A survival linear predictor or risk is not a within-choice-set probability.
+  # Keep its native names, including lp/risk/survival where the model permits.
+  if (is.null(type)) type <- if (methods::is(model, "unmarkedFitGDRField")) "lambda" else
+    if (unmarked) .msr_unmarked_default_type(model) else
+    if (inherits(model, "coxph")) "lp" else "response"
+  validate_character_scalar(type, "type")
+  if (inherits(model, "coxph")) {
+    if (type == "response")
+      stop("Native survival refits have no generic response probability; use type = 'lp' or 'risk', or the conditional_logit backend for choice-set probabilities.", call. = FALSE)
+    if (type == "link") type <- "lp"
+  }
+  if (inherits(model, "lm") && !inherits(model, "glm") && type == "link")
+    type <- "response"
+  if (!is.null(newdata)) {
+    if (unmarked) {
+      component <- .msr_unmarked_marginal_formula(model, type)
+      if (identical(type, "det") && "formula" %in% methods::slotNames(model) &&
+          length(model@formula) == 3L) component <- model@formula[[2L]]
+      required <- .msr_marginal_variables(component, offsets = TRUE)
+    } else if (inherits(model, "gam") && is.list(model$pterms) &&
+        !inherits(model$pterms, "terms")) {
+      required <- .model_predictors(model)
+    } else if (class(model)[1L] %in% c("lm", "glm", "negbin", "coxph", "clogit")) {
+      # Native fitted terms define dot expansion and the retained frame inputs.
+      tt <- stats::terms(model)
+      variables <- as.list(attr(tt, "variables"))[-1L]
+      if (attr(tt, "response") > 0L) variables <- variables[-attr(tt, "response")]
+      required <- unique(unlist(lapply(variables, all.vars), use.names = FALSE))
+      if (inherits(model, "coxph") && type %in% c("expected", "survival"))
+        required <- union(required, all.vars(stats::formula(model)[[2L]]))
+    } else {
+      formula <- stats::formula(model)
+      required <- union(.model_predictors(model),
+        .msr_marginal_variables(formula[[length(formula)]], offsets = TRUE))
+      selected <- .msr_native_selected_random_effects(model, dots)
+      if (.msr_native_zero_random_effects(model, dots) || selected) {
+        # Inspect fixed syntax directly. Formula environments do not decide
+        # whether grouping columns or random-only slopes are needed.
+        required <- .msr_marginal_variables(formula[[length(formula)]], offsets = TRUE)
+        if (selected) required <- union(required, all.vars(dots[["re.form"]]))
+        if (inherits(model, "glmmTMB")) for (f in
+            model$modelInfo$allForm[c("ziformula", "dispformula")])
+          if (!is.null(f)) required <- union(required,
+            .msr_marginal_variables(f[[length(f)]], offsets = TRUE))
+      } else required <- union(required, all.vars(formula[[length(formula)]]))
+      if (inherits(model, "coxph") && type %in% c("expected", "survival"))
+        required <- union(required, all.vars(formula[[2L]]))
+    }
+    absent <- setdiff(required, names(newdata))
+    if (length(absent)) stop("newdata must explicitly contain formula variables: ",
+      paste(absent, collapse = ", "), call. = FALSE)
+    .msr_check_new_field_positions(model, newdata, dots)
+  }
+  args <- c(list(object = model, type = type), dots)
+  if (!is.null(newdata)) args$newdata <- newdata
+  predictor <- if (unmarked) {
+    if (is.null(unmarked_predictor))
+      .msr_unmarked_prediction_function(model, re.form = dots[["re.form"]],
+        component = if (is.data.frame(newdata)) type else NULL) else unmarked_predictor
+  } else if (inherits(model, "gam"))
+    .msr_predict_gam else stats::predict
+  if (!unmarked) args$se.fit <- se.fit
+  value <- do.call(predictor, args)
+  if (unmarked && !se.fit) value <- value$Predicted
+  if (se.fit && !unmarked &&
+      (!is.list(value) || is.null(value$se.fit)))
+    stop("The native prediction method did not supply se.fit; this model's uncertainty needs its native inference interface.", call. = FALSE)
+  attr(value, "prediction_contract") <- .msr_native_prediction_contract(
+    object, if (unmarked) "unmarked" else class(model)[1L], type, dots, se.fit = se.fit, output = value)
+  value
+}

@@ -1,3 +1,7 @@
+# Skipped on CRAN to keep the package check within CRAN's time limit. CI sets
+# NOT_CRAN and runs this file.
+skip_on_cran()
+
 test_that("adjacency projections preserve non-square raster geometry", {
   set.seed(604)
   r <- terra::rast(matrix(sample(1:3, 29 * 37, replace = TRUE),
@@ -75,6 +79,7 @@ test_that("hard-radius summaries omit Wald uncertainty and identify radius", {
 })
 
 test_that("fitted hard-radius metrics store no Hessian standard error", {
+  skip_on_cran()
   set.seed(625)
   r <- terra::rast(matrix(sample(1:3, 30 * 30, replace = TRUE),
                           nrow = 30, ncol = 30))

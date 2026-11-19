@@ -307,6 +307,72 @@
 }
 
 
+# Prepare invariant neighbor contributions once per optimization context. A
+# contribution enters a radius exactly when all of its cells enter. Keep the
+# original matrix column order so mean/sum use the same arithmetic order; do
+# not round radii or accumulate approximate prefix moments.
+.msr_prepare_surface_neighbors_base <- function(d_list, cov_df, specs, resolution, n_cols) {
+  if (is.null(d_list) || is.null(cov_df) || is.null(specs) ||
+      length(d_list) != length(cov_df) || !nrow(specs)) return(NULL)
+  specs <- specs[specs$type == "surface" & specs$metric %in% c("sdq", "sdr"), , drop = FALSE]
+  if (!nrow(specs) || length(resolution) != 1L || !is.finite(resolution) ||
+      resolution <= 0 || length(n_cols) != 1L || !is.finite(n_cols) ||
+      n_cols < 1 || n_cols != trunc(n_cols)) return(NULL)
+  lapply(seq_along(d_list), function(i) {
+    d <- d_list[[i]]
+    cells <- .msr_extract_cells(cov_df[[i]])
+    if (!length(d) || length(cells) != length(d) || anyNA(cells) ||
+        any(!is.finite(cells) | cells < 1 | cells != trunc(cells)) ||
+        anyDuplicated(cells) || !any(is.finite(d))) return(NULL)
+    # Column-major order matches the reconstructed local matrix, including
+    # shuffled input cells. Prevent right neighbors from wrapping raster rows.
+    cols <- (cells - 1) %% n_cols
+    base <- order(cols, cells)
+    base <- base[cols[base] < n_cols - 1]
+    right <- match(cells[base] + 1, cells)
+    down <- match(cells[base] + n_cols, cells)
+    diagonal <- match(cells[base] + n_cols + 1, cells)
+    distances <- d
+    distances[!is.finite(distances)] <- Inf
+    out <- list()
+    for (source in unique(specs$source)) {
+      z <- cov_df[[i]][, source]
+      if (length(z) != length(d) || !is.numeric(z)) next
+      # Match the reference double matrix arithmetic, including integer inputs.
+      z <- as.double(z)
+      needed <- specs[specs$source == source, , drop = FALSE]
+      for (metric in unique(needed$metric)) {
+        if (metric == "sdq") {
+          value <- ((z[base] - z[right])^2 + (z[base] - z[down])^2) / resolution^2
+          threshold <- pmax(distances[base], distances[right], distances[down])
+        } else {
+          value <- .surface_akl(z[base], z[right], z[down], z[diagonal], resolution, resolution)
+          threshold <- pmax(distances[base], distances[right], distances[down], distances[diagonal])
+        }
+        keep <- is.finite(value) & is.finite(threshold)
+        prepared <- list(value = value[keep], threshold = threshold[keep],
+                         min_distance = min(d[is.finite(d)]), metric = metric,
+                         resolution = resolution)
+        for (name in needed$covariate[needed$metric == metric]) out[[name]] <- prepared
+      }
+    }
+    out
+  })
+}
+
+.msr_eval_surface_neighbors <- function(prepared, radius) {
+  validate_scalar_numeric(radius, "radius", positive = TRUE)
+  if (identical(prepared$metric, "sq")) {
+    index <- findInterval(radius, prepared$threshold)
+    return(if (index == 0L) NA_real_ else prepared$value[[index]])
+  }
+  value <- prepared$value[prepared$threshold <= radius]
+  if (!length(value)) return(NA_real_)
+  if (prepared$metric == "sdq") sqrt(mean(value)) else
+    (sum(value) / (length(value) * prepared$resolution^2) - 1) * 100
+}
+
+
 # Raster-projection path for `sq`.
 #
 # Sq is the sample standard deviation within each circular neighborhood, which
@@ -318,7 +384,8 @@
 # matches the FFT idiom used by the kernel-smoothing and landscape-metric
 # projections and is exact (verified to floating-point tolerance against the
 # per-point computation). Cells with fewer than two finite neighbors return NA.
-.surface_sq_raster_fft <- function(raster, radius, na.rm = TRUE) {
+.surface_sq_raster_fft <- function(raster, radius, na.rm = TRUE,
+                                     convolve = fft_convolution) {
   resolution <- .landscape_validate_single_layer_raster(raster, "Surface")
   values <- terra::as.matrix(raster, wide = TRUE)
   .surface_validate_continuous_values(
@@ -332,14 +399,18 @@
   valid <- matrix(as.numeric(!is.na(values)),
                   nrow = nrow(values),
                   ncol = ncol(values))
-  z0 <- values
+  # Center before forming squares; raw second moments lose small roughness on
+  # a surface with a large additive elevation or coordinate offset.
+  anchor <- mean(values, na.rm = TRUE)
+  if (!is.finite(anchor)) anchor <- 0
+  z0 <- values - anchor
   z0[is.na(z0)] <- 0
 
   n <- .landscape_clean_count_matrix(
-    fft_convolution(valid, kernel, fun = "sum", na.rm = na.rm)
+    convolve(valid, kernel, fun = "sum", na.rm = na.rm)
   )
-  s1 <- fft_convolution(z0, kernel, fun = "sum", na.rm = na.rm)
-  s2 <- fft_convolution(z0 * z0, kernel, fun = "sum", na.rm = na.rm)
+  s1 <- convolve(z0, kernel, fun = "sum", na.rm = na.rm)
+  s2 <- convolve(z0 * z0, kernel, fun = "sum", na.rm = na.rm)
 
   variance <- (s2 - (s1 * s1) / n) / (n - 1)
   # Guard against tiny negative variances from floating-point cancellation.
@@ -363,7 +434,8 @@
 # raster mean; skewness and kurtosis are shift-invariant, so this does not
 # change the result but keeps the convolved sums small. Cells with too few
 # finite neighbors (or a flat neighborhood) return NA.
-.surface_moment_raster_fft <- function(raster, radius, metric, na.rm = TRUE) {
+.surface_moment_raster_fft <- function(raster, radius, metric, na.rm = TRUE,
+                                     convolve = fft_convolution) {
   metric <- match.arg(metric, c("ssk", "sku"))
   resolution <- .landscape_validate_single_layer_raster(raster, "Surface")
   values <- terra::as.matrix(raster, wide = TRUE)
@@ -388,11 +460,11 @@
   z0[is.na(z0)] <- 0
 
   n <- .landscape_clean_count_matrix(
-    fft_convolution(valid, kernel, fun = "sum", na.rm = na.rm)
+    convolve(valid, kernel, fun = "sum", na.rm = na.rm)
   )
-  s1 <- fft_convolution(z0, kernel, fun = "sum", na.rm = na.rm)
-  s2 <- fft_convolution(z0^2, kernel, fun = "sum", na.rm = na.rm)
-  s3 <- fft_convolution(z0^3, kernel, fun = "sum", na.rm = na.rm)
+  s1 <- convolve(z0, kernel, fun = "sum", na.rm = na.rm)
+  s2 <- convolve(z0^2, kernel, fun = "sum", na.rm = na.rm)
+  s3 <- convolve(z0^3, kernel, fun = "sum", na.rm = na.rm)
 
   mu <- s1 / n
   variance <- (s2 - (s1 * s1) / n) / (n - 1)
@@ -406,7 +478,7 @@
     result <- (sqrt(n * (n - 1)) / (n - 2)) * (m3 / n) / s^3
     result[!is.finite(n) | n < 3 | s == 0] <- NA_real_
   } else {
-    s4 <- fft_convolution(z0^4, kernel, fun = "sum", na.rm = na.rm)
+    s4 <- convolve(z0^4, kernel, fun = "sum", na.rm = na.rm)
     m4 <- s4 - 4 * mu * s3 + 6 * mu^2 * s2 - 3 * n * mu^4
     result <- (m4 / n) / s^4 - 3
     result[!is.finite(n) | n < 2 | s == 0] <- NA_real_
@@ -431,7 +503,8 @@
 # neighbors, so the two paths agree closely but not bit-for-bit at boundaries
 # (the same boundary behavior as the landscape edge metrics). Cells with no
 # valid base cell in the window return NA.
-.surface_sdq_raster_fft <- function(raster, radius, na.rm = TRUE) {
+.surface_sdq_raster_fft <- function(raster, radius, na.rm = TRUE,
+                                     convolve = fft_convolution) {
   resolution <- .landscape_validate_single_layer_raster(raster, "Surface")
   values <- terra::as.matrix(raster, wide = TRUE)
   .surface_validate_continuous_values(
@@ -459,9 +532,9 @@
   slope_sq[!is.finite(slope_sq)] <- 0
 
   kernel <- .landscape_circle_kernel(radius = radius, resolution = resolution)
-  num <- fft_convolution(slope_sq, kernel, fun = "sum", na.rm = na.rm)
+  num <- convolve(slope_sq, kernel, fun = "sum", na.rm = na.rm)
   den <- .landscape_clean_count_matrix(
-    fft_convolution(valid, kernel, fun = "sum", na.rm = na.rm)
+    convolve(valid, kernel, fun = "sum", na.rm = na.rm)
   )
 
   mean_slope_sq <- num / den
@@ -485,7 +558,8 @@
 # As with `sdq`, the per-cell quad uses each cell's actual raster neighbors, so
 # the projection and the point path agree closely but not bit-for-bit at window
 # boundaries. Cells with no valid quad in the window return NA.
-.surface_sdr_raster_fft <- function(raster, radius, na.rm = TRUE) {
+.surface_sdr_raster_fft <- function(raster, radius, na.rm = TRUE,
+                                     convolve = fft_convolution) {
   resolution <- .landscape_validate_single_layer_raster(raster, "Surface")
   values <- terra::as.matrix(raster, wide = TRUE)
   .surface_validate_continuous_values(
@@ -511,9 +585,9 @@
   akl0[!is.finite(akl0)] <- 0
 
   kernel <- .landscape_circle_kernel(radius = radius, resolution = resolution)
-  surface_area <- fft_convolution(akl0, kernel, fun = "sum", na.rm = na.rm)
+  surface_area <- convolve(akl0, kernel, fun = "sum", na.rm = na.rm)
   base_cells <- .landscape_clean_count_matrix(
-    fft_convolution(valid, kernel, fun = "sum", na.rm = na.rm)
+    convolve(valid, kernel, fun = "sum", na.rm = na.rm)
   )
 
   flat_area <- base_cells * resolution^2
@@ -550,7 +624,9 @@
   )
 
   kernel <- .landscape_circle_kernel(radius = radius, resolution = resolution)
-  result <- surface_sa_focal_cpp(values, kernel)
+  anchor <- mean(values, na.rm = TRUE)
+  if (!is.finite(anchor)) anchor <- 0
+  result <- surface_sa_focal_cpp(values - anchor, kernel)
 
   out <- terra::rast(raster)
   terra::values(out) <- as.vector(t(result))
@@ -586,6 +662,7 @@
     return(NA_real_)
   }
 
+  v <- v - v[[1L]]
   mu <- sum(w * v) / s0
   dev <- v - mu
   m2 <- sum(w * dev^2) / s0
@@ -630,6 +707,15 @@
     )
   }
 
+  # Centered two-pass SQ with one weight buffer shared across columns.
+  # Keep the R implementation below as the reference for other moments.
+  if (identical(metric, "sq") &&
+      (!identical(kernel, "expow") || (length(shape) == 1L && is.finite(shape)))) {
+    out <- msr_surface_weighted_sq_cpp(d, values, sigma,
+      if (identical(kernel, "expow")) shape else 1, kernel)
+    return(stats::setNames(out, colnames(values)))
+  }
+
   weights <- .msr_kernel_shape_weight(
     d = d,
     sigma = sigma,
@@ -647,12 +733,108 @@
 }
 
 
+# Reuse centered moments only within one buffer, from the very same source
+# column and exact scale/shape. Thus the distances and valid-cell mask are
+# identical by construction; nothing is cached across points or evaluations.
+.msr_shared_weighted_metrics <- function(d, cov_df, specs, covariates,
+                                         sigma, shape, kernel, param_covariates,
+                                         validate) {
+  if (length(covariates) < 2L ||
+      sum(specs$type == "surface" & specs$weighted, na.rm = TRUE) < 2L)
+    return(numeric(0))
+  selected <- specs[match(covariates, specs$covariate), , drop = FALSE]
+  pending <- which(selected$type == "surface" & selected$weighted &
+                     selected$metric %in% c("sa", "sq", "ssk", "sku"))
+  out <- numeric(0)
+  if (length(pending) < 2L) return(out)
+  parameter <- match(selected$covariate, param_covariates)
+  if (!anyDuplicated(unname(sigma[parameter[pending]]))) return(out)
+  while (length(pending)) {
+    i <- pending[1L]
+    same <- pending[vapply(pending, function(j)
+      identical(selected$source[i], selected$source[j]) &&
+        identical(unname(sigma[[parameter[i]]]), unname(sigma[[parameter[j]]])) &&
+        (is.null(shape) || identical(unname(shape[[parameter[i]]]),
+                                     unname(shape[[parameter[j]]]))), TRUE)]
+    pending <- setdiff(pending, same)
+    if (length(same) < 2L) next
+    values <- cov_df[, selected$source[i], drop = FALSE]
+    sig <- sigma[[parameter[i]]]
+    shp <- if (is.null(shape)) NULL else shape[[parameter[i]]]
+    metrics <- selected$metric[same]
+    if (length(unique(metrics)) == 1L) {
+      answer <- rep(.surface_weighted_by_buffer(d, values, kernel, sig, shp,
+                                                metrics[1L], validate)[[1L]], length(same))
+    } else {
+      validate_scalar_numeric(sig, "sigma", positive = TRUE)
+      if (!length(d)) stop("`d` must contain at least one distance.", call. = FALSE)
+      values <- as.numeric(values[, 1L])
+      if (length(values) != length(d))
+        stop("`r_stack.df` must have one row for each distance in `d`.", call. = FALSE)
+      if (isTRUE(validate)) .surface_validate_continuous_values(values, metrics[1L])
+      weights <- .msr_kernel_shape_weight(d, sig,
+        if (identical(kernel, "expow")) shp else NULL, kernel)
+      valid <- is.finite(values) & is.finite(weights) & weights > 0
+      v <- values[valid]; w <- weights[valid]; s0 <- sum(w)
+      answer <- rep(NA_real_, length(same))
+      if (length(v) && is.finite(s0) && s0 > 0) {
+        v <- v - v[[1L]]
+        dev <- v - sum(w * v) / s0
+        m2 <- sum(w * dev^2) / s0
+        # Compute each requested statistic once; retain the scalar reference's
+        # arithmetic order and centered powers rather than raw-moment subtraction.
+        unique_metrics <- unique(metrics)
+        result <- vapply(unique_metrics, function(metric) switch(metric,
+          sa = sum(w * abs(dev)) / s0,
+          sq = if (m2 <= 0) 0 else sqrt(m2),
+          ssk = if (m2 <= 0) NA_real_ else (sum(w * dev^3) / s0) / m2^1.5,
+          sku = if (m2 <= 0) NA_real_ else (sum(w * dev^4) / s0) / m2^2 - 3), 0)
+        answer <- unname(result[match(metrics, unique_metrics)])
+      }
+    }
+    out <- c(out, stats::setNames(answer, selected$covariate[same]))
+  }
+  out
+}
+
 # Build the kernel weight matrix used to project a weighted surface metric. This
 # mirrors the focal-window construction in `.msr_kernel_raster_one()`: a window
 # sized using the historical one-dimensional `pct_wt` cutoff, filled with the
 # distance-decay weights for the given kernel, sigma, and shape.
-.surface_kernel_weight_matrix <- function(raster, sigma, shape, kernel, pct_wt) {
-  mx <- kernel_dist(kernel = kernel, sigma = sigma, beta = shape, prob = pct_wt)
+.surface_kernel_weight_matrix <- function(raster, sigma, shape, kernel, pct_wt,
+                                          buffer_radius = NULL) {
+  if (!is.null(buffer_radius)) {
+    validate_scalar_numeric(buffer_radius, "buffer_radius", positive = TRUE)
+    resolution <- terra::res(raster)
+    if (!isTRUE(all.equal(resolution[1L], resolution[2L])))
+      stop("Prepared-buffer projection requires square raster cells.", call. = FALSE)
+    offsets <- seq.int(-ceiling(buffer_radius / resolution[1L]),
+                       ceiling(buffer_radius / resolution[1L])) * resolution[1L]
+    distance <- sqrt(outer(offsets^2, offsets^2, "+"))
+    weights <- matrix(.msr_kernel_shape_weight(as.vector(distance), sigma, shape, kernel),
+                       nrow(distance), ncol(distance))
+    # kernel_prep() keeps every cell returned by polygon intersection, including
+    # partial boundary cells. Reproduce its GEOS buffer and extraction footprint;
+    # a center-distance circle would silently omit those weighted cells.
+    half <- resolution[1L] / 2
+    template <- terra::rast(nrows = length(offsets), ncols = length(offsets),
+      xmin = min(offsets) - half, xmax = max(offsets) + half,
+      ymin = min(offsets) - half, ymax = max(offsets) + half,
+      crs = terra::crs(raster))
+    terra::values(template) <- 0
+    center <- sf::st_sf(geometry = sf::st_sfc(sf::st_point(c(0, 0)),
+      crs = sf::st_crs(terra::crs(raster))))
+    polygon <- sf::st_buffer(center, dist = buffer_radius)
+    cells <- exactextractr::exact_extract(template, polygon,
+      include_cell = TRUE, progress = FALSE)[[1L]]$cell
+    support <- rep(FALSE, length(weights))
+    support[cells] <- TRUE
+    support <- matrix(support, nrow(weights), ncol(weights), byrow = TRUE)
+    weights[!support] <- 0
+    return(weights)
+  }
+  mx <- kernel_dist(kernel = kernel, sigma = sigma, shape = shape, prob = pct_wt,
+                    dimension = "1d")
   r_res <- terra::res(raster)[1]
   focal_d <- ceiling(mx / r_res) * 2
   if ((focal_d %% 2) == 0) {
@@ -684,7 +866,9 @@
                                          shape,
                                          metric,
                                          pct_wt = 0.975,
-                                         na.rm = TRUE) {
+                                         na.rm = TRUE,
+                                         buffer_radius = NULL,
+                                         convolve = fft_convolution) {
   metric <- match.arg(metric, c("sa", "sq", "ssk", "sku"))
   .landscape_validate_single_layer_raster(raster, "Surface")
   values <- terra::as.matrix(raster, wide = TRUE)
@@ -699,13 +883,17 @@
     sigma = sigma,
     shape = shape,
     kernel = kernel,
-    pct_wt = pct_wt
+    pct_wt = pct_wt,
+    buffer_radius = buffer_radius
   )
 
   out <- terra::rast(raster)
 
   if (metric == "sa") {
-    result <- surface_sa_focal_cpp(values, wt_mat)
+    anchor <- mean(values, na.rm = TRUE)
+    if (!is.finite(anchor)) anchor <- 0
+    result <- surface_sa_focal_cpp(values - anchor, wt_mat)
+    if (!is.null(buffer_radius)) result[is.na(values)] <- NA_real_
     terra::values(out) <- as.vector(t(result))
     names(out) <- paste0(names(raster), "_sa")
     return(out)
@@ -722,9 +910,9 @@
   z0 <- centered
   z0[is.na(z0)] <- 0
 
-  s0 <- fft_convolution(valid, wt_mat, fun = "sum", na.rm = na.rm)
-  s1 <- fft_convolution(z0, wt_mat, fun = "sum", na.rm = na.rm)
-  s2 <- fft_convolution(z0^2, wt_mat, fun = "sum", na.rm = na.rm)
+  s0 <- convolve(valid, wt_mat, fun = "sum", na.rm = na.rm)
+  s1 <- convolve(z0, wt_mat, fun = "sum", na.rm = na.rm)
+  s2 <- convolve(z0^2, wt_mat, fun = "sum", na.rm = na.rm)
 
   mu <- s1 / s0
   m2 <- s2 / s0 - mu^2
@@ -733,18 +921,23 @@
   if (metric == "sq") {
     result <- sqrt(m2)
   } else if (metric == "ssk") {
-    s3 <- fft_convolution(z0^3, wt_mat, fun = "sum", na.rm = na.rm)
+    s3 <- convolve(z0^3, wt_mat, fun = "sum", na.rm = na.rm)
     m3 <- s3 / s0 - 3 * mu * (s2 / s0) + 2 * mu^3
     result <- m3 / m2^1.5
   } else {
-    s3 <- fft_convolution(z0^3, wt_mat, fun = "sum", na.rm = na.rm)
-    s4 <- fft_convolution(z0^4, wt_mat, fun = "sum", na.rm = na.rm)
+    s3 <- convolve(z0^3, wt_mat, fun = "sum", na.rm = na.rm)
+    s4 <- convolve(z0^4, wt_mat, fun = "sum", na.rm = na.rm)
     m4 <- s4 / s0 - 4 * mu * (s3 / s0) + 6 * mu^2 * (s2 / s0) - 3 * mu^4
     result <- m4 / m2^2 - 3
   }
 
-  result[!is.finite(s0) | s0 <= 0 | m2 <= 0] <- NA_real_
+  if (metric == "sq") {
+    # Weighted population spread is zero on constant support, unlike the
+    # standardized higher moments. This matches point extraction in both modes.
+    result[!is.finite(s0) | s0 <= 0] <- NA_real_
+  } else result[!is.finite(s0) | s0 <= 0 | m2 <= 0] <- NA_real_
   result[!is.finite(result)] <- NA_real_
+  if (!is.null(buffer_radius)) result[t(is.na(values))] <- NA_real_
 
   terra::values(out) <- as.vector(result)
   names(out) <- paste0(names(raster), "_", metric)
@@ -755,20 +948,21 @@
 # Projection dispatcher used by `.msr_scale_vars_raster()`. `sq` and the
 # higher moments (`ssk`, `sku`) use FFT moment convolutions; `sdq` uses an FFT
 # slope convolution; `sa` uses the compiled masked focal path.
-.surface_metric_raster_fft <- function(raster, radius, metric, na.rm = TRUE) {
+.surface_metric_raster_fft <- function(raster, radius, metric, na.rm = TRUE,
+                                     convolve = fft_convolution) {
   metric <- match.arg(metric, c("sa", "sq", "ssk", "sku", "sdq", "sdr"))
   validate_scalar_numeric(radius, "radius", positive = TRUE)
   validate_scalar_logical(na.rm, "na.rm")
 
   switch(
     metric,
-    sq = .surface_sq_raster_fft(raster = raster, radius = radius, na.rm = na.rm),
+    sq = .surface_sq_raster_fft(raster = raster, radius = radius, na.rm = na.rm, convolve = convolve),
     sa = .surface_sa_raster_cpp(raster = raster, radius = radius, na.rm = na.rm),
     ssk = .surface_moment_raster_fft(raster = raster, radius = radius,
-                                     metric = "ssk", na.rm = na.rm),
+                                     metric = "ssk", na.rm = na.rm, convolve = convolve),
     sku = .surface_moment_raster_fft(raster = raster, radius = radius,
-                                     metric = "sku", na.rm = na.rm),
-    sdq = .surface_sdq_raster_fft(raster = raster, radius = radius, na.rm = na.rm),
-    sdr = .surface_sdr_raster_fft(raster = raster, radius = radius, na.rm = na.rm)
+                                     metric = "sku", na.rm = na.rm, convolve = convolve),
+    sdq = .surface_sdq_raster_fft(raster = raster, radius = radius, na.rm = na.rm, convolve = convolve),
+    sdr = .surface_sdr_raster_fft(raster = raster, radius = radius, na.rm = na.rm, convolve = convolve)
   )
 }

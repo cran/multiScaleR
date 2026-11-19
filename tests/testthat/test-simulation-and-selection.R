@@ -22,6 +22,20 @@ test_that("expected public helpers remain exported", {
   expected_exports <- c(
     "aic_tab",
     "bic_tab",
+    "check_bayes_setup",
+    "cross_validate",
+    "cross_validate_glm",
+    "cross_validate_field",
+    "cross_validate_clogit",
+    "cross_validate_mixed",
+    "cross_validate_bayes",
+    "cv_tab",
+    "grouped_cv_folds",
+    "spatial_cv_folds",
+    "select_cv",
+    "diagnose_bayes_probabilities",
+    "diagnose_bayes_laplace",
+    "diagnose_bayes_scales",
     "diagnostics",
     "estimate_multiscale_ram",
     "kernel_dist",
@@ -29,19 +43,60 @@ test_that("expected public helpers remain exported", {
     "kernel_prep_by_group",
     "kernel_scale.raster",
     "kernel_var",
+    "make_gdr_refitter",
     "landscape_var",
     "msr_vars",
+    "multiScale_bayes",
     "multiScale_optim",
     "plot_kernel",
     "plot_marginal_effects",
+    "posterior_scales",
+    "predict_scales",
+    "prepare_gdr_histories",
+    "prepare_gdr_intervals",
+    "expand_gdr_intervals",
+    "gdr_start_values",
+    "fit_gdr_response_field",
+    "prepare_prediction",
+    "prepare_unmarked_data",
+    "prepare_unmarked_data",
     "profile_sigma",
+    "response_field_geometry",
+    "scale_inference",
     "sim_dat",
+    "sim_dat_gdr",
     "sim_dat_unmarked",
     "sim_rast",
-    "surface_var"
+    "simulate_bayes_prior",
+    "surface_var",
+    "validate_unmarked_data"
   )
 
-  expect_setequal(getNamespaceExports("multiScaleR"), expected_exports)
+  # Explicit reviewed S4 class/method exports and their native generics.
+  # vcov() on a fit dispatches through the registered S3 method, which is
+  # no longer exported by name (0.7.37).
+  expected_S4_exports <- c(
+    ".__C__unmarkedFitGDRField",
+    ".__T__confint:stats",
+    ".__T__predict:stats",
+    ".__T__profile:stats",
+    ".__T__ranef:unmarked",
+    ".__T__simulate:stats",
+    ".__T__update:stats",
+    ".__T__vcov:stats",
+    "confint",
+    "predict",
+    "profile",
+    "ranef",
+    "simulate",
+    "update",
+    "vcov"
+  )
+  expect_setequal(getNamespaceExports("multiScaleR"), c(expected_exports, expected_S4_exports))
+  # Un-exported in 0.7.37. The functions remain inside the package.
+  expect_false(any(c("audit_gdr_integration", "score_simulation", "vcov.multiScaleR") %in%
+                     getNamespaceExports("multiScaleR")))
+  expect_true(is.function(utils::getS3method("vcov", "multiScaleR")))
 })
 
 test_that("aic_tab and bic_tab compare optimized and standard models", {

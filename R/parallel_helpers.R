@@ -7,7 +7,7 @@
 #' @return Invisibly returns the package name loaded
 #' @details For internal use
 #' @rdname cluster_prep
-#' @keywords internal
+#' @noRd
 #' @importFrom utils getS3method
 #' @importFrom methods getClassDef
 cluster_prep <- function(model, cl) {
@@ -160,8 +160,9 @@ cluster_prep <- function(model, cl) {
 #' Extract the Namespace from a Model Call
 #'
 #' This function attempts to extract the package namespace from the call
-#' used to fit a model object, assuming the function was called using the
-#' `pkg::fun()` syntax.
+#' used to fit a model object, when the fitting function was called using
+#' `pkg::fun()` or `pkg:::fun()` syntax. Qualifiers inside a formula or another
+#' argument do not identify the fitting package.
 #'
 #' @param x A fitted model object.
 #'
@@ -170,17 +171,19 @@ cluster_prep <- function(model, cl) {
 #'
 #' @details For internal use
 #' @rdname extract_namespace
-#' @keywords internal
+#' @noRd
 #' @importFrom insight get_call
 extract_namespace <- function(x) {
   fc <- tryCatch(
     get_call(x),
     error = function(e) NULL
   )
-  if (!is.null(fc)) {
-    fc <- paste(fc, collapse = "")  # ensure single string
-    if (grepl("::", fc)) sub("::.*", "", fc) else NULL
-  }
+  # A qualifier in the formula or data is unrelated to the fitting function.
+  if (is.null(fc) || !is.call(fc)) return(NULL)
+  fun <- fc[[1L]]
+  if (is.call(fun) && length(fun) == 3L &&
+      as.character(fun[[1L]]) %in% c("::", ":::"))
+    as.character(fun[[2L]]) else NULL
 }
 
 
@@ -231,4 +234,39 @@ extract_call_function_package <- function(x) {
   }
 
   NULL
+}
+
+#' Drop source references from a closure kept in a returned object
+#'
+#' When multiScaleR is loaded with `keep.source = TRUE` (as covr does, and as
+#' `pkgload::load_all()` does in interactive sessions), every closure defined
+#' inside a package function carries a source reference to its whole source
+#' file. That text then travels with each serialized copy sent to a worker or
+#' saved with `saveRDS()`, and it enters the digests that guard stored
+#' contexts. Ordinary installs keep no source, so the closure comes back
+#' unchanged. `utils::removeSource()` keeps the environment and attributes.
+#'
+#' @param fn A closure.
+#' @return `fn` without source references.
+#' @noRd
+.msr_drop_srcref <- function(fn) {
+  if (is.null(attr(fn, "srcref"))) return(fn)
+  utils::removeSource(fn)
+}
+
+#' Stop every worker in a cluster, tolerating workers that already died
+#'
+#' `parallel::stopCluster()` stops the workers in turn and gives up at the
+#' first one it cannot reach, so a single worker that died earlier leaves the
+#' remaining workers running. Stopping each worker separately shuts down every
+#' reachable worker. Cleanup errors are ignored because the caller has either
+#' finished its work or is already reporting the error that ended it.
+#'
+#' @param cl A cluster from `parallel::makeCluster()` or
+#'   `parallel::makeForkCluster()`.
+#' @return `NULL`, invisibly.
+#' @noRd
+.msr_stop_cluster <- function(cl) {
+  for (i in seq_along(cl)) try(stopCluster(cl[i]), silent = TRUE)
+  invisible(NULL)
 }

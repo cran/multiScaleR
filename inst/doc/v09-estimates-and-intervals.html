@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>09. What Your Estimates and Intervals Mean</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">09. What Your Estimates and Intervals
+Mean</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#ask-three-questions-of-every-interval" id="toc-ask-three-questions-of-every-interval"><span class="toc-section-number">2</span> Ask three questions of every
+interval</a></li>
+<li><a href="#compare-a-conditional-and-a-joint-interval" id="toc-compare-a-conditional-and-a-joint-interval"><span class="toc-section-number">3</span> Compare a conditional and a joint
+interval</a>
+<ul>
+<li><a href="#fit-the-model" id="toc-fit-the-model"><span class="toc-section-number">3.1</span> Fit the model</a></li>
+<li><a href="#predict-with-each-kind-of-uncertainty" id="toc-predict-with-each-kind-of-uncertainty"><span class="toc-section-number">3.2</span> Predict with each kind of
+uncertainty</a></li>
+<li><a href="#read-the-comparison" id="toc-read-the-comparison"><span class="toc-section-number">3.3</span> Read the comparison</a></li>
+</ul></li>
+<li><a href="#judge-an-interval-for-the-scale-of-effect" id="toc-judge-an-interval-for-the-scale-of-effect"><span class="toc-section-number">4</span> Judge an interval for the scale of
+effect</a>
+<ul>
+<li><a href="#examine-the-whole-likelihood-for-one-scale" id="toc-examine-the-whole-likelihood-for-one-scale"><span class="toc-section-number">4.1</span> Examine the whole likelihood for
+one scale</a></li>
+</ul></li>
+<li><a href="#separate-an-expected-count-from-a-count-you-might-record" id="toc-separate-an-expected-count-from-a-count-you-might-record"><span class="toc-section-number">5</span> Separate an expected count from a
+count you might record</a></li>
+<li><a href="#know-whether-a-result-is-a-likelihood-fit-or-a-posterior" id="toc-know-whether-a-result-is-a-likelihood-fit-or-a-posterior"><span class="toc-section-number">6</span> Know whether a result is a
+likelihood fit or a posterior</a></li>
+<li><a href="#choose-the-interval-your-question-needs" id="toc-choose-the-interval-your-question-needs"><span class="toc-section-number">7</span> Choose the interval your question
+needs</a></li>
+<li><a href="#find-each-parameter-and-its-units" id="toc-find-each-parameter-and-its-units"><span class="toc-section-number">8</span> Find each parameter and its
+units</a></li>
+<li><a href="#check-these-before-you-report" id="toc-check-these-before-you-report"><span class="toc-section-number">9</span> Check these before you
+report</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">10</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">10.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">10.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p>Every number <code>multiScaleR</code> reports answers a specific
+question, and an interval helps only if you know which one. Consider
+three statements about a single fitted model. The landscape effect
+extends about 500 m. The expected count at a site is 3. An observer
+could record anywhere from 0 to 9 animals there. Each statement has its
+own interval, and the three are not interchangeable.</p>
+<p>This vignette shows what each estimate and interval includes, what it
+leaves out, and how to choose the one your question needs. It works
+through three examples. The first fits a count model and compares two
+intervals for the same prediction. The second checks how well the data
+locate a single scale of effect. The third uses a stored Bayesian fit to
+separate an expected count from a count you might record.</p>
+<p>Read <code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code>
+first. The Bayesian example reuses the fitted model from
+<code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code>,
+but you do not need to have read that vignette.</p>
+</div>
+<div id="ask-three-questions-of-every-interval" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Ask three questions of
+every interval</h1>
+<ol style="list-style-type: decimal">
+<li><strong>What quantity does it describe?</strong> It may be a scale
+of effect, an <em>expected response</em> (the model’s mean for a site,
+such as an expected count or a probability of occurrence), or a new
+observation.</li>
+<li><strong>What does it hold fixed?</strong> A <em>conditional</em>
+interval treats the estimated scales of effect as known and carries only
+the uncertainty in the regression coefficients. A <em>joint</em>
+interval lets the scales and the coefficients vary together.</li>
+<li><strong>What variation does it include?</strong> Parameter
+uncertainty is always there. Variation among groups, such as years or
+sites, enters only when you ask for it. Observation noise, or the
+scatter of individual counts around their expected value, enters only
+when you simulate observations.</li>
+</ol>
+<p>The answers depend on how you fit the model.</p>
+<table>
+<colgroup>
+<col width="35%" />
+<col width="20%" />
+<col width="43%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">How you fit the model</th>
+<th align="left">Model types</th>
+<th align="left">Uncertainty in predictions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>multiScale_optim()</code> with the default
+<code>backend = &quot;refit&quot;</code></td>
+<td align="left">Every supported model class</td>
+<td align="left">Conditional on the estimated scales</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_optim(backend = &quot;profile_glm&quot;)</code></td>
+<td align="left">Gaussian, Poisson, binomial, and negative binomial
+GLMs</td>
+<td align="left">Conditional or joint</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>multiScale_optim(backend = &quot;joint_nb2&quot;)</code></td>
+<td align="left">Negative binomial count GLMs</td>
+<td align="left">Conditional or joint</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_optim(backend = &quot;conditional_logit&quot;)</code></td>
+<td align="left">Step-selection models with one used step per choice
+set</td>
+<td align="left">Conditional only</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>multiScale_optim(backend = &quot;joint_mixed&quot;)</code></td>
+<td align="left">Poisson and negative binomial models with a random
+intercept, optionally zero-inflated</td>
+<td align="left">Conditional only</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_bayes()</code></td>
+<td align="left">Models with shared, covariate-dependent, or
+year-specific scales</td>
+<td align="left">Full posterior uncertainty in scales and
+coefficients</td>
+</tr>
+</tbody>
+</table>
+<p>A fitting route here means the <code>backend</code> argument. The
+default refits your model at each candidate scale, which works for any
+model class. The other backends estimate the scales and the coefficients
+in one likelihood, which is what makes a joint interval possible.</p>
+</div>
+<div id="compare-a-conditional-and-a-joint-interval" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Compare a conditional
+and a joint interval</h1>
+<div id="fit-the-model" class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> Fit the model</h2>
+<p>To keep the comparison concrete, this example uses the counts and
+landscape layers from the Quick Start, where the true scales of effect
+are 250 m for <code>land1</code> and 500 m for <code>land2</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># bin = TRUE stores the distance-binned summaries the analytic backend needs</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>df    <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>start <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co"># Estimate scales and coefficients in one likelihood</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>                        <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>fit<span class="sc">$</span>scale_est                                         <span class="co"># sigma and SE, in meters</span></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co">#&gt;           Mean       SE</span></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="co">#&gt; land1 238.4831 33.11864</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a><span class="co">#&gt; land2 499.5739 47.46996</span></span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a><span class="fu">diagnostics</span>(fit)<span class="sc">$</span>profile_glm<span class="sc">$</span>uncertainty_available    <span class="co"># TRUE: joint intervals exist</span></span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The sigma estimates match
+the Quick Start fit, because both backends maximize the same likelihood
+for this model. The last line reports whether the fit passed the
+numerical checks that a joint interval requires. When it is
+<code>FALSE</code>, only conditional intervals are available, and
+<code>diagnostics(fit)$profile_glm$reasons</code> says why.</p>
+</div>
+<div id="predict-with-each-kind-of-uncertainty" class="section level2" number="3.2">
+<h2><span class="header-section-number">3.2</span> Predict with each
+kind of uncertainty</h2>
+<p><code>predict()</code> returns the expected count for each survey
+point. The <code>uncertainty</code> argument selects what the confidence
+interval carries.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Holds the estimated scales fixed</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>cond  <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, <span class="at">interval =</span> <span class="st">&quot;confidence&quot;</span>, <span class="at">uncertainty =</span> <span class="st">&quot;conditional&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Lets scales and coefficients vary together</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>joint <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, <span class="at">interval =</span> <span class="st">&quot;confidence&quot;</span>, <span class="at">uncertainty =</span> <span class="st">&quot;joint&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>compare <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">expected    =</span> cond<span class="sc">$</span>fit,</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">cond_lower  =</span> cond<span class="sc">$</span>lower,  <span class="at">cond_upper  =</span> cond<span class="sc">$</span>upper,</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">joint_lower =</span> joint<span class="sc">$</span>lower, <span class="at">joint_upper =</span> joint<span class="sc">$</span>upper</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">head</span>(compare, <span class="dv">5</span>), <span class="dv">2</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt;   expected cond_lower cond_upper joint_lower joint_upper</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt; 1     0.91       0.67       1.23        0.67        1.23</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt; 2     2.58       1.83       3.63        1.64        4.07</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt; 3     4.69       3.85       5.70        3.59        6.12</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; 4     2.05       1.70       2.46        1.54        2.72</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; 5     2.00       1.42       2.81        1.40        2.84</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Ten survey points spread across the range of expected counts</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>keep <span class="ot">&lt;-</span> <span class="fu">order</span>(compare<span class="sc">$</span>expected)[<span class="fu">seq</span>(<span class="dv">5</span>, <span class="dv">95</span>, <span class="at">by =</span> <span class="dv">10</span>)]</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>long <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">point    =</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">seq_along</span>(keep), <span class="dv">2</span>)),</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">expected =</span> <span class="fu">rep</span>(compare<span class="sc">$</span>expected[keep], <span class="dv">2</span>),</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">lower    =</span> <span class="fu">c</span>(compare<span class="sc">$</span>cond_lower[keep], compare<span class="sc">$</span>joint_lower[keep]),</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">upper    =</span> <span class="fu">c</span>(compare<span class="sc">$</span>cond_upper[keep], compare<span class="sc">$</span>joint_upper[keep]),</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">interval =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;Conditional&quot;</span>, <span class="st">&quot;Joint&quot;</span>), <span class="at">each =</span> <span class="fu">length</span>(keep))</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>)</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="fu">ggplot</span>(long, <span class="fu">aes</span>(<span class="at">x =</span> point, <span class="at">y =</span> expected, <span class="at">ymin =</span> lower, <span class="at">ymax =</span> upper,</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>                 <span class="at">color =</span> interval)) <span class="sc">+</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="fu">geom_pointrange</span>(<span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.5</span>)) <span class="sc">+</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="at">Conditional =</span> <span class="st">&quot;black&quot;</span>, <span class="at">Joint =</span> <span class="st">&quot;#2166AC&quot;</span>)) <span class="sc">+</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Survey point (ordered by expected count)&quot;</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">&quot;Expected count&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Interval&quot;</span>) <span class="sc">+</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Expected counts at ten survey points with conditional (black) and joint (blue) 95% confidence intervals." src="data:image/png;base64,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" alt="Expected counts at ten survey points with conditional (black) and joint (blue) 95% confidence intervals." />
+<div class="figcaption"><strong><em>Expected counts at ten survey points
+with conditional (black) and joint (blue) 95% confidence
+intervals.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># How much wider is the joint interval at each of the 100 survey points?</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>ratio <span class="ot">&lt;-</span> (joint<span class="sc">$</span>upper <span class="sc">-</span> joint<span class="sc">$</span>lower) <span class="sc">/</span> (cond<span class="sc">$</span>upper <span class="sc">-</span> cond<span class="sc">$</span>lower)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">quantile</span>(ratio, <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dv">1</span>)), <span class="dv">2</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;   0%  50% 100% </span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; 1.00 1.14 2.08</span></span></code></pre></div>
+</div>
+<div id="read-the-comparison" class="section level2" number="3.3">
+<h2><span class="header-section-number">3.3</span> Read the
+comparison</h2>
+<p><strong>How to read the output:</strong> Both calls return the same
+expected count, because the fitted model is the same. Only the interval
+changes. In this example the joint interval is never narrower than the
+conditional one. Across the 100 survey points its width is 1.14 times
+the conditional width at the median and 2.08 times at the extreme. Both
+intervals are on the response scale, as a count per survey, and both
+describe the expected count rather than a count you might record.</p>
+<p>The conditional interval answers a narrower question. It asks how
+uncertain the prediction is if the scales of effect are exactly 238 m
+and 500 m. The joint interval drops that assumption, and the cost of the
+assumption differs from one survey point to the next.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> The default workflow
+reports conditional standard errors for predictions and nothing wider.
+Say so when you report them. When the sigma intervals in
+<code>summary()</code> are wide, a conditional interval understates how
+uncertain a prediction is.</p>
+</blockquote>
+<p>The <code>profile_glm</code> backend is experimental. Its intervals
+for sigma can be too narrow, as the next section shows, so a joint
+interval is a better approximation than a conditional one, without a
+guarantee of nominal coverage. <code>?multiScale_optim</code> lists the
+model structures each backend accepts.</p>
+</div>
+</div>
+<div id="judge-an-interval-for-the-scale-of-effect" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Judge an interval for
+the scale of effect</h1>
+<p><code>summary(fit)</code> reports a 95% interval for each sigma from
+the curvature of the likelihood at its peak. This is a <em>Wald
+interval</em>. It assumes that the likelihood, on the log scale of
+sigma, falls away symmetrically from the estimate.
+<code>summary(fit, profile = TRUE)</code> reports <em>profile-likelihood
+limits</em> instead. These are the sigma values at which the fit, with
+its coefficients re-estimated, becomes worse than the best fit by more
+than chance alone would allow (1.92 log-likelihood units for a 95%
+interval).</p>
+<p>A simulation study tested both intervals for the analytic backends.
+Each of 96 data sets per response family had one Gaussian kernel, a true
+sigma of 240 m, and a strong landscape effect. The 95% Wald interval
+held the true sigma in 92% of the Gaussian data sets, 89% of the
+binomial, 85% of the Poisson, and 76% of the negative binomial data
+sets. Profile-likelihood limits held it in 90% to 96%. When the
+landscape effect was weak, many profiles spanned the whole search
+range.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Report
+profile-likelihood limits for sigma where you can, and describe any
+interval for a scale as approximate, most of all for counts. A profile
+that stays flat across the search range means the data do not locate the
+scale, whatever the point estimate says.</p>
+</blockquote>
+<div id="examine-the-whole-likelihood-for-one-scale" class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Examine the whole
+likelihood for one scale</h2>
+<p>The profile limits from <code>summary()</code> follow the likelihood
+outward from the estimate. They can miss a second region of support
+elsewhere in the search range. For a negative binomial model with one
+scale, <code>scale_inference()</code> refits the model at sigma values
+spread across the whole range and reports every region the data support.
+The example fits a one-scale version of the running example, with
+<code>land2</code> alone. Its true scale is 500 m.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># One landscape layer, so the model has a single scale of effect</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>inputs2 <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast[<span class="st">&quot;land2&quot;</span>],</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                       <span class="at">max_D =</span> <span class="dv">1700</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>                       <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>df2    <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs2<span class="sc">$</span>kernel_dat)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>start2 <span class="ot">&lt;-</span> MASS<span class="sc">::</span><span class="fu">glm.nb</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land2, <span class="at">data =</span> df2)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co"># Estimate sigma, the coefficients, and the negative binomial theta together</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>fit_nb <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start2, inputs2, <span class="at">backend =</span> <span class="st">&quot;joint_nb2&quot;</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>                           <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co"># Refit the model at 21 sigma values between the search limits</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>scan <span class="ot">&lt;-</span> <span class="fu">scale_inference</span>(fit_nb, <span class="at">grid_points =</span> <span class="dv">21</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>scan<span class="sc">$</span>diagnostics<span class="sc">$</span>profile_status     <span class="co"># how many regions, and do they touch a limit</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; [1] &quot;localized&quot;</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="fu">round</span>(scan<span class="sc">$</span>profile_set[, <span class="fu">c</span>(<span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>)])   <span class="co"># supported sigma, in meters</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt;   lower upper</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; 1   348   530</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>profile_status</code>
+summarizes the shape of the likelihood across the search range.</p>
+<table>
+<colgroup>
+<col width="46%" />
+<col width="23%" />
+<col width="30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"><code>profile_status</code></th>
+<th align="left">Meaning</th>
+<th align="left">What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>&quot;localized&quot;</code></td>
+<td align="left">One region of sigma is supported, away from both search
+limits</td>
+<td align="left">Report its limits</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;disconnected&quot;</code></td>
+<td align="left">Two or more separate regions are supported</td>
+<td align="left">Report every region. A single estimate hides the
+alternatives</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>&quot;bound_limited&quot;</code></td>
+<td align="left">A supported region reaches a search limit</td>
+<td align="left">The limit there is not a confidence limit. Widen the
+search if <code>max_D</code> allows</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;unresolved&quot;</code></td>
+<td align="left">A model without the landscape term fits within the
+cutoff</td>
+<td align="left">The data do not locate the scale</td>
+</tr>
+</tbody>
+</table>
+<p>Here the status is <code>&quot;localized&quot;</code>, and each row of
+<code>profile_set</code> is one supported region in map units. The
+single region contains the true 500 m.</p>
+<p>Set <code>bootstrap</code> to check the 1.92 cutoff by simulation,
+which helps near a search limit or when the effect is weak. Each draw
+refits the model twice, so 99 draws at two sigma values take a few
+minutes. Name the values you want to test with
+<code>bootstrap_values</code>. A bootstrap across the whole grid also
+returns <code>bootstrap_set</code>, built from grid values only, and it
+can miss the true scale when few grid values fall inside a narrow
+supported region. In a simulation with a clear effect, that set held the
+true scale in 6 of 16 data sets, while a direct test at the true scale
+accepted it in 13 of 16. Test specific scales directly rather than
+reading the grid set as an interval. <code>?scale_inference</code>
+describes every element of the result.</p>
+</div>
+</div>
+<div id="separate-an-expected-count-from-a-count-you-might-record" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Separate an expected
+count from a count you might record</h1>
+<p>An interval for an expected count describes uncertainty about a mean.
+Because a single survey also carries observation noise, the count you
+record can fall well outside that interval. The Bayesian interface
+provides both quantities, and a stored fit to five years of counts shows
+the difference.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>annual <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;bayesian-annual-example.rds&quot;</span>,</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>bfit <span class="ot">&lt;-</span> annual<span class="sc">$</span>fits<span class="sc">$</span>pooled          <span class="co"># negative binomial fit, sampled earlier</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co"># Three site-years to predict. Remove the response, which is not an input.</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>surveys <span class="ot">&lt;-</span> annual<span class="sc">$</span>data[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, ]</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>surveys<span class="sc">$</span>count <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co"># Expected count: uncertainty about the mean only</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>expected <span class="ot">&lt;-</span> <span class="fu">predict</span>(bfit, surveys, <span class="at">kernel_inputs =</span> annual<span class="sc">$</span>inputs,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>                    <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">draws =</span> <span class="dv">400</span>)</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co"># Replicated counts: adds observation noise to every posterior draw</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>replicated <span class="ot">&lt;-</span> <span class="fu">simulate</span>(bfit, <span class="at">nsim =</span> <span class="dv">400</span>, <span class="at">seed =</span> <span class="dv">11</span>, <span class="at">newdata =</span> surveys,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>                       <span class="at">kernel_inputs =</span> annual<span class="sc">$</span>inputs, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>observed <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">apply</span>(<span class="fu">as.matrix</span>(replicated), <span class="dv">1</span>, quantile,</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>                    <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>)))</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>both <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="at">site_year       =</span> expected<span class="sc">$</span>point_id,</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="at">expected_median =</span> expected<span class="sc">$</span>median,</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>  <span class="at">expected_lower  =</span> expected<span class="sc">$</span>lower,  <span class="at">expected_upper =</span> expected<span class="sc">$</span>upper,</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>  <span class="at">observed_median =</span> observed[, <span class="dv">2</span>],</span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>  <span class="at">observed_lower  =</span> observed[, <span class="dv">1</span>],   <span class="at">observed_upper =</span> observed[, <span class="dv">3</span>]</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>)</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(both, <span class="at">digits =</span> <span class="dv">1</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Site and year&quot;</span>, <span class="st">&quot;Expected count&quot;</span>, <span class="st">&quot;Lower&quot;</span>, <span class="st">&quot;Upper&quot;</span>,</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>                           <span class="st">&quot;Recorded count&quot;</span>, <span class="st">&quot;Lower&quot;</span>, <span class="st">&quot;Upper&quot;</span>))</span></code></pre></div>
+<table>
+<colgroup>
+<col width="20%" />
+<col width="22%" />
+<col width="8%" />
+<col width="8%" />
+<col width="22%" />
+<col width="8%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Site and year</th>
+<th align="right">Expected count</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+<th align="right">Recorded count</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">s1_2021</td>
+<td align="right">3.1</td>
+<td align="right">1.8</td>
+<td align="right">5.4</td>
+<td align="right">3</td>
+<td align="right">0</td>
+<td align="right">9</td>
+</tr>
+<tr class="even">
+<td align="left">s2_2021</td>
+<td align="right">4.0</td>
+<td align="right">2.4</td>
+<td align="right">6.4</td>
+<td align="right">3</td>
+<td align="right">0</td>
+<td align="right">11</td>
+</tr>
+<tr class="odd">
+<td align="left">s3_2021</td>
+<td align="right">15.3</td>
+<td align="right">9.9</td>
+<td align="right">23.2</td>
+<td align="right">15</td>
+<td align="right">4</td>
+<td align="right">30</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the table:</strong> Each row is one site in one
+year. The first three numeric columns give the posterior median and 95%
+interval for the expected count. The last three give the median and
+central 95% range of counts that a new survey could record. For s1_2021,
+the expected count lies between 1.8 and 5.4, yet a single survey could
+plausibly record anywhere from 0 to 9 animals.</p>
+<p>Each Bayesian prediction also carries a record of what it is.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>record <span class="ot">&lt;-</span> <span class="fu">attr</span>(expected, <span class="st">&quot;prediction_contract&quot;</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>record<span class="sc">$</span>quantity                         <span class="co"># what the numbers describe</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;expected_response&quot;</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>record<span class="sc">$</span>uncertainty<span class="sc">$</span>observation_noise    <span class="co"># FALSE: observation noise is left out</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>quantity</code> names
+what was predicted, and <code>observation_noise</code> states whether
+the scatter of individual counts is included. Check these two fields
+whenever you are unsure which interval you are holding.
+<code>?prediction_contract</code> describes the remaining fields.</p>
+<p>The same distinction holds for <code>multiScale_optim()</code> fits.
+Their <code>predict()</code> intervals describe the expected response,
+and the package adds no observation noise to them.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Use the
+expected-response interval to compare sites or scenarios. Use replicated
+observations to ask whether a count you recorded is surprising, or to
+plan how variable future surveys will be.
+<code>vignette(&quot;v14-bayesian-prediction&quot;, package = &quot;multiScaleR&quot;)</code>
+covers new sites, new years, and totals across sites.</p>
+</blockquote>
+</div>
+<div id="know-whether-a-result-is-a-likelihood-fit-or-a-posterior" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Know whether a result
+is a likelihood fit or a posterior</h1>
+<p><code>multiScale_optim()</code> maximizes a likelihood.
+<code>multiScale_bayes()</code> estimates a posterior, which combines
+the likelihood with prior distributions. Three rules follow.</p>
+<ul>
+<li><strong>Information criteria need likelihood fits.</strong>
+<code>aic_tab()</code> and <code>bic_tab()</code> stop with an error if
+you pass a Bayesian fit. Compare Bayesian models with the posterior
+predictive checks in
+<code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code>.</li>
+<li><strong>A Bayesian interval reflects the priors as well as the
+data.</strong> Leaving <code>priors</code> empty selects the documented
+defaults. It does not remove them.</li>
+<li><strong><code>method</code> changes only the computation.</strong>
+The settings <code>&quot;sample&quot;</code>, <code>&quot;slice&quot;</code>,
+<code>&quot;laplace&quot;</code>, and <code>&quot;marginal&quot;</code> are different ways
+to compute or approximate the same posterior. <code>&quot;marginal&quot;</code>
+does not mean maximum likelihood.
+<code>vignette(&quot;v15-bayesian-computation&quot;, package = &quot;multiScaleR&quot;)</code>
+explains when each approximation is adequate.</li>
+</ul>
+<p>Compare AIC values only among models fitted to the same observations.
+Two <code>unmarked</code> models can share sites yet use different
+visits when a detection covariate has missing values, and
+<code>aic_tab()</code> stops when the observations differ.</p>
+</div>
+<div id="choose-the-interval-your-question-needs" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Choose the interval
+your question needs</h1>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="10%" />
+<col width="38%" />
+<col width="25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Your question</th>
+<th align="left">Call</th>
+<th align="left">The interval includes</th>
+<th align="left">It leaves out</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">How far does the landscape effect extend?</td>
+<td align="left"><code>summary(fit)</code>, or
+<code>summary(fit, profile = TRUE)</code> for profile-likelihood limits.
+<code>scale_inference(fit)</code> scans the whole range for a one-scale
+negative binomial model</td>
+<td align="left">Uncertainty in sigma</td>
+<td align="left">Nothing relevant to this question</td>
+</tr>
+<tr class="even">
+<td align="left">What is the expected response, taking the estimated
+scales as given?</td>
+<td align="left"><code>predict(fit, interval = &quot;confidence&quot;, uncertainty = &quot;conditional&quot;)</code></td>
+<td align="left">Coefficient uncertainty</td>
+<td align="left">Scale uncertainty, observation noise</td>
+</tr>
+<tr class="odd">
+<td align="left">What is the expected response, allowing for uncertain
+scales?</td>
+<td align="left"><code>predict(fit, interval = &quot;confidence&quot;, uncertainty = &quot;joint&quot;)</code>
+on a <code>profile_glm</code> or <code>joint_nb2</code> fit</td>
+<td align="left">Coefficient and scale uncertainty together</td>
+<td align="left">Observation noise</td>
+</tr>
+<tr class="even">
+<td align="left">What scale of effect applies in a given year, or in a
+year not yet surveyed?</td>
+<td align="left"><code>predict_scales(bfit, ...)</code></td>
+<td align="left">Posterior uncertainty in the scale, plus year-to-year
+variation when requested</td>
+<td align="left">Observation noise</td>
+</tr>
+<tr class="odd">
+<td align="left">What is the expected response from a Bayesian fit?</td>
+<td align="left"><code>predict(bfit, ...)</code></td>
+<td align="left">Posterior uncertainty in scales and coefficients</td>
+<td align="left">Observation noise</td>
+</tr>
+<tr class="even">
+<td align="left">What might I record on a new survey?</td>
+<td align="left"><code>simulate(bfit, ...)</code></td>
+<td align="left">Posterior uncertainty and observation noise</td>
+<td align="left">Nothing</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="find-each-parameter-and-its-units" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Find each parameter and
+its units</h1>
+<table>
+<colgroup>
+<col width="16%" />
+<col width="26%" />
+<col width="25%" />
+<col width="31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Parameter</th>
+<th align="left">Where it appears</th>
+<th align="left">Scale and units</th>
+<th align="left">How to interpret it</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Kernel scale (sigma)</td>
+<td align="left"><code>summary(fit)$opt_scale</code>,
+<code>fit$scale_est</code></td>
+<td align="left">Map units of the prepared raster (meters here)</td>
+<td align="left">Convert to an effective distance with
+<code>kernel_dist(fit)</code></td>
+</tr>
+<tr class="even">
+<td align="left">Effective distance</td>
+<td align="left"><code>summary(fit)$opt_dist</code>,
+<code>kernel_dist(fit)</code></td>
+<td align="left">Map units</td>
+<td align="left">Radius of the circle that holds 90% of the kernel
+weight</td>
+</tr>
+<tr class="odd">
+<td align="left">Regression coefficient</td>
+<td align="left"><code>summary(fit$opt_mod)</code></td>
+<td align="left">Link scale, per one standard deviation of the
+kernel-weighted covariate</td>
+<td align="left">Exponentiate for a log link. Use <code>plogis()</code>
+for a logit link</td>
+</tr>
+<tr class="even">
+<td align="left">Annual scales in a Bayesian fit</td>
+<td align="left"><code>posterior_scales(bfit)</code></td>
+<td align="left">Map units</td>
+<td align="left">Posterior median and interval for each year’s
+sigma</td>
+</tr>
+<tr class="odd">
+<td align="left">Between-year spread of scale</td>
+<td align="left"><code>summary(bfit)$group_sd$log_scale_group_sd</code></td>
+<td align="left">Log of distance</td>
+<td align="left"><code>exp()</code> of the value is a multiplicative
+factor. A value of 0.3 means a year one standard deviation above average
+has a scale about 1.35 times the typical scale</td>
+</tr>
+<tr class="even">
+<td align="left">Spread among sites or years in the response</td>
+<td align="left"><code>summary(bfit)$group_sd$response_group_sd</code></td>
+<td align="left">Link scale</td>
+<td align="left">Spread of group effects on the model’s linear
+predictor</td>
+</tr>
+</tbody>
+</table>
+<p>Because landscape covariates are standardized by default, a
+coefficient describes a change of one standard deviation. Predictions
+for new locations reuse the mean and standard deviation from the fitted
+data. Do not standardize a prediction data set on its own.</p>
+</div>
+<div id="check-these-before-you-report" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Check these before you
+report</h1>
+<ul>
+<li><strong>Units.</strong> A scale is in the map units of the raster
+you prepared. Use a projected coordinate reference system so that those
+units are a distance.</li>
+<li><strong>Support.</strong> A sigma estimate near <code>max_D</code>
+means the search stopped at the edge of the extracted landscape.
+Increase <code>max_D</code>, run <code>kernel_prep()</code> again, and
+refit before interpreting that scale.</li>
+<li><strong>Location.</strong> A profile that reaches a search limit, or
+spans the whole range, means the data do not pin down the scale. Report
+the region, not a single distance.</li>
+<li><strong>Missing landscape.</strong> A buffer that lies inside the
+raster extent can still contain missing cells. Inspect the raster around
+points near gaps or edges.</li>
+<li><strong>What you conditioned on.</strong> State whether a reported
+interval is conditional on the estimated scales, joint, or a posterior
+interval.</li>
+<li><strong>Numerical precision.</strong> A Bayesian fit that passes its
+sampling diagnostics can still estimate a tail probability imprecisely.
+Monte Carlo error describes that numerical precision, and it differs
+from the posterior uncertainty an interval reports. See
+<code>vignette(&quot;v15-bayesian-computation&quot;, package = &quot;multiScaleR&quot;)</code>.</li>
+</ul>
+</div>
+<div id="quick-reference" class="section level1" number="10">
+<h1><span class="header-section-number">10</span> Quick reference</h1>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># 1. Fit with a backend that estimates scales and coefficients together</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(pts, land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                      <span class="at">bin =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>start  <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">family =</span> <span class="fu">poisson</span>(),</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>              <span class="at">data =</span> <span class="fu">data.frame</span>(landscape_counts, inputs<span class="sc">$</span>kernel_dat))</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>fit    <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>, <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="fu">diagnostics</span>(fit)<span class="sc">$</span>profile_glm<span class="sc">$</span>uncertainty_available   <span class="co"># TRUE: joint intervals exist</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co"># 2. Scale of effect and its interval</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="fu">summary</span>(fit)                   <span class="co"># sigma and effective distance, in map units</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="fu">summary</span>(fit, <span class="at">profile =</span> <span class="cn">TRUE</span>)   <span class="co"># profile-likelihood limits for sigma</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co"># One-scale negative binomial fit: every supported region of sigma</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>scan <span class="ot">&lt;-</span> <span class="fu">scale_inference</span>(fit_nb, <span class="at">grid_points =</span> <span class="dv">21</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>scan<span class="sc">$</span>diagnostics<span class="sc">$</span>profile_status   <span class="co"># &quot;localized&quot;, &quot;disconnected&quot;, &quot;bound_limited&quot;, &quot;unresolved&quot;</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>scan<span class="sc">$</span>profile_set                  <span class="co"># supported regions, in map units</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co"># 3. Expected response with two kinds of interval</span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="fu">predict</span>(fit, <span class="at">interval =</span> <span class="st">&quot;confidence&quot;</span>, <span class="at">uncertainty =</span> <span class="st">&quot;conditional&quot;</span>)  <span class="co"># scales fixed</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="fu">predict</span>(fit, <span class="at">interval =</span> <span class="st">&quot;confidence&quot;</span>, <span class="at">uncertainty =</span> <span class="st">&quot;joint&quot;</span>)        <span class="co"># scales uncertain</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co"># 4. Bayesian fit: expected response versus a count you might record</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="fu">predict</span>(bfit, newdata, <span class="at">kernel_inputs =</span> new_inputs, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>)</span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="fu">simulate</span>(bfit, <span class="at">nsim =</span> <span class="dv">400</span>, <span class="at">newdata =</span> newdata, <span class="at">kernel_inputs =</span> new_inputs,</span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>         <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>)                     <span class="co"># adds observation noise</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="fu">attr</span>(<span class="fu">predict</span>(bfit, newdata, <span class="at">kernel_inputs =</span> new_inputs, <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>),</span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>     <span class="st">&quot;prediction_contract&quot;</span>)<span class="sc">$</span>quantity               <span class="co"># what the numbers describe</span></span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="10.1">
+<h2><span class="header-section-number">10.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>multiScale_optim()</code></td>
+<td align="left">Estimate scales of effect by maximum likelihood.
+<code>backend</code> sets which intervals are available</td>
+</tr>
+<tr class="even">
+<td align="left"><code>diagnostics()</code></td>
+<td align="left">Report whether a fit passed the checks a joint interval
+requires</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>summary()</code>, <code>kernel_dist()</code></td>
+<td align="left">Report sigma and the effective distance with their
+intervals</td>
+</tr>
+<tr class="even">
+<td align="left"><code>scale_inference()</code></td>
+<td align="left">Scan the likelihood for one scale across the whole
+search range, with optional bootstrap tests</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>predict()</code></td>
+<td align="left">Expected response, with a conditional or joint
+confidence interval</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_bayes()</code></td>
+<td align="left">Estimate a posterior for scales and coefficients</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>predict_scales()</code></td>
+<td align="left">Posterior for the scale of effect in observed or new
+groups</td>
+</tr>
+<tr class="even">
+<td align="left"><code>simulate()</code></td>
+<td align="left">Replicated observations from a Bayesian fit, including
+observation noise</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>aic_tab()</code>, <code>bic_tab()</code></td>
+<td align="left">Compare likelihood fits</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="10.2">
+<h2><span class="header-section-number">10.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow and how to read a fitted model.</li>
+<li><strong><code>vignette(&quot;v02-user-guide&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+profile likelihood intervals and model selection with AIC and BIC.</li>
+<li><strong><code>vignette(&quot;v08-cross-validation&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+comparing models by how well they predict held-out observations.</li>
+<li><strong><code>vignette(&quot;v07-fitting-methods&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+which covariate types each fitting route accepts.</li>
+<li><strong><code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+fitting and checking a Bayesian model with year-specific scales.</li>
+<li><strong><code>vignette(&quot;v14-bayesian-prediction&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+predicting new sites, new years, and totals.</li>
+<li><strong><code>vignette(&quot;v15-bayesian-computation&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+numerical precision and faster approximations.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

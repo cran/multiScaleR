@@ -723,7 +723,7 @@ test_that("multiScale_optim covers singular hessian and failure branches via moc
 
   expect_s3_class(singular_out, "multiScaleR")
   expect_type(singular_out$scale_est$SE, "double")
-  expect_true(is.infinite(singular_out$scale_est$SE[[1]]))
+  expect_true(is.na(singular_out$scale_est$SE[[1]]))
   singular_summary <- summary(singular_out)
   expect_s3_class(singular_summary, "summary_multiScaleR")
   expect_type(singular_summary$opt_scale$SE, "double")
@@ -756,8 +756,8 @@ test_that("multiScale_optim covers singular hessian and failure branches via moc
   expect_s3_class(singular_expow, "multiScaleR")
   expect_type(singular_expow$scale_est$SE, "double")
   expect_type(singular_expow$shape_est$SE, "double")
-  expect_true(is.infinite(singular_expow$scale_est$SE[[1]]))
-  expect_true(is.infinite(singular_expow$shape_est$SE[[1]]))
+  expect_true(is.na(singular_expow$scale_est$SE[[1]]))
+  expect_true(is.na(singular_expow$shape_est$SE[[1]]))
   expow_summary <- summary(singular_expow)
   expect_s3_class(expow_summary, "summary_multiScaleR")
   expect_type(expow_summary$opt_scale$SE, "double")
@@ -813,8 +813,8 @@ test_that("multiScale_optim covers parallel and unmarked branches via mocks", {
 
   expect_s3_class(par_out, "multiScaleR")
 
-  expect_warning(
-    unsafe_ram_out <- with_mocked_bindings(
+  expect_error(
+    with_mocked_bindings(
       multiScale_optim(
         fitted_mod = fix$fitted_mod,
         kernel_inputs = fix$kernel_inputs,
@@ -834,24 +834,12 @@ test_that("multiScale_optim covers parallel and unmarked branches via mocks", {
           )
         )
       },
-      makeCluster = function(...) "cl",
-      setDefaultCluster = function(cl = NULL) invisible(NULL),
-      cluster_prep = function(model, cl) "stats",
-      optimParallel = function(...) list(par = 0.2, hessian = matrix(1, 1, 1)),
-      stopCluster = function(cl) invisible(NULL),
-      kernel_scale_fn = function(..., mod_return = NULL) {
-        if (isTRUE(mod_return)) {
-          list(mod = fix$fitted_mod, scl_params = fix$kernel_inputs$scl_params)
-        } else {
-          0
-        }
-      },
-      kernel_dist = function(...) data.frame(Mean = 20, low = 10, high = 30),
+      makeCluster = function(...) stop("Workers must not start"),
+      optimParallel = function(...) stop("Optimization must not start"),
       .package = "multiScaleR"
     ),
-    "conservative RAM budget"
+    "Parallel optimization was not started.*conservative RAM budget"
   )
-  expect_s3_class(unsafe_ram_out, "multiScaleR")
 
   expect_error(
     with_mocked_bindings(
@@ -902,8 +890,56 @@ test_that("multiScale_optim covers parallel and unmarked branches via mocks", {
   expect_equal(rownames(mocked_unmark$scale_est), c("bin1", "cont1"))
 })
 
+test_that("parallel optimization stops every worker when worker setup fails", {
+  fix <- make_core_fixture()
+  calls <- new.env(parent = emptyenv())
+  calls$stopped <- character()
+  calls$default <- list()
+  # Two fake workers. Worker "a" has died, so stopping it fails.
+  fake_cl <- structure(list(list(id = "a"), list(id = "b")),
+                       class = c("SOCKcluster", "cluster"))
+
+  expect_error(
+    with_mocked_bindings(
+      multiScale_optim(
+        fitted_mod = fix$fitted_mod,
+        kernel_inputs = fix$kernel_inputs,
+        par = 0.2,
+        n_cores = 2,
+        PSOCK = TRUE,
+        verbose = FALSE
+      ),
+      makeCluster = function(...) fake_cl,
+      setDefaultCluster = function(cl = NULL) {
+        calls$default <- c(calls$default, list(cl))
+        invisible(NULL)
+      },
+      cluster_prep = function(model, cl) stop("forced setup failure"),
+      optimParallel = function(...) stop("Optimization must not start"),
+      stopCluster = function(cl) {
+        calls$stopped <- c(calls$stopped, cl[[1]]$id)
+        if (identical(cl[[1]]$id, "a")) stop("error writing to connection")
+        invisible(NULL)
+      },
+      .package = "multiScaleR"
+    ),
+    "forced setup failure"
+  )
+
+  # The original error surfaces, the live worker is still stopped after the
+  # dead one fails, and the default cluster no longer points at the workers.
+  expect_identical(calls$stopped, c("a", "b"))
+  expect_null(calls$default[[length(calls$default)]])
+})
+
 test_that("PSOCK workers load the same multiScaleR namespace as the main session", {
   skip_on_cran()
+  # Under covr on Linux CI, a real PSOCK worker started by these end-to-end
+  # tests has intermittently lost its socket right after cluster_prep()
+  # exported its variables ("error writing to connection"), in a different
+  # test on each run. R CMD check runs them cleanly on all five CI platforms,
+  # and test-internals-and-helpers.R still covers cluster_prep() under covr.
+  skip_on_covr()
   skip_if_not_installed("pkgload")
 
   fix <- make_core_fixture()
@@ -966,6 +1002,7 @@ test_that("cluster_prep exports library paths for PSOCK workers", {
 
 test_that("screened starts run on real PSOCK workers", {
   skip_on_cran()
+  skip_on_covr() # See the namespace test above.
   skip_if_not_installed("pkgload")
 
   fix <- make_core_fixture()
@@ -1010,6 +1047,7 @@ test_that("screened starts run on real PSOCK workers", {
 
 test_that("PSOCK optimization works for unqualified MASS model calls", {
   skip_on_cran()
+  skip_on_covr() # See the namespace test above.
   skip_if_not_installed("MASS")
   skip_if_not_installed("pkgload")
 
@@ -1054,6 +1092,7 @@ test_that("PSOCK optimization works for unqualified MASS model calls", {
 
 test_that("PSOCK optimization works for nested clogit wrappers", {
   skip_on_cran()
+  skip_on_covr() # See the namespace test above.
   skip_if_not_installed("survival")
   skip_if_not_installed("pkgload")
 

@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>07. Choose a Fitting Method for Your Model</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">07. Choose a Fitting Method for Your
+Model</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#choose-a-route-for-your-model" id="toc-choose-a-route-for-your-model"><span class="toc-section-number">2</span> Choose a route for your
+model</a></li>
+<li><a href="#check-what-each-route-supports" id="toc-check-what-each-route-supports"><span class="toc-section-number">3</span> Check what each route
+supports</a></li>
+<li><a href="#fit-one-model-by-two-routes" id="toc-fit-one-model-by-two-routes"><span class="toc-section-number">4</span> Fit one model by two routes</a>
+<ul>
+<li><a href="#prepare-the-data-once" id="toc-prepare-the-data-once"><span class="toc-section-number">4.1</span> Prepare the data once</a></li>
+<li><a href="#compare-the-scale-estimates" id="toc-compare-the-scale-estimates"><span class="toc-section-number">4.2</span> Compare the scale
+estimates</a></li>
+<li><a href="#compare-the-prediction-uncertainty" id="toc-compare-the-prediction-uncertainty"><span class="toc-section-number">4.3</span> Compare the prediction
+uncertainty</a></li>
+</ul></li>
+<li><a href="#add-a-curved-response" id="toc-add-a-curved-response"><span class="toc-section-number">5</span>
+Add a curved response</a></li>
+<li><a href="#mix-covariate-types-in-one-model" id="toc-mix-covariate-types-in-one-model"><span class="toc-section-number">6</span> Mix covariate types in one
+model</a></li>
+<li><a href="#check-a-bayesian-model-before-you-sample" id="toc-check-a-bayesian-model-before-you-sample"><span class="toc-section-number">7</span> Check a Bayesian model before you
+sample</a></li>
+<li><a href="#current-restrictions" id="toc-current-restrictions"><span class="toc-section-number">8</span> Current restrictions</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">9</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">9.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">9.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p><code>multiScaleR</code> can estimate a scale of effect in several
+ways. A <em>fitting route</em> is the combination of function and
+settings that does the estimation, either a <code>backend</code> of
+<code>multiScale_optim()</code> or a <code>method</code> of
+<code>multiScale_bayes()</code>. The routes differ in which models they
+accept, which kinds of landscape covariate and formula term they allow,
+and which intervals they can report. This vignette answers one question.
+Which route should you use for your model, and what does it support?</p>
+<p>Two tables give the answer, and four short examples on the Quick
+Start data show what changes when you fit the same model by a different
+route. Read
+<code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code> first.
+What each interval includes and leaves out is the subject of
+<code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code>,
+which this vignette does not repeat.</p>
+</div>
+<div id="choose-a-route-for-your-model" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Choose a route for your
+model</h1>
+<p>Find your model in the first column of the table below. Every route
+listed beside it accepts that model, although a route can still reject a
+particular term or covariate, which the next section covers.</p>
+<table>
+<colgroup>
+<col width="51%" />
+<col width="48%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Your starting model</th>
+<th align="left">Routes that fit it</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Gaussian (identity link), Poisson (log), or binomial
+(logit) model fitted with <code>glm()</code></td>
+<td align="left"><code>refit</code>, <code>profile_glm</code>,
+<code>multiScale_bayes()</code></td>
+</tr>
+<tr class="even">
+<td align="left">Negative binomial model fitted with
+<code>MASS::glm.nb()</code></td>
+<td align="left"><code>refit</code>, <code>profile_glm</code>,
+<code>joint_nb2</code>, <code>multiScale_bayes()</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>lm()</code> model, or a GLM with another family
+or link such as Gamma with a log link</td>
+<td align="left"><code>refit</code></td>
+</tr>
+<tr class="even">
+<td align="left">Generalized additive model fitted with
+<code>mgcv::gam()</code></td>
+<td align="left"><code>refit</code></td>
+</tr>
+<tr class="odd">
+<td align="left">Mixed model fitted with <code>lme4</code> or
+<code>glmmTMB</code></td>
+<td align="left"><code>refit</code>. A Poisson or negative binomial
+<code>glmmTMB</code> model with one random intercept, optionally
+zero-inflated, can also use <code>joint_mixed</code>, and
+<code>multiScale_bayes()</code> accepts random intercepts</td>
+</tr>
+<tr class="even">
+<td align="left">Step-selection model fitted with
+<code>survival::clogit()</code>, one used step per choice set</td>
+<td align="left"><code>refit</code>, <code>conditional_logit</code></td>
+</tr>
+<tr class="odd">
+<td align="left">Occupancy or abundance model fitted with
+<code>unmarked</code></td>
+<td align="left"><code>refit</code></td>
+</tr>
+<tr class="even">
+<td align="left">Any count, binary, or Gaussian response whose scale of
+effect varies among years or depends on a covariate</td>
+<td align="left"><code>multiScale_bayes()</code></td>
+</tr>
+</tbody>
+</table>
+<p>The names in the second column are values of the <code>backend</code>
+argument of <code>multiScale_optim()</code>, except for
+<code>multiScale_bayes()</code>, which is a separate function. Three
+rules of thumb cover most analyses.</p>
+<ul>
+<li><strong>Start with <code>refit</code>.</strong> It is the default.
+It refits your model at each candidate scale, so it works with every
+model class in the table and every covariate type.</li>
+<li><strong>Move to <code>profile_glm</code> or <code>joint_nb2</code>
+when a prediction interval must carry scale uncertainty.</strong> These
+backends estimate the scales and the coefficients in one likelihood,
+which makes a joint interval possible.</li>
+<li><strong>Use <code>multiScale_bayes()</code> when the scale itself is
+the object of study.</strong> It is the only route that lets a scale
+differ among years or follow a covariate.</li>
+</ul>
+<p><code>multiScale_bayes()</code> takes a formula in place of a
+starting model, and its <code>method</code> argument selects how the
+posterior is computed. Apart from the requirement noted for
+<code>&quot;marginal&quot;</code>, every method accepts the same model
+structures.</p>
+<table>
+<colgroup>
+<col width="19%" />
+<col width="26%" />
+<col width="53%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"><code>method</code></th>
+<th align="left">What it does</th>
+<th align="left">Optional packages it needs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>&quot;sample&quot;</code> (default)</td>
+<td align="left">Samples the full posterior with the NUTS algorithm</td>
+<td align="left"><code>RTMB</code> and <code>tmbstan</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;slice&quot;</code></td>
+<td align="left">Samples the same posterior with a slice sampler written
+in R</td>
+<td align="left">None. Install <code>posterior</code> to compute the
+sampling diagnostics</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>&quot;laplace&quot;</code></td>
+<td align="left">Fits a Gaussian approximation to the posterior</td>
+<td align="left"><code>RTMB</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;marginal&quot;</code></td>
+<td align="left">Integrates one between-group standard deviation of
+scale numerically. The model needs exactly one random intercept in its
+scale formulas</td>
+<td align="left"><code>RTMB</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>&quot;prepare&quot;</code></td>
+<td align="left">Checks the model and returns without fitting</td>
+<td align="left">None</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="check-what-each-route-supports" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Check what each route
+supports</h1>
+<p>The next table lists the covariate types, formula terms, and outputs
+that each route allows. Each entry was checked by running the route on
+the Quick Start data or by reading the error it returns.
+<code>joint_mixed</code> is left out because it follows the same rules
+as <code>conditional_logit</code> for kernels and covariate types, and
+its own requirements appear under <a href="#current-restrictions">Current restrictions</a>.</p>
+<table>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="31%" />
+<col width="23%" />
+<col width="24%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Feature</th>
+<th align="left"><code>refit</code></th>
+<th align="left"><code>profile_glm</code>, <code>joint_nb2</code></th>
+<th align="left"><code>conditional_logit</code></th>
+<th align="left"><code>multiScale_bayes()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Kernel in <code>kernel_prep()</code></td>
+<td align="left">Gaussian, exponential, exponential power, fixed</td>
+<td align="left">Gaussian, exponential, exponential power</td>
+<td align="left">Gaussian, exponential</td>
+<td align="left">Gaussian, exponential</td>
+</tr>
+<tr class="even">
+<td align="left">Binned inputs (<code>bin = TRUE</code>, the
+default)</td>
+<td align="left">Optional, and much faster</td>
+<td align="left">Required</td>
+<td align="left">Required</td>
+<td align="left">Required</td>
+</tr>
+<tr class="odd">
+<td align="left">Kernel-weighted mean, <code>kernel_var()</code></td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="even">
+<td align="left">Kernel-weighted root-mean-square roughness,
+<code>surface_var(..., &quot;sq&quot;, weighted = TRUE)</code></td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="odd">
+<td align="left">Other kernel-weighted surface metrics, and any surface
+or landscape metric with an estimated radius</td>
+<td align="left">Yes</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">Search over a list of candidate radii,
+<code>radius_grid</code></td>
+<td align="left"><code>lm()</code>, <code>glm()</code>, and
+step-selection models</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">Metric computed at a fixed radius</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="even">
+<td align="left">Interactions with numeric or factor predictors, and
+between landscape covariates</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="odd">
+<td align="left">Arithmetic inside <code>I()</code>, such as
+<code>I(land2^2)</code></td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="even">
+<td align="left"><code>poly()</code> of a landscape covariate</td>
+<td align="left">Yes</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>splines::ns()</code> or
+<code>splines::bs()</code> with fixed <code>knots</code> and
+<code>Boundary.knots</code></td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="even">
+<td align="left"><code>splines::ns()</code> or
+<code>splines::bs()</code> with <code>df</code></td>
+<td align="left">Yes</td>
+<td align="left">No</td>
+<td align="left">Use <code>refit</code></td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">Smooth terms such as <code>s()</code> in
+<code>mgcv</code></td>
+<td align="left">Yes</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">Random effects</td>
+<td align="left">Whatever the model class allows</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">Random intercepts, <code>(1 | group)</code></td>
+</tr>
+<tr class="odd">
+<td align="left">Offsets</td>
+<td align="left">Yes</td>
+<td align="left"><code>offset()</code> in the formula</td>
+<td align="left"><code>offset()</code> in the formula</td>
+<td align="left"><code>offset()</code> in the formula</td>
+</tr>
+<tr class="even">
+<td align="left">Case weights</td>
+<td align="left">Whatever the model class allows</td>
+<td align="left">Whole-number frequency weights for count and binomial
+models</td>
+<td align="left">No</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">Covariates kept in their own units,
+<code>covariate_transform = &quot;raw&quot;</code></td>
+<td align="left">Yes</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">Interval for sigma</td>
+<td align="left">Wald, or profile likelihood with
+<code>summary(fit, profile = TRUE)</code></td>
+<td align="left">Wald, or profile likelihood with
+<code>summary(fit, profile = TRUE)</code></td>
+<td align="left">None</td>
+<td align="left">Posterior credible interval</td>
+</tr>
+<tr class="odd">
+<td align="left">Uncertainty from <code>predict()</code></td>
+<td align="left">Conditional standard errors</td>
+<td align="left">Conditional or joint standard errors and confidence
+intervals</td>
+<td align="left">Conditional standard errors</td>
+<td align="left">Posterior intervals</td>
+</tr>
+<tr class="even">
+<td align="left">Model comparison with <code>aic_tab()</code> and
+<code>bic_tab()</code></td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">No</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the table:</strong> A <em>conditional</em>
+standard error treats the estimated scales as known. A <em>joint</em>
+one lets the scales and the coefficients vary together. A landscape
+covariate here means a column that <code>kernel_prep()</code> builds
+from a raster layer. Four rows need a word of explanation.</p>
+<ul>
+<li><strong>Covariate types.</strong> <code>kernel_var()</code> is the
+distance-weighted mean used in the Quick Start.
+<code>surface_var()</code> summarizes how much a continuous layer varies
+around a survey point, and <code>landscape_var()</code> summarizes the
+composition or arrangement of land-cover classes. See
+<code>vignette(&quot;v05-surface-metrics&quot;, package = &quot;multiScaleR&quot;)</code>
+and
+<code>vignette(&quot;v04-landscape-metrics&quot;, package = &quot;multiScaleR&quot;)</code>.</li>
+<li><strong>Fixed-radius metrics.</strong> A metric with
+<code>radius</code> set has no scale to estimate.
+<code>kernel_prep()</code> computes it once and every route treats it as
+an ordinary numeric predictor.</li>
+<li><strong>A grid of radii.</strong> With <code>radius_grid</code>, an
+experimental option, <code>refit</code> fits the model at every
+combination of the radii you list and re-estimates any kernel sigma at
+each. <code>diagnostics(fit)$radius_profile</code> keeps the likelihood
+of every combination. An interval for a kernel sigma then treats the
+chosen radii as known.
+<code>vignette(&quot;v04-landscape-metrics&quot;, package = &quot;multiScaleR&quot;)</code>
+works an example.</li>
+<li><strong>Raw units.</strong> By default each landscape covariate is
+centered and scaled again at every candidate scale, so a coefficient
+describes a change of one standard deviation. With
+<code>covariate_transform = &quot;raw&quot;</code> the covariate keeps its own
+units, which for the binary <code>land1</code> layer is the
+kernel-weighted proportion of habitat. <code>?multiScale_optim</code>
+describes how to set up the starting model.</li>
+</ul>
+</div>
+<div id="fit-one-model-by-two-routes" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Fit one model by two
+routes</h1>
+<div id="prepare-the-data-once" class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Prepare the data
+once</h2>
+<p>Every route reads the same <code>kernel_prep()</code> object, so you
+prepare the inputs once. The data are the counts and landscape layers
+from the Quick Start, where the true scales of effect are 250 m for
+<code>land1</code> and 500 m for <code>land2</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># bin = TRUE (the default) stores distance-binned summaries for every route</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co"># Starting model: its formula and family carry through to the fit</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>df    <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>start <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span></code></pre></div>
+</div>
+<div id="compare-the-scale-estimates" class="section level2" number="4.2">
+<h2><span class="header-section-number">4.2</span> Compare the scale
+estimates</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Default backend: refit the GLM at every candidate scale</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>time_refit <span class="ot">&lt;-</span> <span class="fu">system.time</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  fit_refit <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, inputs, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co"># Analytic backend: scales and coefficients in one likelihood</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>time_profile <span class="ot">&lt;-</span> <span class="fu">system.time</span>(</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  fit_profile <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>                                  <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co"># Sigma, its standard error, and the default 95% interval, in meters</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>est_refit   <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit_refit)<span class="sc">$</span>opt_scale</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>est_profile <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit_profile)<span class="sc">$</span>opt_scale</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>scale_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  <span class="at">backend   =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;refit&quot;</span>, <span class="st">&quot;profile_glm&quot;</span>), <span class="at">each =</span> <span class="dv">2</span>),</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">covariate =</span> <span class="fu">c</span>(<span class="fu">rownames</span>(est_refit), <span class="fu">rownames</span>(est_profile)),</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="fu">rbind</span>(est_refit, est_profile),</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>)</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(scale_table, <span class="at">digits =</span> <span class="dv">1</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Backend&quot;</span>, <span class="st">&quot;Covariate&quot;</span>, <span class="st">&quot;Sigma (m)&quot;</span>, <span class="st">&quot;SE&quot;</span>,</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>                           <span class="st">&quot;Lower&quot;</span>, <span class="st">&quot;Upper&quot;</span>))</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Backend</th>
+<th align="left">Covariate</th>
+<th align="right">Sigma (m)</th>
+<th align="right">SE</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">refit</td>
+<td align="left">land1</td>
+<td align="right">238.5</td>
+<td align="right">33.1</td>
+<td align="right">172.7</td>
+<td align="right">304.2</td>
+</tr>
+<tr class="even">
+<td align="left">refit</td>
+<td align="left">land2</td>
+<td align="right">499.6</td>
+<td align="right">47.5</td>
+<td align="right">405.3</td>
+<td align="right">593.8</td>
+</tr>
+<tr class="odd">
+<td align="left">profile_glm</td>
+<td align="left">land1</td>
+<td align="right">238.5</td>
+<td align="right">33.1</td>
+<td align="right">181.7</td>
+<td align="right">313.1</td>
+</tr>
+<tr class="even">
+<td align="left">profile_glm</td>
+<td align="left">land2</td>
+<td align="right">499.6</td>
+<td align="right">47.5</td>
+<td align="right">414.7</td>
+<td align="right">601.8</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># Seconds each fit took</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">c</span>(<span class="at">refit =</span> time_refit[[<span class="st">&quot;elapsed&quot;</span>]],</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>        <span class="at">profile_glm =</span> time_profile[[<span class="st">&quot;elapsed&quot;</span>]]), <span class="dv">2</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt;       refit profile_glm </span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;        0.17        0.26</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Both backends maximize the
+same likelihood for this model, so the sigma estimates and standard
+errors agree to the first decimal place. For <code>land1</code> both
+report 238 m, and for <code>land2</code> both report 500 m. The
+intervals differ slightly. <code>refit</code> builds a symmetric
+interval around sigma. <code>profile_glm</code> builds its interval on
+the log of sigma, so the upper limit sits farther from the estimate than
+the lower limit does. Both intervals for each covariate contain the true
+value.</p>
+<p>Both fits finish quickly, because both read binned inputs. Binning is
+what matters for speed. The same <code>refit</code> call on inputs
+prepared with <code>bin = FALSE</code> took more than 20 seconds when
+this vignette was written.</p>
+</div>
+<div id="compare-the-prediction-uncertainty" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Compare the
+prediction uncertainty</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># refit: standard errors that hold the estimated scales fixed</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>se_refit <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_refit, <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">uncertainty =</span> <span class="st">&quot;conditional&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">head</span>(<span class="fu">data.frame</span>(<span class="at">expected =</span> se_refit<span class="sc">$</span>fit, <span class="at">se =</span> se_refit<span class="sc">$</span>se.fit), <span class="dv">3</span>), <span class="dv">2</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;   expected   se</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; 1     0.91 0.14</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; 2     2.58 0.45</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; 3     4.69 0.47</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># refit cannot return a joint interval</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">predict</span>(fit_refit, <span class="at">interval =</span> <span class="st">&quot;confidence&quot;</span>, <span class="at">uncertainty =</span> <span class="st">&quot;joint&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; ! Refit predictions support native conditional SEs only; use uncertainty = &#39;conditional&#39; and interval = &#39;none&#39;.</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># profile_glm: scales and coefficients vary together</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>joint <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_profile, <span class="at">interval =</span> <span class="st">&quot;confidence&quot;</span>, <span class="at">uncertainty =</span> <span class="st">&quot;joint&quot;</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">head</span>(<span class="fu">data.frame</span>(<span class="at">expected =</span> joint<span class="sc">$</span>fit, <span class="at">se =</span> joint<span class="sc">$</span>se.fit,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                      <span class="at">lower =</span> joint<span class="sc">$</span>lower, <span class="at">upper =</span> joint<span class="sc">$</span>upper), <span class="dv">3</span>), <span class="dv">2</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;   expected   se lower upper</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; 1     0.91 0.14  0.67  1.23</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; 2     2.58 0.60  1.64  4.07</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; 3     4.69 0.64  3.59  6.12</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Each row is a survey point,
+and <code>expected</code> is the expected count per survey. The two fits
+predict the same counts and differ only in the uncertainty attached to
+them. At the second survey point the conditional standard error is 0.45
+and the joint standard error is 0.6, because the joint value also
+carries the uncertainty in the two scales. The default backend stops
+with an error when you ask it for an interval, and its message names the
+one setting it supports.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Choose the backend
+before you need the interval. If a report or a map must show uncertainty
+that includes the scale of effect, fit with <code>profile_glm</code> or
+<code>joint_nb2</code> from the start, or use
+<code>multiScale_bayes()</code>.</p>
+</blockquote>
+</div>
+</div>
+<div id="add-a-curved-response" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Add a curved
+response</h1>
+<p>A spline lets the response bend along a landscape covariate. Two
+recipes are common. One names the knots, or the covariate values where
+the curve is allowed to change shape. The other gives only
+<code>df</code>, the number of basis columns, and lets R place the knots
+at quantiles of the data.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Recipe 1: knots and boundaries written out</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>start_knots <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                     splines<span class="sc">::</span><span class="fu">ns</span>(land2, <span class="at">knots =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">0.5</span>, <span class="fl">0.5</span>),</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                                 <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">4</span>, <span class="dv">4</span>)),</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>                   <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co"># Recipe 2: R chooses the knots from the data</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>start_df <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> splines<span class="sc">::</span><span class="fu">ns</span>(land2, <span class="at">df =</span> <span class="dv">3</span>),</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>                <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co"># Written-out knots work with the analytic backend</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>fit_knots <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_knots, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>,</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>                              <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># The df recipe does not</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">multiScale_optim</span>(start_df, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                 <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; ! Dynamic splines require explicit fixed knots and Boundary.knots, without adaptive df; use the refit backend otherwise.</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># The default backend accepts either recipe</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>fit_df <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_df, inputs, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co"># Compare the straight-line model with the two curved ones</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="fu">aic_tab</span>(<span class="fu">list</span>(fit_profile, fit_knots, fit_df),</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>        <span class="at">mod_names =</span> <span class="fu">c</span>(<span class="st">&quot;linear&quot;</span>, <span class="st">&quot;spline, fixed knots&quot;</span>, <span class="st">&quot;spline, df = 3&quot;</span>))</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; Model selection based on AICc:</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt;                     K   AICc Delta_AICc AICcWt Cum.Wt      LL</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; linear              6 319.15       0.00   0.62   0.62 -153.12</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; spline, df = 3      8 321.36       2.21   0.20   0.82 -151.89</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; spline, fixed knots 8 321.64       2.49   0.18   1.00 -152.03</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The quantile knots of the
+<code>df</code> recipe move each time the optimizer tries a new scale,
+because the covariate values change with the scale.
+<code>profile_glm</code> needs a basis that stays put, so it stops and
+points you to <code>refit</code>. In the table, <code>K</code> counts
+the regression coefficients plus the two scales, and a lower
+<code>AICc</code> means better support. The straight-line model ranks
+first. Each spline spends two more parameters and gains about one unit
+of log-likelihood (<code>LL</code>), which matches how the data were
+simulated, with a straight-line effect of <code>land2</code> on the log
+of the expected count. The two spline fits differ little from each
+other.</p>
+<p>Knots are in the units of the modeled covariate. Landscape covariates
+are standardized by default, so the knot at 0.5 sits half a standard
+deviation above the mean kernel-weighted value of <code>land2</code>. It
+is not a fixed amount of <code>land2</code>. All spline columns share
+the one scale of effect estimated for <code>land2</code>.</p>
+</div>
+<div id="mix-covariate-types-in-one-model" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Mix covariate types in
+one model</h1>
+<p><code>msr_vars()</code> names each covariate and says how to compute
+it. The model below adds the roughness of <code>land3</code> within a
+fixed 300 m radius to the two kernel-weighted means. The
+<code>&quot;sa&quot;</code> metric is the mean absolute deviation of the layer
+from its local mean.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Name each covariate and how to summarize its source layer</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>features <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="at">land1  =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land1&quot;</span>),                      <span class="co"># mean, scale estimated</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="at">land2  =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land2&quot;</span>),                      <span class="co"># mean, scale estimated</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  <span class="at">rough3 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="st">&quot;sa&quot;</span>, <span class="at">radius =</span> <span class="dv">300</span>)  <span class="co"># roughness within 300 m</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>)</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>inputs_mix <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>                          <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">scale_vars =</span> features,</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>                          <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>df_mix    <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs_mix<span class="sc">$</span>kernel_dat)</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>start_mix <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2 <span class="sc">+</span> rough3,</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>                 <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df_mix)</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co"># Either backend accepts the fixed-radius metric</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>fit_mix_refit   <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_mix, inputs_mix, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>fit_mix_profile <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_mix, inputs_mix,</span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>                                    <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>,</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>                                    <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="fu">round</span>(fit_mix_profile<span class="sc">$</span>scale_est, <span class="dv">1</span>)                  <span class="co"># estimated scales (m)</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co">#&gt;        Mean   SE</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="co">#&gt; land1 234.3 34.2</span></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="co">#&gt; land2 493.9 48.5</span></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">coef</span>(<span class="fu">summary</span>(fit_mix_profile<span class="sc">$</span>opt_mod)), <span class="dv">3</span>)     <span class="co"># regression table</span></span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a><span class="co">#&gt;             Estimate Std. Error z value Pr(&gt;|z|)</span></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a><span class="co">#&gt; (Intercept)    0.391      0.091   4.278    0.000</span></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co">#&gt; site           0.172      0.083   2.063    0.039</span></span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a><span class="co">#&gt; land1         -0.477      0.080  -5.954    0.000</span></span>
+<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a><span class="co">#&gt; land2          0.630      0.074   8.480    0.000</span></span>
+<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a><span class="co">#&gt; rough3         0.035      0.074   0.477    0.633</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The scale table has two
+rows, one for each kernel-weighted mean. <code>rough3</code> has a
+regression coefficient and no scale, because its radius was fixed in
+advance. Its coefficient is 0.035 with a standard error of 0.074, which
+is consistent with no effect. That is the right answer, since
+<code>land3</code> played no part in simulating the counts.
+<code>fit_mix_refit</code> returns the same estimates.</p>
+<p>To predict at new points, prepare them with the same
+<code>features</code> and call <code>predict()</code> with
+<code>include_fixed = TRUE</code>. The fixed-radius column is then
+rebuilt and standardized with the mean and standard deviation of the
+fitted data.</p>
+<p>Had <code>rough3</code> been declared without <code>radius</code>,
+its radius would be estimated, and only <code>refit</code> could fit the
+model. The same holds for a kernel-weighted metric other than
+<code>&quot;sq&quot;</code>. Fits that estimate a kernel-weighted roughness also
+take longer than fits of kernel-weighted means, on the order of 5 to 40
+seconds for these data against less than 1 second.</p>
+</div>
+<div id="check-a-bayesian-model-before-you-sample" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Check a Bayesian model
+before you sample</h1>
+<p>Sampling a posterior can take minutes, so it pays to learn first
+whether <code>multiScale_bayes()</code> accepts your model.
+<code>method = &quot;prepare&quot;</code> runs every check and returns without
+fitting. The function rebuilds the landscape covariates from
+<code>inputs</code>, so <code>data</code> holds only the response and
+the covariates measured at the survey point.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Validate the formula, rows, priors, and bins. Nothing is sampled.</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>bayes_check <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2,</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>                                <span class="at">inputs =</span> inputs, <span class="at">data =</span> landscape_counts,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>                                <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>, <span class="at">method =</span> <span class="st">&quot;prepare&quot;</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>bayes_check</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; Experimental Bayesian landscape-scale model</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; Inference: prepared </span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; Family: poisson | observations: 100 </span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; Scale formulas:</span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt;   land1 : ~1 </span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt;   land2 : ~1</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># A term the Bayesian route rejects fails at once</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="fu">multiScale_bayes</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> splines<span class="sc">::</span><span class="fu">ns</span>(land2, <span class="at">df =</span> <span class="dv">3</span>),</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>                 <span class="at">inputs =</span> inputs, <span class="at">data =</span> landscape_counts,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>                 <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>, <span class="at">method =</span> <span class="st">&quot;prepare&quot;</span>)</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="co">#&gt; ! Dynamic splines require explicit fixed knots and Boundary.knots, without adaptive df; use the refit backend otherwise.</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The first call succeeds. Its
+printout lists the family, the number of observations, and one scale
+formula per landscape covariate, where <code>~1</code> means a single
+shared scale. The second call stops with the same message
+<code>profile_glm</code> gave, because the Bayesian route also needs a
+spline basis with written-out knots. Once a model passes, change
+<code>method</code> to fit it.
+<code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code>
+works through a full fit.</p>
+<p>A Bayesian fit standardizes each landscape covariate once, with a
+fixed center and spread, while <code>multiScale_optim()</code>
+standardizes again at each candidate scale. Regression coefficients from
+the two are therefore not on the same scale. Compare their scales of
+effect and their predictions.</p>
+</div>
+<div id="current-restrictions" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Current
+restrictions</h1>
+<table>
+<colgroup>
+<col width="58%" />
+<col width="41%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Route or feature</th>
+<th align="left">Restriction</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>profile_glm</code></td>
+<td align="left">Experimental. In simulations its 95% Wald intervals for
+sigma held the true value in 76% to 92% of data sets, depending on the
+response family. Profile-likelihood limits did better</td>
+</tr>
+<tr class="even">
+<td align="left"><code>profile_glm</code>, <code>joint_nb2</code></td>
+<td align="left">Need a <code>glm()</code> or
+<code>MASS::glm.nb()</code> object, and <code>joint_nb2</code> needs the
+negative binomial one. Set <code>n_cores = 1</code>. Put offsets in the
+formula with <code>offset()</code></td>
+</tr>
+<tr class="odd">
+<td align="left">Joint intervals</td>
+<td align="left">Withheld when a fit fails its numerical checks, for
+example when a scale sits at a search bound or when a Poisson model fits
+negative binomial data equally well.
+<code>diagnostics(fit)$profile_glm$reasons</code> gives the reason, and
+conditional standard errors remain available</td>
+</tr>
+<tr class="even">
+<td align="left"><code>conditional_logit</code></td>
+<td align="left">Reports sigma with no standard error and no interval.
+Needs complete choice sets with one used step each, no weights, and
+<code>n_cores = 1</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>survival::clogit()</code> and
+<code>coxph()</code> starting models</td>
+<td align="left">When the formula uses <code>scale()</code>,
+<code>poly()</code>, or a spline, fit with <code>model = TRUE</code> and
+<code>na.action = stats::na.fail</code>. Recent versions of
+<code>survival</code> otherwise drop the stored center, spread, or
+knots, and predictions cannot recover the original units</td>
+</tr>
+<tr class="even">
+<td align="left"><code>joint_mixed</code></td>
+<td align="left">Needs the optional packages <code>RTMB</code>,
+<code>TMB</code>, and <code>glmmTMB</code>, a Gaussian or exponential
+kernel, and a <code>glmmTMB</code> model. Reports sigma with no standard
+error, and conditional prediction standard errors only</td>
+</tr>
+<tr class="odd">
+<td align="left">All backends except <code>refit</code></td>
+<td align="left">Match model rows to survey points by row name. Build
+the model data from <code>kernel_dat</code> and keep its row names when
+you subset</td>
+</tr>
+<tr class="even">
+<td align="left">Estimated radius of a hard-edged metric, and
+<code>kernel = &quot;fixed&quot;</code></td>
+<td align="left">Sigma has no standard error. Use
+<code>summary(fit, profile = TRUE)</code> for an interval. With
+<code>kernel = &quot;fixed&quot;</code>, <code>multiScale_optim()</code> screens
+starting values by default, because a single start cannot move. The
+estimate is then the best screened candidate</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>multiScale_bayes()</code></td>
+<td align="left">Experimental, and printed as such.
+<code>aic_tab()</code> and <code>bic_tab()</code> stop with an error for
+a Bayesian fit</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="quick-reference" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Quick reference</h1>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">library</span>(multiScaleR)</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co"># 1. Prepare once. Binned inputs serve every route.</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>); <span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>pts       <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>df     <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>start  <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co"># 2. Same model, two routes</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>fit_refit   <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, inputs)               <span class="co"># any model class</span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a>fit_profile <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>,</span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a>                                <span class="at">n_cores =</span> <span class="dv">1</span>)                 <span class="co"># joint intervals</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="fu">summary</span>(fit_refit)<span class="sc">$</span>opt_scale       <span class="co"># sigma, SE, symmetric 95% interval (m)</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="fu">summary</span>(fit_profile)<span class="sc">$</span>opt_scale     <span class="co"># sigma, SE, 95% interval on the log scale</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co"># 3. Prediction uncertainty by route</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="fu">predict</span>(fit_refit, <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">uncertainty =</span> <span class="st">&quot;conditional&quot;</span>)       <span class="co"># scales fixed</span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="fu">predict</span>(fit_profile, <span class="at">interval =</span> <span class="st">&quot;confidence&quot;</span>, <span class="at">uncertainty =</span> <span class="st">&quot;joint&quot;</span>) <span class="co"># scales uncertain</span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a></span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a><span class="co"># 4. Splines: written-out knots for profile_glm, either recipe for refit</span></span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a>start_knots <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span></span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a>                     splines<span class="sc">::</span><span class="fu">ns</span>(land2, <span class="at">knots =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">0.5</span>, <span class="fl">0.5</span>),</span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a>                                 <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">4</span>, <span class="dv">4</span>)),</span>
+<span id="cb13-29"><a href="#cb13-29" tabindex="-1"></a>                   <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb13-30"><a href="#cb13-30" tabindex="-1"></a>start_df    <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> splines<span class="sc">::</span><span class="fu">ns</span>(land2, <span class="at">df =</span> <span class="dv">3</span>),</span>
+<span id="cb13-31"><a href="#cb13-31" tabindex="-1"></a>                   <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb13-32"><a href="#cb13-32" tabindex="-1"></a>fit_knots <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_knots, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>,</span>
+<span id="cb13-33"><a href="#cb13-33" tabindex="-1"></a>                              <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb13-34"><a href="#cb13-34" tabindex="-1"></a>fit_df    <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_df, inputs)</span>
+<span id="cb13-35"><a href="#cb13-35" tabindex="-1"></a><span class="fu">aic_tab</span>(<span class="fu">list</span>(fit_profile, fit_knots, fit_df),</span>
+<span id="cb13-36"><a href="#cb13-36" tabindex="-1"></a>        <span class="at">mod_names =</span> <span class="fu">c</span>(<span class="st">&quot;linear&quot;</span>, <span class="st">&quot;spline, fixed knots&quot;</span>, <span class="st">&quot;spline, df = 3&quot;</span>))</span>
+<span id="cb13-37"><a href="#cb13-37" tabindex="-1"></a></span>
+<span id="cb13-38"><a href="#cb13-38" tabindex="-1"></a><span class="co"># 5. Mixed covariate types: two estimated scales and one fixed-radius metric</span></span>
+<span id="cb13-39"><a href="#cb13-39" tabindex="-1"></a>features <span class="ot">&lt;-</span> <span class="fu">msr_vars</span>(</span>
+<span id="cb13-40"><a href="#cb13-40" tabindex="-1"></a>  <span class="at">land1  =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land1&quot;</span>),</span>
+<span id="cb13-41"><a href="#cb13-41" tabindex="-1"></a>  <span class="at">land2  =</span> <span class="fu">kernel_var</span>(<span class="st">&quot;land2&quot;</span>),</span>
+<span id="cb13-42"><a href="#cb13-42" tabindex="-1"></a>  <span class="at">rough3 =</span> <span class="fu">surface_var</span>(<span class="st">&quot;land3&quot;</span>, <span class="st">&quot;sa&quot;</span>, <span class="at">radius =</span> <span class="dv">300</span>)</span>
+<span id="cb13-43"><a href="#cb13-43" tabindex="-1"></a>)</span>
+<span id="cb13-44"><a href="#cb13-44" tabindex="-1"></a>inputs_mix <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb13-45"><a href="#cb13-45" tabindex="-1"></a>                          <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">scale_vars =</span> features,</span>
+<span id="cb13-46"><a href="#cb13-46" tabindex="-1"></a>                          <span class="at">bin =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-47"><a href="#cb13-47" tabindex="-1"></a>df_mix    <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs_mix<span class="sc">$</span>kernel_dat)</span>
+<span id="cb13-48"><a href="#cb13-48" tabindex="-1"></a>start_mix <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2 <span class="sc">+</span> rough3,</span>
+<span id="cb13-49"><a href="#cb13-49" tabindex="-1"></a>                 <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df_mix)</span>
+<span id="cb13-50"><a href="#cb13-50" tabindex="-1"></a>fit_mix_refit   <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_mix, inputs_mix)</span>
+<span id="cb13-51"><a href="#cb13-51" tabindex="-1"></a>fit_mix_profile <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_mix, inputs_mix,</span>
+<span id="cb13-52"><a href="#cb13-52" tabindex="-1"></a>                                    <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>, <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb13-53"><a href="#cb13-53" tabindex="-1"></a></span>
+<span id="cb13-54"><a href="#cb13-54" tabindex="-1"></a><span class="co"># 6. Check a Bayesian model without fitting it</span></span>
+<span id="cb13-55"><a href="#cb13-55" tabindex="-1"></a>bayes_check <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2,</span>
+<span id="cb13-56"><a href="#cb13-56" tabindex="-1"></a>                                <span class="at">inputs =</span> inputs, <span class="at">data =</span> landscape_counts,</span>
+<span id="cb13-57"><a href="#cb13-57" tabindex="-1"></a>                                <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>, <span class="at">method =</span> <span class="st">&quot;prepare&quot;</span>)</span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="9.1">
+<h2><span class="header-section-number">9.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>kernel_prep()</code></td>
+<td align="left">Prepare the inputs every route reads.
+<code>bin = TRUE</code> is required by all routes except
+<code>refit</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>msr_vars()</code>, <code>kernel_var()</code>,
+<code>surface_var()</code>, <code>landscape_var()</code></td>
+<td align="left">Declare kernel-weighted means, surface metrics, and
+land-cover metrics, each with an estimated or a fixed scale</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>multiScale_optim()</code></td>
+<td align="left">Estimate scales by maximum likelihood.
+<code>backend</code> selects the route</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_bayes()</code></td>
+<td align="left">Estimate a posterior for scales and coefficients.
+<code>method = &quot;prepare&quot;</code> checks a model without fitting</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>summary()</code></td>
+<td align="left">Report sigma with a Wald or profile-likelihood
+interval</td>
+</tr>
+<tr class="even">
+<td align="left"><code>predict()</code></td>
+<td align="left">Expected response with the uncertainty the route
+supports</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>diagnostics()</code></td>
+<td align="left">Report whether a joint interval is available, and why
+not</td>
+</tr>
+<tr class="even">
+<td align="left"><code>aic_tab()</code>, <code>bic_tab()</code></td>
+<td align="left">Compare likelihood fits from any
+<code>multiScale_optim()</code> backend</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="9.2">
+<h2><span class="header-section-number">9.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow with the default backend.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what a conditional, joint, or posterior interval includes and leaves
+out.</li>
+<li><strong><code>vignette(&quot;v05-surface-metrics&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+surface roughness and texture metrics.</li>
+<li><strong><code>vignette(&quot;v04-landscape-metrics&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+land-cover composition and configuration metrics.</li>
+<li><strong><code>vignette(&quot;v10-step-selection&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+step-selection models with
+<code>backend = &quot;conditional_logit&quot;</code>.</li>
+<li><strong><code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+surveys from several years, each with its own map.</li>
+<li><strong><code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+fitting and checking a Bayesian model whose scales vary among
+years.</li>
+<li><strong><code>vignette(&quot;v08-cross-validation&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+comparing models by how well they predict held-out observations.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

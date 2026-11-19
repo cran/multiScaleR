@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>11. Account for Spatial Autocorrelation with a Spatial Field</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">11. Account for Spatial Autocorrelation
+with a Spatial Field</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#know-what-a-spatial-field-does" id="toc-know-what-a-spatial-field-does"><span class="toc-section-number">2</span> Know what a spatial field
+does</a></li>
+<li><a href="#simulate-counts-with-a-known-field" id="toc-simulate-counts-with-a-known-field"><span class="toc-section-number">3</span> Simulate counts with a known
+field</a></li>
+<li><a href="#fit-the-model-without-a-field" id="toc-fit-the-model-without-a-field"><span class="toc-section-number">4</span> Fit the model without a
+field</a></li>
+<li><a href="#add-a-spatial-field" id="toc-add-a-spatial-field"><span class="toc-section-number">5</span> Add a spatial field</a></li>
+<li><a href="#read-the-scales-the-coefficients-and-the-field" id="toc-read-the-scales-the-coefficients-and-the-field"><span class="toc-section-number">6</span> Read the scales, the coefficients,
+and the field</a></li>
+<li><a href="#predict-at-the-survey-points" id="toc-predict-at-the-survey-points"><span class="toc-section-number">7</span> Predict at the survey
+points</a></li>
+<li><a href="#predict-at-new-locations-and-map-the-result" id="toc-predict-at-new-locations-and-map-the-result"><span class="toc-section-number">8</span> Predict at new locations and map the
+result</a></li>
+<li><a href="#current-restrictions" id="toc-current-restrictions"><span class="toc-section-number">9</span> Current restrictions</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">10</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">10.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">10.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p>Counts from neighboring survey points often resemble each other more
+than the landscape covariates can explain. This leftover pattern is
+residual spatial autocorrelation. A model that ignores it tends to
+report standard errors that are too small, and it can distort the
+estimated scale of effect. This vignette shows how to estimate scales of
+effect while a spatial field in the regression model absorbs that
+pattern.</p>
+<p>You will simulate counts with a known scale of effect and a known
+field, fit the model with and without the field, read both sets of
+estimates, and predict at survey points, at new locations, and across a
+map. Read
+<code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code> first.
+The field is fitted by <code>glmmTMB</code>, a package that
+<code>multiScaleR</code> suggests but does not install, and the code
+below runs only when <code>glmmTMB</code> is available.</p>
+</div>
+<div id="know-what-a-spatial-field-does" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Know what a spatial
+field does</h1>
+<p>A spatial field is a random effect with one value per survey
+location, where values at nearby locations are correlated and the
+correlation fades with distance. It stands in for spatially structured
+drivers that you did not measure. Add one when the residuals of an
+ordinary model are similar at neighboring points.</p>
+<p>The field has a distance parameter of its own, the range. Do not
+confuse it with the scale of effect.</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Scale of effect (sigma)</th>
+<th align="left">Field range</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">What it describes</td>
+<td align="left">How far the landscape around a point influences the
+response</td>
+<td align="left">How far apart two points can be while their unexplained
+variation stays correlated</td>
+</tr>
+<tr class="even">
+<td align="left">What it acts on</td>
+<td align="left">One landscape covariate</td>
+<td align="left">The part of the response the covariates leave
+unexplained</td>
+</tr>
+<tr class="odd">
+<td align="left">How to treat it</td>
+<td align="left">The ecological result. Report it as an effective
+distance</td>
+<td align="left">A nuisance parameter that describes the residual
+pattern</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="simulate-counts-with-a-known-field" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Simulate counts with a
+known field</h1>
+<p>The counts bundled with the package were simulated without a spatial
+field, so they cannot show what a field changes. This example keeps the
+bundled landscape and survey points and simulates new counts. The true
+scales of effect stay at 250 m for <code>land1</code> and 500 m for
+<code>land2</code>. The field has a standard deviation of 0.6 on the log
+scale and a range of 800 m.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)      <span class="co"># 100 survey points</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>xy  <span class="ot">&lt;-</span> <span class="fu">crds</span>(pts)           <span class="co"># their coordinates, in meters</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># Landscape covariates smoothed at the true scales, then standardized</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>truth  <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(land_rast[[<span class="fu">c</span>(<span class="st">&quot;land1&quot;</span>, <span class="st">&quot;land2&quot;</span>)]],</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>                              <span class="at">sigma =</span> <span class="fu">c</span>(<span class="dv">250</span>, <span class="dv">500</span>), <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>                              <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>x_true <span class="ot">&lt;-</span> <span class="fu">scale</span>(<span class="fu">as.matrix</span>(<span class="fu">extract</span>(truth, pts, <span class="at">ID =</span> <span class="cn">FALSE</span>)))</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co"># The field: correlation between two points is exp(-distance / 800)</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>d_mat <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">dist</span>(xy))</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>field <span class="ot">&lt;-</span> <span class="fu">drop</span>(<span class="fu">t</span>(<span class="fu">chol</span>(<span class="fl">0.6</span><span class="sc">^</span><span class="dv">2</span> <span class="sc">*</span> <span class="fu">exp</span>(<span class="sc">-</span>d_mat <span class="sc">/</span> <span class="dv">800</span>))) <span class="sc">%*%</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(xy)))</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>site  <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(xy))   <span class="co"># a covariate measured at the survey point</span></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co"># Log expected count: intercept, site effect, landscape effects, and the field</span></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>log_mu <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fl">0.3</span> <span class="sc">*</span> site <span class="sc">-</span> <span class="fl">0.5</span> <span class="sc">*</span> x_true[, <span class="st">&quot;land1&quot;</span>] <span class="sc">+</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>  <span class="fl">0.7</span> <span class="sc">*</span> x_true[, <span class="st">&quot;land2&quot;</span>] <span class="sc">+</span> field</span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">counts =</span> <span class="fu">rpois</span>(<span class="fu">nrow</span>(xy), <span class="fu">exp</span>(log_mu)), <span class="at">site =</span> site)</span></code></pre></div>
+</div>
+<div id="fit-the-model-without-a-field" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Fit the model without a
+field</h1>
+<p>Start with the ordinary workflow from the Quick Start, which gives
+the baseline for the comparison.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># bin = TRUE stores distance-binned summaries, which speed up every refit</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(dat, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>start_glm <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>fit_glm   <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_glm, inputs, <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+</div>
+<div id="add-a-spatial-field" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Add a spatial
+field</h1>
+<p><code>glmmTMB</code> writes a spatial field as a covariance term in
+the model formula. The term needs two columns. The first holds the
+coordinates of each row, built with <code>glmmTMB::numFactor()</code>.
+The second is a grouping factor with a single level, which tells
+<code>glmmTMB</code> that every point belongs to one shared field.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>df<span class="sc">$</span>pos <span class="ot">&lt;-</span> glmmTMB<span class="sc">::</span><span class="fu">numFactor</span>(xy[, <span class="dv">1</span>], xy[, <span class="dv">2</span>])   <span class="co"># coordinates, in meters</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>df<span class="sc">$</span>grp <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="st">&quot;all&quot;</span>, <span class="fu">nrow</span>(df)))           <span class="co"># one field for all points</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># exp() here is glmmTMB&#39;s exponential covariance, not the exponential function</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>start_field <span class="ot">&lt;-</span> glmmTMB<span class="sc">::</span><span class="fu">glmmTMB</span>(</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2 <span class="sc">+</span> <span class="fu">exp</span>(pos <span class="sc">+</span> <span class="dv">0</span> <span class="sc">|</span> grp),</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">start  =</span> <span class="fu">list</span>(<span class="at">theta =</span> <span class="fu">c</span>(<span class="fu">log</span>(<span class="fl">0.5</span>), <span class="fu">log</span>(<span class="dv">500</span>)))   <span class="co"># log field SD, log range (m)</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>)</span></code></pre></div>
+<p><strong>Choosing <code>start</code>:</strong> Supply starting values
+for the field. By default <code>glmmTMB</code> starts the range at one
+coordinate unit, here 1 m. No two survey points are correlated at that
+range, so the optimizer cannot move and the fit fails its convergence
+check. <code>multiScale_optim()</code> then returns the starting sigma
+values with no standard errors, and it warns that the search never left
+its start. Start the range at or above the spacing between neighboring
+points, which is about 310 m here.</p>
+<p>Use projected coordinates in the same distance units as the raster,
+because the range is estimated in those units and nothing is rescaled
+for you.</p>
+<p>Pass the starting model to <code>multiScale_optim()</code> as usual.
+The default <code>backend = &quot;refit&quot;</code> refits the
+<code>glmmTMB</code> model at each candidate scale, so the field is
+estimated again every time the kernel-weighted covariates change.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>fit_field <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_field, inputs, <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<p>This search took about 45 seconds, against less than one second
+without the field.</p>
+</div>
+<div id="read-the-scales-the-coefficients-and-the-field" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Read the scales, the
+coefficients, and the field</h1>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>s_glm   <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit_glm)<span class="sc">$</span>opt_scale                     <span class="co"># sigma, SE, 95% CI (m)</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>s_field <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit_field)<span class="sc">$</span>opt_scale</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>b_glm   <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit_glm<span class="sc">$</span>opt_mod)<span class="sc">$</span>coefficients          <span class="co"># log-scale estimates</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>b_field <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit_field<span class="sc">$</span>opt_mod)<span class="sc">$</span>coefficients<span class="sc">$</span>cond</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>compare <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">Parameter =</span> <span class="fu">c</span>(<span class="st">&quot;sigma, land1 (m)&quot;</span>, <span class="st">&quot;sigma, land2 (m)&quot;</span>, <span class="st">&quot;intercept&quot;</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>                <span class="st">&quot;effect of site&quot;</span>, <span class="st">&quot;effect of land1&quot;</span>, <span class="st">&quot;effect of land2&quot;</span>),</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">Truth     =</span> <span class="fu">c</span>(<span class="dv">250</span>, <span class="dv">500</span>, <span class="dv">1</span>, <span class="fl">0.3</span>, <span class="sc">-</span><span class="fl">0.5</span>, <span class="fl">0.7</span>),</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="at">No_field  =</span> <span class="fu">c</span>(s_glm[, <span class="st">&quot;Mean&quot;</span>], b_glm[, <span class="st">&quot;Estimate&quot;</span>]),</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="at">SE        =</span> <span class="fu">c</span>(s_glm[, <span class="st">&quot;SE&quot;</span>], b_glm[, <span class="st">&quot;Std. Error&quot;</span>]),</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="at">Field     =</span> <span class="fu">c</span>(s_field[, <span class="st">&quot;Mean&quot;</span>], b_field[, <span class="st">&quot;Estimate&quot;</span>]),</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="at">SE_field  =</span> <span class="fu">c</span>(s_field[, <span class="st">&quot;SE&quot;</span>], b_field[, <span class="st">&quot;Std. Error&quot;</span>]))</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(compare, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Parameter&quot;</span>, <span class="st">&quot;Truth&quot;</span>, <span class="st">&quot;No field&quot;</span>, <span class="st">&quot;SE&quot;</span>,</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>                           <span class="st">&quot;With field&quot;</span>, <span class="st">&quot;SE&quot;</span>))</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Parameter</th>
+<th align="right">Truth</th>
+<th align="right">No field</th>
+<th align="right">SE</th>
+<th align="right">With field</th>
+<th align="right">SE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">sigma, land1 (m)</td>
+<td align="right">250.0</td>
+<td align="right">632.35</td>
+<td align="right">69.01</td>
+<td align="right">325.45</td>
+<td align="right">48.81</td>
+</tr>
+<tr class="even">
+<td align="left">sigma, land2 (m)</td>
+<td align="right">500.0</td>
+<td align="right">587.77</td>
+<td align="right">39.89</td>
+<td align="right">501.35</td>
+<td align="right">57.18</td>
+</tr>
+<tr class="odd">
+<td align="left">intercept</td>
+<td align="right">1.0</td>
+<td align="right">1.05</td>
+<td align="right">0.07</td>
+<td align="right">1.14</td>
+<td align="right">0.20</td>
+</tr>
+<tr class="even">
+<td align="left">effect of site</td>
+<td align="right">0.3</td>
+<td align="right">0.43</td>
+<td align="right">0.05</td>
+<td align="right">0.40</td>
+<td align="right">0.07</td>
+</tr>
+<tr class="odd">
+<td align="left">effect of land1</td>
+<td align="right">-0.5</td>
+<td align="right">-0.74</td>
+<td align="right">0.06</td>
+<td align="right">-0.57</td>
+<td align="right">0.10</td>
+</tr>
+<tr class="even">
+<td align="left">effect of land2</td>
+<td align="right">0.7</td>
+<td align="right">0.99</td>
+<td align="right">0.05</td>
+<td align="right">0.71</td>
+<td align="right">0.12</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the table:</strong> The first two rows are the
+scales of effect, in meters. Without the field, the <code>land1</code>
+estimate is 632 m and its 95% interval (495 to 769 m) misses the true
+250 m. With the field, the estimate is 325 m and the interval (229 to
+422 m) contains it. The remaining rows are on the log scale. The model
+without a field overstates both landscape effects. It estimates that one
+standard deviation of <code>land2</code> multiplies the expected count
+by 2.69, where the truth is 2.01 and the field model gives 2.03. Because
+the field model no longer treats neighboring counts as independent, it
+also reports a larger standard error for every coefficient.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># The field parameters, back-transformed from the log scale</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>field_par <span class="ot">&lt;-</span> <span class="fu">exp</span>(glmmTMB<span class="sc">::</span><span class="fu">getME</span>(fit_field<span class="sc">$</span>opt_mod, <span class="st">&quot;theta&quot;</span>))</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="fu">names</span>(field_par) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;field SD (log scale)&quot;</span>, <span class="st">&quot;range (m)&quot;</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">round</span>(field_par, <span class="dv">2</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; field SD (log scale)            range (m) </span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt;                 0.45               711.06</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co"># K counts the regression coefficients, the field parameters, and the two sigmas</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="fu">aic_tab</span>(<span class="fu">list</span>(fit_glm, fit_field), <span class="at">mod_names =</span> <span class="fu">c</span>(<span class="st">&quot;No field&quot;</span>, <span class="st">&quot;With field&quot;</span>))</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt; Model selection based on AICc:</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;            K   AICc Delta_AICc AICcWt Cum.Wt      LL</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; With field 8 430.84       0.00      1      1 -206.63</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; No field   6 457.46      26.62      0      1 -222.28</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The field standard deviation
+is on the scale of the linear predictor, the log expected count. An
+estimate of 0.45 means that a location one standard deviation above
+average has an expected count 1.57 times that of an average location
+with the same covariates. The range is in meters. Correlation between
+two locations is <code>exp(-distance / range)</code>. With a range of
+711 m it is 0.65 between neighboring survey points and falls to 0.37 at
+711 m. The data were simulated with a standard deviation of 0.6 and a
+range of 800 m. In the AICc table, lower values mean better support, and
+the field model wins by a wide margin. Its <code>K</code> is two larger
+because it adds the field standard deviation and the range.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> One simulated data
+set shows what a field can change. It does not show that a field always
+improves a scale estimate. When the bundled counts, which have no
+residual spatial pattern, were fitted with the same field term, the
+field standard deviation was 0.14 and the scales barely moved (240 and
+499 m, against 238 and 500 m without it). Fit both models and compare
+them.</p>
+</blockquote>
+</div>
+<div id="predict-at-the-survey-points" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Predict at the survey
+points</h1>
+<p><code>predict()</code> returns the expected count. For a model with a
+field, you choose whether the prediction includes the estimated field
+value at each location.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Default: includes the estimated field value at each survey point</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>p_field <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_field, <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">uncertainty =</span> <span class="st">&quot;conditional&quot;</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co"># re.form = NA: sets the field to zero, leaving the covariate effects only</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>p_zero  <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_field, <span class="at">re.form =</span> <span class="cn">NA</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">head</span>(<span class="fu">data.frame</span>(<span class="at">observed   =</span> df<span class="sc">$</span>counts,</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>                      <span class="at">with_field =</span> <span class="fu">as.numeric</span>(p_field<span class="sc">$</span>fit),</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>                      <span class="at">se         =</span> <span class="fu">as.numeric</span>(p_field<span class="sc">$</span>se.fit),</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>                      <span class="at">field_zero =</span> <span class="fu">as.numeric</span>(p_zero)), <span class="dv">5</span>), <span class="dv">2</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt;   observed with_field   se field_zero</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; 1        1       1.15 0.40       1.11</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; 2        2       2.98 0.85       2.81</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; 3        7       5.18 1.35       5.77</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; 4       14      11.82 2.53       6.79</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; 5        3       2.22 0.69       2.26</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co"># The estimated field at the survey points against the simulated one</span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="fu">cor</span>(<span class="fu">log</span>(<span class="fu">as.numeric</span>(p_field<span class="sc">$</span>fit) <span class="sc">/</span> <span class="fu">as.numeric</span>(p_zero)), field)</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; [1] 0.7565847</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>with_field</code> is
+the expected count at that survey point, given what the counts revealed
+about the field there. <code>field_zero</code> is the expected count for
+the same covariate values at a location where the field equals zero.
+Treat it as a reference value, because it is not an average over the
+field. The ratio of the two columns is the field’s multiplier at that
+point, and its log tracks the simulated field with a correlation of
+0.76.</p>
+<p>The standard error describes the expected count. It holds the
+estimated scales of effect fixed and adds no observation noise. Request
+it with <code>se.fit = TRUE</code> and
+<code>uncertainty = &quot;conditional&quot;</code>. Confidence limits
+(<code>interval = &quot;confidence&quot;</code>) and joint uncertainty are not
+available for these fits, and <code>predict()</code> stops with an error
+if you ask for them. The <code>prediction_contract</code> attribute of
+each result records whether the field was included or set to zero.</p>
+</div>
+<div id="predict-at-new-locations-and-map-the-result" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Predict at new
+locations and map the result</h1>
+<p>A new location needs its own kernel inputs and its own coordinates.
+Prepare both, then set <code>allow.new.levels = TRUE</code> so that
+<code>glmmTMB</code> accepts positions it did not see during fitting.
+Without that argument the call stops with an error that names it and the
+alternative, <code>re.form = NA</code>. At a new position, the field
+value is predicted from the field at the survey points, weighted by the
+fitted correlation. Far from every survey point, the prediction
+therefore returns to the zero-field value.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># A 225 m grid of new locations inside the surveyed area</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>grid_xy <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">expand.grid</span>(<span class="at">x =</span> <span class="fu">seq</span>(<span class="dv">800</span>, <span class="dv">3500</span>, <span class="at">by =</span> <span class="dv">225</span>),</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                                 <span class="at">y =</span> <span class="fu">seq</span>(<span class="dv">800</span>, <span class="dv">3500</span>, <span class="at">by =</span> <span class="dv">225</span>)))</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>grid_inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> <span class="fu">vect</span>(grid_xy, <span class="at">type =</span> <span class="st">&quot;points&quot;</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                           <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>                           <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co"># One row per new location: site covariate, coordinates, and the field group</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>grid_dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">site =</span> <span class="dv">0</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>                       <span class="at">pos  =</span> glmmTMB<span class="sc">::</span><span class="fu">numFactor</span>(grid_xy[, <span class="dv">1</span>], grid_xy[, <span class="dv">2</span>]),</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>                       <span class="at">grp  =</span> <span class="fu">factor</span>(<span class="st">&quot;all&quot;</span>),</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>                       <span class="at">row.names =</span> <span class="fu">rownames</span>(grid_inputs<span class="sc">$</span>kernel_dat))</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>with_field <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_field, grid_dat, grid_inputs,</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>                      <span class="at">allow.new.levels =</span> <span class="cn">TRUE</span>,          <span class="co"># accept new positions</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>                      <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">uncertainty =</span> <span class="st">&quot;conditional&quot;</span>)</span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>no_field   <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_field, grid_dat, grid_inputs, <span class="at">re.form =</span> <span class="cn">NA</span>)</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>grid_map <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">data.frame</span>(</span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>  grid_xy,</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>  <span class="at">expected   =</span> <span class="fu">as.numeric</span>(with_field<span class="sc">$</span>fit),</span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>  <span class="at">multiplier =</span> <span class="fu">as.numeric</span>(with_field<span class="sc">$</span>fit) <span class="sc">/</span> <span class="fu">as.numeric</span>(no_field),</span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a>  <span class="at">se         =</span> <span class="fu">as.numeric</span>(with_field<span class="sc">$</span>se.fit)), <span class="at">type =</span> <span class="st">&quot;xyz&quot;</span>)</span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="fu">plot</span>(grid_map, <span class="at">nc =</span> <span class="dv">3</span>,</span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>     <span class="at">main =</span> <span class="fu">c</span>(<span class="st">&quot;Expected count&quot;</span>, <span class="st">&quot;Field multiplier&quot;</span>, <span class="st">&quot;Standard error&quot;</span>))</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Predictions on a 225 m grid inside the surveyed area." src="data:image/png;base64,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" alt="Predictions on a 225 m grid inside the surveyed area." />
+<div class="figcaption"><strong><em>Predictions on a 225 m grid inside
+the surveyed area.</em></strong></div>
+</div>
+<p><strong>How to read these plots:</strong> The left panel is the
+expected count per survey when <code>site</code> is zero, including the
+predicted field. The middle panel isolates the field. A value above 1
+marks an area where counts run higher than the landscape covariates
+predict, and a value below 1 marks the opposite. The right panel is the
+standard error of the expected count, in the same units. Prediction time
+climbs steeply with the number of new positions (the 169 here take a few
+seconds), so keep the grid coarse.</p>
+<p>A map with the field set to zero can cover every raster cell. Prepare
+the layers with <code>kernel_scale.raster()</code>, setting
+<code>scale_center = TRUE</code> and <code>match_buffer = TRUE</code>,
+then call <code>predict()</code> with <code>re.form = NA</code>. This
+route requires a raster with a projected coordinate reference system. It
+also expects every variable in the model formula, so pass one fitted
+position and the group label through <code>site_values</code>. With
+<code>re.form = NA</code> they do not change the result.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># The bundled raster has no CRS. Declare a projected one, in meters.</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>map_rast <span class="ot">&lt;-</span> land_rast</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="fu">crs</span>(map_rast) <span class="ot">&lt;-</span> <span class="st">&quot;EPSG:32617&quot;</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co"># Landscape layers at the estimated scales, with site held at zero. The field</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co"># columns are placeholders that re.form = NA ignores.</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>layers <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  map_rast, <span class="at">multiScaleR =</span> fit_field,</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">match_buffer =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>  <span class="at">site_values =</span> <span class="fu">list</span>(<span class="at">site =</span> <span class="dv">0</span>, <span class="at">pos =</span> <span class="fu">as.character</span>(df<span class="sc">$</span>pos[<span class="dv">1</span>]), <span class="at">grp =</span> <span class="st">&quot;all&quot;</span>))</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>map_zero <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_field, layers, <span class="at">re.form =</span> <span class="cn">NA</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="fu">plot</span>(map_zero, <span class="at">main =</span> <span class="st">&quot;Expected count, field set to zero&quot;</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="fu">points</span>(pts, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.4</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Expected count from the covariate effects alone, with the field set to zero." src="data:image/png;base64,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" alt="Expected count from the covariate effects alone, with the field set to zero." />
+<div class="figcaption"><strong><em>Expected count from the covariate
+effects alone, with the field set to zero.</em></strong></div>
+</div>
+<p><strong>How to read this plot:</strong> Each cell holds the expected
+count that the landscape covariates alone predict. Use this map to show
+the landscape effect, and use the grid above when you want the best
+prediction for a place. Cells near the border lie outside the surveyed
+area, so read them with caution.</p>
+</div>
+<div id="current-restrictions" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Current
+restrictions</h1>
+<p>Support for spatial fields is experimental. The package checks that
+its predictions match those of <code>glmmTMB</code>. It has not yet
+evaluated how well scales of effect are recovered, or whether intervals
+reach their nominal coverage, when a field is present.</p>
+<table>
+<colgroup>
+<col width="14%" />
+<col width="36%" />
+<col width="49%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Feature</th>
+<th align="left">Checked and supported</th>
+<th align="left">Not supported, or not checked</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Fitting</td>
+<td align="left"><code>multiScale_optim()</code> with the default
+<code>backend = &quot;refit&quot;</code></td>
+<td align="left">The <code>profile_glm</code>, <code>joint_nb2</code>,
+and <code>joint_mixed</code> backends</td>
+</tr>
+<tr class="even">
+<td align="left">Response</td>
+<td align="left">Gaussian. Poisson, negative binomial
+(<code>nbinom2</code>), and Gamma with a log link. Binomial with a logit
+link</td>
+<td align="left">Other families and links</td>
+</tr>
+<tr class="odd">
+<td align="left">Field</td>
+<td align="left">One field shared by all rows, with <code>exp()</code>,
+<code>gau()</code>, or <code>mat()</code> covariance</td>
+<td align="left">Several fields, or a field combined with other random
+effects</td>
+</tr>
+<tr class="even">
+<td align="left">Coordinates</td>
+<td align="left">Projected, in the distance units of the raster</td>
+<td align="left">Longitude and latitude. Raster prediction stops without
+a projected CRS</td>
+</tr>
+<tr class="odd">
+<td align="left">Uncertainty</td>
+<td align="left">Sigma standard errors and intervals from
+<code>summary()</code>. Standard errors for predictions, with scales
+held fixed</td>
+<td align="left">Confidence limits and joint uncertainty from
+<code>predict()</code></td>
+</tr>
+<tr class="even">
+<td align="left">Held-out evaluation</td>
+<td align="left"><code>cross_validate_field()</code> for Gaussian
+responses with <code>exp()</code> or <code>gau()</code> covariance. It
+requires <code>glmmTMB</code> 1.1.14 and <code>TMB</code> 1.9.25</td>
+<td align="left">Count and binomial responses</td>
+</tr>
+</tbody>
+</table>
+<p><code>cross_validate_field()</code> fits a field model to part of the
+data and scores its predictions for the rest, keeping all surveys from
+one location in the same fold. See <code>?cross_validate_field</code>
+and
+<code>vignette(&quot;v08-cross-validation&quot;, package = &quot;multiScaleR&quot;)</code>.</p>
+</div>
+<div id="quick-reference" class="section level1" number="10">
+<h1><span class="header-section-number">10</span> Quick reference</h1>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># 1. Prepare kernel inputs and fit a baseline model without a field</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(dat, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>start_glm <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>fit_glm   <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_glm, inputs, <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co"># 2. Add a spatial field on the survey coordinates and estimate the scales</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>df<span class="sc">$</span>pos <span class="ot">&lt;-</span> glmmTMB<span class="sc">::</span><span class="fu">numFactor</span>(xy[, <span class="dv">1</span>], xy[, <span class="dv">2</span>])   <span class="co"># coordinates, in meters</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>df<span class="sc">$</span>grp <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="st">&quot;all&quot;</span>, <span class="fu">nrow</span>(df)))           <span class="co"># one field for all points</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>start_field <span class="ot">&lt;-</span> glmmTMB<span class="sc">::</span><span class="fu">glmmTMB</span>(</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>  counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2 <span class="sc">+</span> <span class="fu">exp</span>(pos <span class="sc">+</span> <span class="dv">0</span> <span class="sc">|</span> grp),</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df,</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>  <span class="at">start  =</span> <span class="fu">list</span>(<span class="at">theta =</span> <span class="fu">c</span>(<span class="fu">log</span>(<span class="fl">0.5</span>), <span class="fu">log</span>(<span class="dv">500</span>))))  <span class="co"># log field SD, log range (m)</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>fit_field <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start_field, inputs, <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co"># 3. Read the results</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="fu">summary</span>(fit_field)<span class="sc">$</span>opt_scale                          <span class="co"># sigma, SE, interval (m)</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="fu">summary</span>(fit_field<span class="sc">$</span>opt_mod)<span class="sc">$</span>coefficients<span class="sc">$</span>cond          <span class="co"># log-scale coefficients</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="fu">exp</span>(glmmTMB<span class="sc">::</span><span class="fu">getME</span>(fit_field<span class="sc">$</span>opt_mod, <span class="st">&quot;theta&quot;</span>))       <span class="co"># field SD, range (m)</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="fu">aic_tab</span>(<span class="fu">list</span>(fit_glm, fit_field), <span class="at">mod_names =</span> <span class="fu">c</span>(<span class="st">&quot;No field&quot;</span>, <span class="st">&quot;With field&quot;</span>))</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co"># 4. Predict at the survey points, then at new locations</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="fu">predict</span>(fit_field, <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">uncertainty =</span> <span class="st">&quot;conditional&quot;</span>)  <span class="co"># with the field</span></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="fu">predict</span>(fit_field, <span class="at">re.form =</span> <span class="cn">NA</span>)                                <span class="co"># field at zero</span></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="fu">predict</span>(fit_field, grid_dat, grid_inputs, <span class="at">allow.new.levels =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a>        <span class="at">se.fit =</span> <span class="cn">TRUE</span>, <span class="at">uncertainty =</span> <span class="st">&quot;conditional&quot;</span>)   <span class="co"># grid_dat: site, pos, grp</span></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co"># 5. Map the covariate effects with the field set to zero</span></span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a>layers <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a>  map_rast, <span class="at">multiScaleR =</span> fit_field,             <span class="co"># map_rast has a projected CRS</span></span>
+<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a>  <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">match_buffer =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb10-33"><a href="#cb10-33" tabindex="-1"></a>  <span class="at">site_values =</span> <span class="fu">list</span>(<span class="at">site =</span> <span class="dv">0</span>, <span class="at">pos =</span> <span class="fu">as.character</span>(df<span class="sc">$</span>pos[<span class="dv">1</span>]), <span class="at">grp =</span> <span class="st">&quot;all&quot;</span>))</span>
+<span id="cb10-34"><a href="#cb10-34" tabindex="-1"></a>map_zero <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_field, layers, <span class="at">re.form =</span> <span class="cn">NA</span>)</span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="10.1">
+<h2><span class="header-section-number">10.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>glmmTMB::numFactor()</code></td>
+<td align="left">Store survey coordinates in the form a
+<code>glmmTMB</code> covariance term needs</td>
+</tr>
+<tr class="even">
+<td align="left"><code>glmmTMB::glmmTMB()</code></td>
+<td align="left">Fit the starting model with an <code>exp()</code>,
+<code>gau()</code>, or <code>mat()</code> spatial field</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>multiScale_optim()</code></td>
+<td align="left">Estimate the scales of effect, refitting the field at
+each candidate scale</td>
+</tr>
+<tr class="even">
+<td align="left"><code>summary()</code>, <code>aic_tab()</code></td>
+<td align="left">Report sigma with its interval, and compare models with
+and without a field</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>predict()</code></td>
+<td align="left">Expected response with the field (the default) or with
+the field at zero (<code>re.form = NA</code>)</td>
+</tr>
+<tr class="even">
+<td align="left"><code>kernel_scale.raster()</code></td>
+<td align="left">Apply the fitted kernels to a raster for mapping</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>cross_validate_field()</code></td>
+<td align="left">Score held-out predictions for a Gaussian response with
+a field</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="10.2">
+<h2><span class="header-section-number">10.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow and how to read a fitted model.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what each interval includes and what it leaves out.</li>
+<li><strong><code>vignette(&quot;v08-cross-validation&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+comparing models by how well they predict held-out observations.</li>
+<li><strong><code>vignette(&quot;v03-map-predictions&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+mapping beyond the conditions you sampled.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

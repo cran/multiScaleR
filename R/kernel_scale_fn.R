@@ -15,11 +15,24 @@
 
 
 .model_predictors <- function(model) {
+  # The combined native GAM terms include inputs from every linear predictor.
+  if (inherits(model, "gam") && is.list(model$pterms) &&
+      !inherits(model$pterms, "terms"))
+    return(.msr_active_formula_variables(stats::terms(model)))
   vars <- tryCatch(
     unname(unlist(find_predictors(model))),
     error = function(e) character()
   )
 
+  if (class(model)[1L] %in% c("lm", "glm", "negbin", "coxph", "clogit")) {
+    # Native terms decide membership; retain the existing recognized order so
+    # predictor discovery does not reorder established spatial parameter blocks.
+    tt <- tryCatch(stats::terms(model), error = function(e) NULL)
+    if (inherits(tt, "terms")) {
+      active <- .msr_active_formula_variables(tt)
+      return(unique(c(intersect(vars, active), setdiff(active, vars))))
+    }
+  }
   if (length(vars) > 0) {
     return(vars)
   }
@@ -40,7 +53,8 @@
 
 # unmarked fits differ in whether they retain one formula or a list of
 # component formulas. Only variables in the fitted formulas can be optimized.
-.unmarked_model_predictors <- function(model) {
+.unmarked_model_formulas <- function(model) {
+  if (methods::is(model, "unmarkedFitGDR")) return(.msr_gdr_active_formulas(model))
   collect_formulas <- function(x) {
     if (inherits(x, "formula")) return(list(x))
     if (is.list(x)) return(do.call(c, lapply(x, collect_formulas)))
@@ -55,9 +69,13 @@
     stop("Could not recover formulas from this unmarked model class: ",
          class(model)[1], call. = FALSE)
   }
-  unique(unlist(lapply(formulas, all.vars), use.names = FALSE))
+  formulas
 }
 
+.unmarked_model_predictors <- function(model) {
+  if (methods::is(model, "unmarkedFitGDR")) return(.msr_gdr_model_predictors(model))
+  unique(unlist(lapply(.unmarked_model_formulas(model), all.vars), use.names = FALSE))
+}
 
 # Resolve every model row to exactly one prepared spatial site. The model may
 # repeat site keys (for example, once per year); prepared keys must be unique.
@@ -116,10 +134,29 @@
 
 
 .model_data <- function(model, ...) {
-  suppressWarnings(tryCatch(
+  dat <- suppressWarnings(tryCatch(
     get_data(model, ...),
     error = function(e) NULL
   ))
+  # Some insight/survival combinations rename a saved conditional-logistic
+  # response to `x`. Reconstruct its original name from the retained frame
+  # before accepting data that cannot be used to refit the model.
+  if (inherits(model, "coxph")) {
+    formula <- stats::formula(model)
+    response <- formula[[2L]]
+    # Limit recovery to the constant-time, direct-response contract used by
+    # clogit. Do not invert transformed event times or response expressions.
+    direct_response <- is.call(response) && length(all.vars(response)) == 1L &&
+      is.symbol(response[[length(response)]])
+    required <- all.vars(formula)
+    if (direct_response && (is.null(dat) || !all(required %in% names(dat)))) {
+      recovered <- extract_model_data(model)
+      if (!is.null(recovered) && all(required %in% names(recovered))) {
+        dat <- recovered
+      }
+    }
+  }
+  dat
 }
 
 
@@ -155,7 +192,16 @@
     }
   }
 
-  eval(refit_call, envir = list(data = data), enclos = parent.frame())
+  replay_environment <- parent.frame()
+  if (identical(class(model)[1L], "glmmTMB")) {
+    # A reusable native call can contain locally bound family/start/map/control
+    # objects. Resolve them where the retained formula was created, while the
+    # replacement data argument remains bound explicitly for this refit.
+    replay_environment <- environment(stats::formula(model))
+    if (!is.environment(replay_environment))
+      stop("Native glmmTMB refitting requires its retained formula environment.", call. = FALSE)
+  }
+  eval(refit_call, envir = list(data = data), enclos = replay_environment)
 }
 
 
@@ -167,6 +213,10 @@
 
   call_refit <- try(.refit_from_call(model, data), silent = TRUE)
   if (!inherits(call_refit, "try-error")) {
+    if (identical(class(model)[1L], "glmmTMB"))
+      attr(call_refit, "msr_refit_call") <- list(
+        evaluation_scope = "retained_native_formula_environment",
+        initial_update_error = conditionMessage(attr(refit, "condition")))
     return(call_refit)
   }
 
@@ -198,49 +248,8 @@
 }
 
 
-.finite_first_numeric <- function(value) {
-  value <- suppressWarnings(as.numeric(value)[1])
-  length(value) == 1 && is.finite(value)
-}
-
-
 .neg_loglik_model <- function(model, mod_class) {
-  if (identical(mod_class, "unmarked")) {
-    value <- try(model@negLogLike, silent = TRUE)
-    if (!inherits(value, "try-error") && .finite_first_numeric(value)) {
-      return(as.numeric(value)[1])
-    }
-
-    value <- try(unmarked::logLik(model)[1] * -1, silent = TRUE)
-    if (!inherits(value, "try-error") && .finite_first_numeric(value)) {
-      return(as.numeric(value)[1])
-    }
-  }
-
-  if (.has_nested_analysis_model(model)) {
-    value <- try(stats::logLik(.analysis_model(model))[1] * -1, silent = TRUE)
-    if (!inherits(value, "try-error") && .finite_first_numeric(value)) {
-      return(as.numeric(value)[1])
-    }
-
-    value <- try(insight::get_loglikelihood(.analysis_model(model))[1] * -1,
-                 silent = TRUE)
-    if (!inherits(value, "try-error") && .finite_first_numeric(value)) {
-      return(as.numeric(value)[1])
-    }
-  }
-
-  value <- try(stats::logLik(model)[1] * -1, silent = TRUE)
-  if (!inherits(value, "try-error") && .finite_first_numeric(value)) {
-    return(as.numeric(value)[1])
-  }
-
-  value <- try(insight::get_loglikelihood(model)[1] * -1, silent = TRUE)
-  if (!inherits(value, "try-error") && .finite_first_numeric(value)) {
-    return(as.numeric(value)[1])
-  }
-
-  stop("Could not extract a finite log-likelihood from the refitted model.", call. = FALSE)
+  -.msr_model_loglik(model)
 }
 
 
@@ -299,9 +308,9 @@
   n_covs <- opt_context$n_covs
   scale_vars <- opt_context$scale_vars
 
-  sigma <- par[1:n_covs]
+  sigma <- par[seq_len(n_covs)]
   if (kernel == 'expow') {
-    shape <- par[(n_covs + 1):(n_covs * 2)]
+    shape <- par[n_covs + seq_len(n_covs)]
   } else {
     shape <- NULL
   }
@@ -356,23 +365,35 @@
       )
     }
 
-    # Exact per-cell evaluation over the requested covariates. `sig_idx` maps the
-    # requested columns back to their positions in the full sigma/shape vectors so
-    # a subset is weighted with exactly the same parameters as the full matrix.
-    sig_idx <- match(target_covs, covs)
+    # Binned kernel columns are filled below. Evaluate only the remaining
+    # transforms here, retaining their requested order and parameter mapping.
+    # Legacy inputs without scale_vars keep their existing exact path.
+    exact_covs <- if (is.null(scale_vars)) target_covs else
+      setdiff(target_covs, binned_covs)
+    exact_params <- if (is.null(scale_vars)) exact_covs else
+      exact_covs[exact_covs %in% param_covariates]
+    sig_idx <- match(exact_params, covs)
+    prepared_adjacency <- opt_context$adjacency_neighbors
+    prepared_edges <- opt_context$edge_neighbors
+    if (!is.null(prepared_edges) && !is.null(eval_idx))
+      prepared_edges <- prepared_edges[eval_idx]
+    if (!is.null(prepared_adjacency) && !is.null(eval_idx))
+      prepared_adjacency <- prepared_adjacency[eval_idx]
+    prepared_neighbors <- opt_context$surface_neighbors
+    if (!is.null(prepared_neighbors) && !is.null(eval_idx))
+      prepared_neighbors <- prepared_neighbors[eval_idx]
     for (i in seq_len(n_ind)) {
       if (is.null(scale_vars)) {
-        cov.w[i, ] <-
+        cov.w[i, exact_covs] <-
           scale_type(d_list[[i]],
                      kernel = kernel,
                      sigma = sigma[sig_idx],
                      shape = if (is.null(shape)) NULL else shape[sig_idx],
-                     r_stack.df = cov_df[[i]][, target_covs, drop = FALSE])
+                     r_stack.df = cov_df[[i]][, exact_covs, drop = FALSE])
       } else {
-        # `.msr_eval_scale_vars()` indexes `sigma`/`shape` by each covariate's
-        # position within the `covariates` it is handed, so a subset must receive
-        # the subset-ordered parameters (`sig_idx` maps back to the full vector).
-        cov.w[i, ] <- .msr_eval_scale_vars(
+        # Fixed-radius metrics have no parameter; pass only optimized scales
+        # and shapes in the order expected by the remaining transforms.
+        cov.w[i, exact_covs] <- .msr_eval_scale_vars(
           d = d_list[[i]],
           cov_df = cov_df[[i]],
           scale_vars = scale_vars,
@@ -382,14 +403,16 @@
           unit_conv = opt_context$unit_conv,
           resolution = opt_context$resolution,
           n_cols = opt_context$n_cols,
-          covariates = target_covs,
-          validate = FALSE
+          covariates = exact_covs,
+          validate = FALSE,
+          prepared_neighbors = prepared_neighbors[[i]],
+          prepared_adjacency = prepared_adjacency[[i]],
+          prepared_edges = prepared_edges[[i]]
         )
       }
     } ## End for loop
 
-    # Overwrite the kernel covariate columns with their (faster, equivalent)
-    # binned values so mixed kernel + landscape models still benefit.
+    # Fill kernel columns once from the same binned summaries as before.
     if (length(binned_covs) > 0 && !is.null(scale_vars)) {
       cov.w[, binned_covs] <- .msr_binned_kernel_means(
         binned = binned,
@@ -423,9 +446,13 @@
 #'   scaled and refit directly. Used by `profile_sigma()` to reuse the columns of
 #'   covariates that are held at their optimum. Default: NULL (compute internally).
 #' @return Either estimated parameters or the fitted model using provided parameters
-#' @details For internal use
+#' @details For internal use. Native glmmTMB call replay resolves local
+#'   constructor arguments in the retained formula environment when ordinary
+#'   updating fails. The replacement data stay explicit. Constructor arguments
+#'   and defaults are not replaced; the initial update error is retained in the
+#'   returned model's \code{msr_refit_call} attribute.
 #' @rdname kernel_scale_fn
-#' @keywords internal
+#' @noRd
 #' @importFrom insight get_data get_loglikelihood find_predictors
 #' @importFrom stats formula logLik model.frame
 #' @useDynLib multiScaleR, .registration=TRUE
@@ -448,6 +475,9 @@ kernel_scale_fn <- function(par,
   }
 
   mod <- opt_context$fitted_mod
+  # Tell custom refitters when model metadata/uncertainty must be retained.
+  # This local list copy does not mutate the shared optimization context.
+  opt_context$return_model <- !is.null(mod_return)
   mod_class <- opt_context$mod_class
   n_covs <- opt_context$n_covs
 
@@ -491,7 +521,15 @@ kernel_scale_fn <- function(par,
          call. = FALSE)
   }
 
-  scl_df <- scale(cov.w)
+  if (identical(opt_context$covariate_transform, "raw")) {
+    # Keep the metric's units and a reusable identity transform. Upstream
+    # surface normalization and fixed-covariate transforms are unchanged.
+    scl_df <- as.matrix(cov.w)
+    attr(scl_df, "scaled:center") <- stats::setNames(rep(0, ncol(scl_df)), colnames(scl_df))
+    attr(scl_df, "scaled:scale") <- stats::setNames(rep(1, ncol(scl_df)), colnames(scl_df))
+  } else {
+    scl_df <- scale(cov.w)
+  }
   refit_error <- NULL
 
   if(mod_class == 'unmarked'){
@@ -502,6 +540,7 @@ kernel_scale_fn <- function(par,
         as.data.frame(scl_df[opt_context$unmarked_site_idx, , drop = FALSE])
       .refit_model(mod, data = umf, opt_context = opt_context)
     }, error = function(e) {
+      if (inherits(e, "msr_gdr_audit_error")) stop(e)
       refit_error <<- conditionMessage(e)
       NULL
     })
@@ -515,6 +554,7 @@ kernel_scale_fn <- function(par,
       dat[opt_context$covs] <- as.data.frame(scl_df_dat)
       .refit_model(mod, data = dat, opt_context = opt_context)
     }, error = function(e) {
+      if (inherits(e, "msr_gdr_audit_error")) stop(e)
       refit_error <<- conditionMessage(e)
       NULL
     })
@@ -543,6 +583,12 @@ kernel_scale_fn <- function(par,
     )
   }
 
+  if (identical(mod_class, "unmarked") &&
+      !identical(mod@sitesRemoved, mod_u@sitesRemoved)) {
+    if (is.null(mod_return)) return(1e6^10)
+    stop("The final unmarked refit changed which sites contribute to the likelihood.",
+         call. = FALSE)
+  }
   starting_n <- tryCatch(.msr_model_nobs(.analysis_model(mod)),
                          error = function(e) NA_integer_)
   candidate_n <- tryCatch(.msr_model_nobs(.analysis_model(mod_u)),
@@ -554,12 +600,6 @@ kernel_scale_fn <- function(par,
     stop("The final refit changed the number of observations relative to the starting model.",
          call. = FALSE)
   }
-  if (identical(mod_class, "unmarked") &&
-      !identical(mod@sitesRemoved, mod_u@sitesRemoved)) {
-    if (is.null(mod_return)) return(1e6^10)
-    stop("The final unmarked refit changed which sites contribute to the likelihood.",
-         call. = FALSE)
-  }
 
   if(is.null(mod_return)){
     obj <- try(.neg_loglik_model(mod_u, mod_class), silent = TRUE)
@@ -567,6 +607,19 @@ kernel_scale_fn <- function(par,
       return(1e6^10)
     }
   } else {
+    analysis <- .analysis_model(mod_u)
+    if (mod_class != "unmarked" && is.null(opt_context$refit_fn) &&
+        inherits(analysis, "coxph")) {
+      # The final raw training rows are still available here. Freeze any
+      # original fixed recipes before the native call's local binding expires.
+      repaired <- .msr_native_fixed_metadata(analysis, training = dat)
+      # Optional nested recovery must preserve the fit when an expression's
+      # attributes cannot identify its training recipe. Prediction can then
+      # report the existing error for that expression.
+      repaired <- tryCatch(.msr_native_fixed_metadata(repaired, nested = TRUE,
+        training = dat), error = function(e) repaired)
+      if (.has_nested_analysis_model(mod_u)) mod_u$model <- repaired else mod_u <- repaired
+    }
     obj <- list(mod = mod_u,
                 scl_params = list(mean = attr(scl_df, "scaled:center"),
                                   sd = attr(scl_df, "scaled:scale")))
@@ -614,9 +667,13 @@ build_opt_context <- function(fitted_mod,
                               unit_conv = 1,
                               resolution = NULL,
                               n_cols = NULL,
-                              binned = NULL) {
+                              binned = NULL,
+                              d_list = NULL) {
   mod <- fitted_mod
   analysis_mod <- .analysis_model(mod)
+  .msr_gdr_native_guard(analysis_mod)
+  if (methods::is(analysis_mod, "unmarkedFitGDRField") && is.null(refit_fn))
+    stop("Supply make_gdr_refitter() for this audited GDR response field.", call. = FALSE)
   cov_names <- .msr_optimized_covariates(scale_vars, cov_df = cov_df)
 
   if(any(class(mod) == 'gls')){
@@ -669,6 +726,18 @@ build_opt_context <- function(fitted_mod,
               resolution = resolution,
               n_cols = n_cols,
               binned = .msr_subset_binned(binned, covs))
+  out$surface_neighbors <- .msr_prepare_surface_neighbors(
+    d_list, cov_df, if (is.null(scale_vars)) NULL else
+      scale_vars[scale_vars$covariate %in% covs, , drop = FALSE],
+    resolution, n_cols)
+
+  out$adjacency_neighbors <- .msr_prepare_adjacency(
+    d_list, cov_df, if (is.null(scale_vars)) NULL else
+      scale_vars[scale_vars$covariate %in% covs, , drop = FALSE], n_cols)
+
+  out$edge_neighbors <- .msr_prepare_edge_neighbors(
+    d_list, cov_df, if (is.null(scale_vars)) NULL else
+      scale_vars[scale_vars$covariate %in% covs, , drop = FALSE], resolution, n_cols)
 
   n_sites <- if (!is.null(cov_df)) {
     length(cov_df)
@@ -677,12 +746,14 @@ build_opt_context <- function(fitted_mod,
   } else {
     nrow(dat)
   }
+  point_ids <- if (!is.null(cov_df)) names(cov_df) else binned$point_ids
   complete_cases <- .model_complete_indices(dat = dat,
-                                            n_sites = n_sites)
+                                            n_sites = n_sites, point_ids = point_ids)
   data_idx <- complete_cases$data_idx
   complete_idx <- complete_cases$complete_idx
 
   if(mod_class == 'unmarked'){
+    .msr_gdr_spatial_guard(mod, covs)
     umf_template <- mod@data
     missing_site_covs <- setdiff(covs, names(umf_template@siteCovs))
     if (length(missing_site_covs) > 0L) {
@@ -714,7 +785,7 @@ build_opt_context <- function(fitted_mod,
 }
 
 
-.model_complete_indices <- function(dat, n_sites) {
+.model_complete_indices <- function(dat, n_sites, point_ids = NULL) {
   data_idx <- which(stats::complete.cases(dat))
   complete_idx <- data_idx
 
@@ -722,7 +793,12 @@ build_opt_context <- function(fitted_mod,
   has_numeric_row_ids <- length(row_ids) == nrow(dat) &&
     all(grepl("^[0-9]+$", row_ids))
 
-  if (isTRUE(has_numeric_row_ids)) {
+  # Explicit named raw-cell IDs take precedence over numeric row-name
+  # guesses. This matters when CV subsets or permutes complete training rows.
+  if (.msr_valid_observation_ids(point_ids, n_sites) &&
+      .msr_valid_observation_ids(row_ids, nrow(dat)) && all(row_ids %in% point_ids)) {
+    complete_idx <- match(row_ids, point_ids)[data_idx]
+  } else if (isTRUE(has_numeric_row_ids)) {
     row_idx <- suppressWarnings(as.integer(row_ids))
     valid_row_idx <- !anyNA(row_idx) &&
       !anyDuplicated(row_idx) &&

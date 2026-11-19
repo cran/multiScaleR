@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>13. Estimate Scales of Effect with a Bayesian Model</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">13. Estimate Scales of Effect with a
+Bayesian Model</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#decide-whether-you-need-a-bayesian-model" id="toc-decide-whether-you-need-a-bayesian-model"><span class="toc-section-number">2</span> Decide whether you need a Bayesian
+model</a></li>
+<li><a href="#check-the-software-you-need" id="toc-check-the-software-you-need"><span class="toc-section-number">3</span> Check the software you need</a></li>
+<li><a href="#fit-one-scale-per-landscape-layer" id="toc-fit-one-scale-per-landscape-layer"><span class="toc-section-number">4</span> Fit one scale per landscape
+layer</a>
+<ul>
+<li><a href="#prepare-the-inputs" id="toc-prepare-the-inputs"><span class="toc-section-number">4.1</span> Prepare the inputs</a></li>
+<li><a href="#state-the-priors-in-meters" id="toc-state-the-priors-in-meters"><span class="toc-section-number">4.2</span> State the priors in
+meters</a></li>
+<li><a href="#look-at-the-priors-before-fitting" id="toc-look-at-the-priors-before-fitting"><span class="toc-section-number">4.3</span> Look at the priors before
+fitting</a></li>
+<li><a href="#fit-the-model" id="toc-fit-the-model"><span class="toc-section-number">4.4</span> Fit the model</a></li>
+<li><a href="#check-the-fit-before-you-read-it" id="toc-check-the-fit-before-you-read-it"><span class="toc-section-number">4.5</span> Check the fit before you read
+it</a></li>
+<li><a href="#read-the-posterior-scales" id="toc-read-the-posterior-scales"><span class="toc-section-number">4.6</span> Read the posterior scales</a></li>
+</ul></li>
+<li><a href="#let-the-scale-differ-among-years" id="toc-let-the-scale-differ-among-years"><span class="toc-section-number">5</span> Let the scale differ among years</a>
+<ul>
+<li><a href="#load-the-data" id="toc-load-the-data"><span class="toc-section-number">5.1</span> Load the data</a></li>
+<li><a href="#write-the-response-formula-and-the-scale-formula" id="toc-write-the-response-formula-and-the-scale-formula"><span class="toc-section-number">5.2</span> Write the response formula and the
+scale formula</a></li>
+<li><a href="#read-the-between-year-standard-deviation-as-a-multiplier" id="toc-read-the-between-year-standard-deviation-as-a-multiplier"><span class="toc-section-number">5.3</span> Read the between-year standard
+deviation as a multiplier</a></li>
+<li><a href="#prepare-the-model-and-read-the-specification" id="toc-prepare-the-model-and-read-the-specification"><span class="toc-section-number">5.4</span> Prepare the model and read the
+specification</a></li>
+<li><a href="#sample-and-check-the-fit" id="toc-sample-and-check-the-fit"><span class="toc-section-number">5.5</span> Sample and check the fit</a></li>
+<li><a href="#read-the-annual-scales-and-the-between-year-spread" id="toc-read-the-annual-scales-and-the-between-year-spread"><span class="toc-section-number">5.6</span> Read the annual scales and the
+between-year spread</a></li>
+<li><a href="#compare-shared-separate-and-partially-pooled-scales" id="toc-compare-shared-separate-and-partially-pooled-scales"><span class="toc-section-number">5.7</span> Compare shared, separate, and
+partially pooled scales</a></li>
+<li><a href="#check-how-much-the-prior-on-the-spread-matters" id="toc-check-how-much-the-prior-on-the-spread-matters"><span class="toc-section-number">5.8</span> Check how much the prior on the
+spread matters</a></li>
+<li><a href="#check-the-model-against-the-data" id="toc-check-the-model-against-the-data"><span class="toc-section-number">5.9</span> Check the model against the
+data</a></li>
+</ul></li>
+<li><a href="#current-restrictions" id="toc-current-restrictions"><span class="toc-section-number">6</span> Current restrictions</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">7</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">7.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">7.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p><code>multiScale_bayes()</code> estimates the scale of effect and the
+regression coefficients together as one posterior distribution, or the
+combination of what the data say with what you assumed beforehand. This
+vignette shows when that is worth doing, how to state your prior
+knowledge about a scale in meters, how to fit the model and check the
+fit, and how to read the posterior scales. It then lets the scale of
+effect differ among years.</p>
+<p>You work through two examples. The first fits the count data from
+<code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code>, which
+you should read first. The second uses a stored fit to five years of
+surveys, each with its own habitat map, prepared as in
+<code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code>.</p>
+</div>
+<div id="decide-whether-you-need-a-bayesian-model" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Decide whether you need
+a Bayesian model</h1>
+<p><code>multiScale_optim()</code> is the default tool and is enough for
+most analyses. Reach for <code>multiScale_bayes()</code> in three
+situations.</p>
+<ul>
+<li><strong>You know something about the scale.</strong> A prior states
+a plausible range for sigma, the kernel width, before the data are seen.
+It can steady the estimate when the data are sparse or the landscape
+effect is weak.</li>
+<li><strong>The scale may differ among groups.</strong> A scale formula
+lets sigma change with a measured covariate or differ among years or
+regions. Years with few surveys can borrow information from the
+others.</li>
+<li><strong>Predictions must carry all the uncertainty.</strong> Every
+posterior draw holds a scale and a set of coefficients, so predictions
+account for both at once.</li>
+</ul>
+<p>The price is computation time, a prior you must justify, and sampling
+diagnostics you must check. The interface is experimental, and the
+coverage of its intervals has not been established for general
+ecological data sets.</p>
+</div>
+<div id="check-the-software-you-need" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Check the software you
+need</h1>
+<p>Each fitting method needs different optional packages.</p>
+<table>
+<colgroup>
+<col width="23%" />
+<col width="32%" />
+<col width="44%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"><code>method</code></th>
+<th align="left">What it does</th>
+<th align="left">Optional packages</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>&quot;prepare&quot;</code></td>
+<td align="left">Checks the data, formulas, and priors without
+fitting</td>
+<td align="left">None</td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;slice&quot;</code></td>
+<td align="left">Samples the posterior in R</td>
+<td align="left">None to fit, <code>posterior</code> for
+diagnostics</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>&quot;sample&quot;</code> (default)</td>
+<td align="left">Samples the posterior with NUTS, a gradient-based
+sampler</td>
+<td align="left"><code>RTMB</code>, <code>tmbstan</code>,
+<code>rstan</code>, <code>posterior</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>&quot;laplace&quot;</code>, <code>&quot;marginal&quot;</code></td>
+<td align="left">Approximate the posterior without sampling</td>
+<td align="left"><code>RTMB</code></td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">check_bayes_setup</span>(<span class="at">method =</span> <span class="st">&quot;slice&quot;</span>)   <span class="co"># are the packages for this method ready?</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co">#&gt; Bayesian package setup: slice </span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">#&gt; Package checks passed.</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co">#&gt; Slice sampling needs no optional fitting packages.</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co">#&gt; Install posterior (&gt;= 1.6.0) to compute chain diagnostics.</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> A passed check means the
+packages load and meet their minimum versions. It does not test your
+compiler or run a model. Installing the NUTS packages from source can
+require a C++ compiler, which on Windows comes with <a href="https://cran.r-project.org/bin/windows/Rtools/">Rtools</a>. This
+vignette uses <code>&quot;slice&quot;</code> and <code>&quot;sample&quot;</code>.
+<code>vignette(&quot;v15-bayesian-computation&quot;, package = &quot;multiScaleR&quot;)</code>
+covers the approximations, sampler settings, and parallel chains.</p>
+</div>
+<div id="fit-one-scale-per-landscape-layer" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Fit one scale per
+landscape layer</h1>
+<div id="prepare-the-inputs" class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Prepare the
+inputs</h2>
+<p>The first example uses the simulated counts from the Quick Start. The
+true sigma is 250 m for <code>land1</code> and 500 m for
+<code>land2</code>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>)              <span class="co"># counts and one site-level covariate</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)                      <span class="co"># survey locations (an sf object)</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>pts <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">vect</span>(surv_pts)          <span class="co"># convert to a terra SpatVector</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>                                     <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co"># bin = TRUE (the default) stores the distance-binned summaries the model uses</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+</div>
+<div id="state-the-priors-in-meters" class="section level2" number="4.2">
+<h2><span class="header-section-number">4.2</span> State the priors in
+meters</h2>
+<p>You set priors through the <code>priors</code> argument. Anything you
+leave out takes its default.</p>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Setting</th>
+<th align="left">Default</th>
+<th align="left">What it controls</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>scale_median</code></td>
+<td align="left"><code>sqrt(min_D * max_D)</code>, here 184 m</td>
+<td align="left">Prior median of sigma, in map units. One value, or a
+named vector with one value per layer</td>
+</tr>
+<tr class="even">
+<td align="left"><code>scale_intercept_sd</code></td>
+<td align="left">1</td>
+<td align="left">Spread of the prior for sigma, as a standard deviation
+of log sigma</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>scale_coef_sd</code></td>
+<td align="left">0.5</td>
+<td align="left">Prior standard deviation for the effect of a covariate
+on log sigma</td>
+</tr>
+<tr class="even">
+<td align="left"><code>scale_group_sd</code></td>
+<td align="left">0.5</td>
+<td align="left">Prior for the spread of log sigma among groups such as
+years</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>beta_sd</code></td>
+<td align="left">2.5</td>
+<td align="left">Prior standard deviation for each regression
+coefficient, on the link scale</td>
+</tr>
+<tr class="even">
+<td align="left"><code>response_group_sd</code></td>
+<td align="left">1</td>
+<td align="left">Prior for the spread of random intercepts, on the link
+scale</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>dispersion_log_mean</code>,
+<code>dispersion_log_sd</code></td>
+<td align="left">0, 1</td>
+<td align="left">Prior for the log of the negative binomial size or the
+Gaussian residual standard deviation</td>
+</tr>
+</tbody>
+</table>
+<p>The prior for sigma is normal on the log scale, so it multiplies and
+divides the median by the same factor. Suppose you believe the scale of
+effect is a few hundred meters and set the median to 300 m. Two lines of
+arithmetic show what the default spread then implies.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Central 95% of the prior for sigma: median 300 m, SD of 1 on the log scale</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>prior_sigma <span class="ot">&lt;-</span> <span class="dv">300</span> <span class="sc">*</span> <span class="fu">exp</span>(<span class="fu">c</span>(<span class="at">lower =</span> <span class="sc">-</span><span class="fl">1.96</span>, <span class="at">median =</span> <span class="dv">0</span>, <span class="at">upper =</span> <span class="fl">1.96</span>) <span class="sc">*</span> <span class="dv">1</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># The same values as effective distances (radius holding 90% of kernel weight)</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>prior_dist <span class="ot">&lt;-</span> <span class="fu">sapply</span>(prior_sigma, <span class="cf">function</span>(s) {</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="fu">kernel_dist</span>(<span class="at">sigma =</span> s, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>})</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">rbind</span>(<span class="at">sigma =</span> prior_sigma, <span class="at">effective_distance =</span> prior_dist))</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;                    lower median upper</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; sigma                 42    300  2130</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; effective_distance    91    644  4570</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> This prior puts 95% of its
+weight on a sigma between 42 and 2130 m, a factor of 7.1 either side of
+300 m. As an effective distance, the radius that holds 90% of the kernel
+weight, that is 91 to 4570 m. If that range is wider than you can
+defend, lower <code>scale_intercept_sd</code>. A value of 0.5 narrows
+the range for sigma to 113 to 799 m. The prior has no hard limit at
+<code>max_D</code>. A sigma beyond <code>max_D</code> weights the
+extracted neighborhood almost evenly and gains nothing from more distant
+cells.</p>
+</div>
+<div id="look-at-the-priors-before-fitting" class="section level2" number="4.3">
+<h2><span class="header-section-number">4.3</span> Look at the priors
+before fitting</h2>
+<p><code>method = &quot;prepare&quot;</code> checks the data, formula, and priors
+without fitting. <code>simulate_bayes_prior()</code> then draws
+parameters from the priors and simulates counts for your survey points,
+so you can see everything the priors allow.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>prepared <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, inputs,</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>                             landscape_counts, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>                             <span class="at">priors =</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="fu">c</span>(<span class="at">land1 =</span> <span class="dv">300</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>                                                            <span class="at">land2 =</span> <span class="dv">300</span>)),</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>                             <span class="at">method =</span> <span class="st">&quot;prepare&quot;</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>prior <span class="ot">&lt;-</span> <span class="fu">simulate_bayes_prior</span>(prepared, <span class="at">nsim =</span> <span class="dv">1000</span>, <span class="at">seed =</span> <span class="dv">63</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co"># Prior for sigma in meters, one column per landscape layer</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">sapply</span>(prior<span class="sc">$</span>log_scales, <span class="cf">function</span>(x) {</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="fu">exp</span>(<span class="fu">quantile</span>(x, <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>)))</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>}))</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;       land1 land2</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; 2.5%     41    44</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; 50%     298   295</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; 97.5%  2323  2198</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co"># Largest count in each simulated data set (the largest observed count is 10)</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>largest <span class="ot">&lt;-</span> <span class="fu">vapply</span>(prior<span class="sc">$</span>responses, max, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="fu">signif</span>(<span class="fu">quantile</span>(largest, <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>)), <span class="dv">2</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;    2.5%     50%   97.5% </span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; 2.0e+00 2.7e+04 8.5e+17</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The simulated prior for
+sigma is close to the arithmetic above. The simulated counts are another
+matter. The typical data set drawn from these priors has a largest count
+of 27,000, against 10 observed, because the default
+<code>beta_sd = 2.5</code> allows very large effects on the log scale.
+Extreme simulated counts show that a prior is loose for your design.
+They are not evidence of a poor fit. If the range is implausible for
+your surveys, set a smaller <code>beta_sd</code> and simulate again.
+This example keeps the default.</p>
+</div>
+<div id="fit-the-model" class="section level2" number="4.4">
+<h2><span class="header-section-number">4.4</span> Fit the model</h2>
+<p>The fitting call is the prepared call with a different
+<code>method</code>. Slice sampling needs no optional packages for
+fitting.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, inputs,</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>                        landscape_counts, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                        <span class="at">priors =</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="fu">c</span>(<span class="at">land1 =</span> <span class="dv">300</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>                                                       <span class="at">land2 =</span> <span class="dv">300</span>)),</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                        <span class="at">method =</span> <span class="st">&quot;slice&quot;</span>,   <span class="co"># four chains of 2000 iterations</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>                        <span class="at">seed =</span> <span class="dv">5211</span>)</span></code></pre></div>
+<p>This fit takes 20 to 40 seconds, so the package stores the result.
+<code>chains</code>, <code>iter</code>, and <code>warmup</code> set the
+number of chains, the iterations per chain, and how many of those are
+discarded as warm-up.</p>
+</div>
+<div id="check-the-fit-before-you-read-it" class="section level2" number="4.5">
+<h2><span class="header-section-number">4.5</span> Check the fit before
+you read it</h2>
+<p>A sampler runs several independent chains. The results are
+trustworthy only if the chains agree and contain enough draws.
+<code>summary()</code> reports the checks on the model parameters.
+<code>diagnose_bayes_scales()</code> repeats them for the fitted scales
+and reports how precisely each interval limit is computed.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>precision <span class="ot">&lt;-</span> <span class="fu">diagnose_bayes_scales</span>(fit)   <span class="co"># needs the posterior package</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">summary</span>(fit)<span class="sc">$</span>diagnostics<span class="sc">$</span>passed      <span class="co"># did the parameter checks pass?</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="fu">summary</span>(fit)<span class="sc">$</span>diagnostics<span class="sc">$</span>criteria    <span class="co"># the rule the package applies</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;At least 2 chains; Rhat &lt;= 1.01; bulk/tail ESS &gt;= 100 per chain.&quot;</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co"># Agreement among chains and effective sample sizes for each log sigma</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>precision<span class="sc">$</span>parameters[<span class="fu">c</span>(<span class="st">&quot;covariate&quot;</span>, <span class="st">&quot;rhat&quot;</span>, <span class="st">&quot;ess_bulk&quot;</span>, <span class="st">&quot;ess_tail&quot;</span>)]</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt;   covariate     rhat  ess_bulk ess_tail</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; 1     land1 1.002665  905.3584  937.121</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; 2     land2 1.003975 1033.0974 1611.410</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co"># Each interval limit on the log scale, with its Monte Carlo standard error</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>precision<span class="sc">$</span>quantiles[<span class="fu">c</span>(<span class="st">&quot;covariate&quot;</span>, <span class="st">&quot;probability&quot;</span>, <span class="st">&quot;estimate&quot;</span>, <span class="st">&quot;mcse&quot;</span>)]</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;   covariate probability estimate        mcse</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; 1     land1       0.025 5.196872 0.012290191</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; 2     land1       0.500 5.507952 0.005139396</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt; 3     land1       0.975 5.841998 0.027488507</span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt; 4     land2       0.025 6.022401 0.006516360</span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt; 5     land2       0.500 6.217000 0.003116837</span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; 6     land2       0.975 6.396603 0.005060544</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>precision<span class="sc">$</span>passed                     <span class="co"># parameter checks and scale checks together</span></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Chain plots take the stored chains of a slice fit</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(fit<span class="sc">$</span>chains, <span class="at">regex_pars =</span> <span class="st">&quot;^scale_beta&quot;</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Trace plots for the two scale parameters, one line per chain." src="data:image/png;base64,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" alt="Trace plots for the two scale parameters, one line per chain." />
+<div class="figcaption"><strong><em>Trace plots for the two scale
+parameters, one line per chain.</em></strong></div>
+</div>
+<p><strong>How to read the diagnostics:</strong> The table lists each
+check, the value the package accepts, and what to do when a fit falls
+short.</p>
+<table style="width:100%;">
+<colgroup>
+<col width="21%" />
+<col width="32%" />
+<col width="21%" />
+<col width="23%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Diagnostic</th>
+<th align="left">Where to find it</th>
+<th align="left">Acceptable</th>
+<th align="left">If it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">R-hat, or agreement among chains</td>
+<td align="left"><code>rhat</code></td>
+<td align="left">1.01 or less for every parameter</td>
+<td align="left">Find the parameter in
+<code>summary(fit)$diagnostics$parameters</code>. Refit with another
+<code>seed</code> and compare. A weak landscape effect leaves its scale
+poorly identified, and longer chains do not cure that</td>
+</tr>
+<tr class="even">
+<td align="left">Effective sample size, or the number of independent
+draws the chains are worth</td>
+<td align="left"><code>ess_bulk</code>, <code>ess_tail</code></td>
+<td align="left">At least 100 per chain (400 for four chains)</td>
+<td align="left">Increase <code>iter</code></td>
+</tr>
+<tr class="odd">
+<td align="left">Divergences (NUTS only)</td>
+<td align="left"><code>summary(fit)$diagnostics$divergences</code></td>
+<td align="left">0</td>
+<td align="left">Raise <code>adapt_delta</code> in <code>control</code>
+(default 0.9) and refit</td>
+</tr>
+<tr class="even">
+<td align="left">Tree-depth hits (NUTS only)</td>
+<td align="left"><code>summary(fit)$diagnostics$max_treedepth_hits</code></td>
+<td align="left">0</td>
+<td align="left">Raise <code>max_treedepth</code> in
+<code>control</code> (default 12) and refit</td>
+</tr>
+<tr class="odd">
+<td align="left">E-BFMI, an energy check (NUTS only)</td>
+<td align="left"><code>summary(fit)$diagnostics$ebfmi</code></td>
+<td align="left">0.3 or more in every chain</td>
+<td align="left">Do not report the fit. Compare it with
+<code>method = &quot;slice&quot;</code>, which samples the same posterior</td>
+</tr>
+<tr class="even">
+<td align="left">Monte Carlo standard error (MCSE)</td>
+<td align="left"><code>mcse</code></td>
+<td align="left">No fixed cutoff. Small next to the precision your
+question needs</td>
+<td align="left">Increase <code>iter</code>, and compare independent
+runs when an interval limit matters</td>
+</tr>
+</tbody>
+</table>
+<p>Here every R-hat is 1.004 or less and the smallest effective sample
+size is 905, so the fit passes. The MCSE needs a little translation. The
+upper limit of log sigma for <code>land1</code> has an MCSE of 0.027. An
+error of that size on the log scale is about 3% of the distance, or
+roughly 9 m of numerical error on a limit of 344 m. In the trace plots
+the four chains overlap and none drifts, which is the pattern you want.
+<code>scale_beta[1]</code> belongs to <code>land1</code> and
+<code>scale_beta[2]</code> to <code>land2</code>. The vertical axis is
+the sampler’s internal log scale, so read the shape and not the
+values.</p>
+<p>Passing these checks means the computation is sound. It does not show
+that the model fits the data. More iterations improve numerical
+precision, but they cannot repair a wrong likelihood or an uninformative
+landscape.</p>
+</div>
+<div id="read-the-posterior-scales" class="section level2" number="4.6">
+<h2><span class="header-section-number">4.6</span> Read the posterior
+scales</h2>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>scales <span class="ot">&lt;-</span> <span class="fu">posterior_scales</span>(fit)       <span class="co"># sigma in map units (meters here)</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>scales[<span class="fu">c</span>(<span class="st">&quot;covariate&quot;</span>, <span class="st">&quot;median&quot;</span>, <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>         <span class="st">&quot;p_below_min_D&quot;</span>, <span class="st">&quot;p_above_max_D&quot;</span>)]</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt;   covariate   median    lower    upper p_below_min_D p_above_max_D</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; 1     land1 246.6455 180.7061 344.4668             0             0</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; 2     land2 501.1973 412.5682 599.8042             0             0</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co"># Posterior medians as effective distances</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>dist90 <span class="ot">&lt;-</span> <span class="fu">sapply</span>(scales<span class="sc">$</span>median, <span class="cf">function</span>(s) {</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>  <span class="fu">kernel_dist</span>(<span class="at">sigma =</span> s, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>})</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">setNames</span>(dist90, scales<span class="sc">$</span>covariate))</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; land1 land2 </span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;   529  1076</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co"># Regression coefficients on the log scale</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>coefs <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit)<span class="sc">$</span>coefficients</span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>coefs[<span class="fu">c</span>(<span class="st">&quot;coefficient&quot;</span>, <span class="st">&quot;median&quot;</span>, <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>)]</span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;   coefficient     median       lower      upper</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; 1 (Intercept)  0.2882414  0.07100499  0.4802068</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; 2        site  0.1688255  0.00802232  0.3364049</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; 3       land1 -0.3877099 -0.60578511 -0.2299701</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; 4       land2  1.0899201  0.75829505  1.4906864</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Each row of
+<code>posterior_scales()</code> is one landscape layer.
+<code>median</code> is the posterior median of sigma, and
+<code>lower</code> and <code>upper</code> bound a central 95% credible
+interval, or the range that holds 95% of the posterior. The median for
+<code>land1</code> is 247 m (181 to 344 m) and for <code>land2</code> it
+is 501 m (413 to 600 m). Both intervals contain the true values of 250
+and 500 m. As effective distances, habitat within about 529 m shapes the
+count for <code>land1</code>, and within about 1076 m for
+<code>land2</code>. The last two columns give the share of the posterior
+below the raster cell size (<code>min_D</code>) and above
+<code>max_D</code>. Both are zero, so the prepared inputs cover the
+plausible scales.</p>
+<p>For this Poisson model the coefficients are on the log scale. A one
+standard deviation increase in kernel-weighted <code>land1</code>
+multiplies the expected count by 0.68, and the same increase in
+<code>land2</code> multiplies it by 2.97.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> A Bayesian fit
+standardizes each landscape covariate once, at the prior median scale,
+and keeps that standardization fixed. Its coefficients therefore
+describe one standard deviation of the covariate at
+<code>scale_median</code>, not at the fitted sigma. They are not
+comparable with coefficients from <code>multiScale_optim()</code>.
+Refitting this model with
+<code>scale_median = c(land1 = 250, land2 = 500)</code> returns nearly
+the same scales (244 and 502 m), but the <code>land2</code> coefficient
+changes from 1.09 to 0.63. Report <code>scale_median</code> with any
+coefficient.</p>
+</blockquote>
+</div>
+</div>
+<div id="let-the-scale-differ-among-years" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Let the scale differ
+among years</h1>
+<div id="load-the-data" class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> Load the data</h2>
+<p>The second example has repeated counts at up to 25 sites in five
+years, with a different habitat map each year. The counts were simulated
+with a different sigma in each year, and two years have fewer
+surveys.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>annual <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;bayesian-annual-example.rds&quot;</span>,</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>dat <span class="ot">&lt;-</span> annual<span class="sc">$</span>data            <span class="co"># one row per site and year</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>inputs_annual <span class="ot">&lt;-</span> annual<span class="sc">$</span>inputs    <span class="co"># prepared with kernel_prep_by_group()</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="fu">head</span>(dat, <span class="dv">3</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt;   site year site_year count</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; 1   s1 2021   s1_2021     3</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; 2   s2 2021   s2_2021     5</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; 3   s3 2021   s3_2021     9</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>annual<span class="sc">$</span>truth                  <span class="co"># sigma used to simulate each year (m), surveys</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt;   year scale observations</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; 1 2021   180           25</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt; 2 2022   250           25</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; 3 2023   350            9</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt; 4 2024   260           25</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt; 5 2025   210           16</span></span></code></pre></div>
+<p><code>site_year</code> links each count to the landscape prepared for
+that site in that year. <code>inputs_annual</code> holds those
+landscapes, which
+<code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code>
+shows how to build.</p>
+</div>
+<div id="write-the-response-formula-and-the-scale-formula" class="section level2" number="5.2">
+<h2><span class="header-section-number">5.2</span> Write the response
+formula and the scale formula</h2>
+<p>The model takes two formulas, and they describe different things. The
+response formula here is
+<code>count ~ habitat + factor(year) + (1 | site)</code>. In it,
+<code>factor(year)</code> lets the average count differ among years, and
+<code>(1 | site)</code> is a random intercept that accounts for repeated
+surveys at a site. The scale formula goes in <code>scales</code>, as
+<code>list(habitat = ~1 + (1 | year))</code>, and its
+<code>(1 | year)</code> gives each year its own sigma. A year effect in
+the response changes how many animals you expect. A year effect in the
+scale changes how far the habitat effect reaches.</p>
+<table>
+<colgroup>
+<col width="44%" />
+<col width="55%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Scale formula</th>
+<th align="left">What it estimates</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>~1</code> (default)</td>
+<td align="left">One sigma for all observations</td>
+</tr>
+<tr class="even">
+<td align="left"><code>~ elevation</code></td>
+<td align="left">Sigma that changes with a numeric covariate.
+<code>exp()</code> of its coefficient is the multiplicative change in
+sigma per unit</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>~ year</code></td>
+<td align="left">A separate sigma for each level of a factor, as
+contrasts with the first level</td>
+</tr>
+<tr class="even">
+<td align="left"><code>~0 + year</code></td>
+<td align="left">A separate sigma per year, each with the same prior,
+and no sharing among years</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>~1 + (1 | year)</code></td>
+<td align="left">Partial pooling, in which years share a typical sigma
+and an estimated spread around it</td>
+</tr>
+</tbody>
+</table>
+<p>Partial pooling writes each year’s scale as <span class="math inline">\(\log \sigma_y = \alpha + \tau z_y\)</span>, with
+<span class="math inline">\(z_y \sim N(0, 1)\)</span>. Here alpha is the
+log of the typical sigma and tau is the standard deviation of log sigma
+among years. The model treats years as exchangeable. It assumes no trend
+and no carry-over from one year to the next.</p>
+</div>
+<div id="read-the-between-year-standard-deviation-as-a-multiplier" class="section level2" number="5.3">
+<h2><span class="header-section-number">5.3</span> Read the between-year
+standard deviation as a multiplier</h2>
+<p>Because tau lives on the log scale, <code>exp(tau)</code> is a
+multiplier. A tau of 0.3 means a year one standard deviation above
+typical has a sigma 1.35 times the typical value, and a year one
+standard deviation below has 0.74 times. About 95% of years fall between
+0.56 and 1.8 times the typical sigma. The same reading applies to its
+prior.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Prior on tau: half-normal with scale 0.5 (scale_group_sd)</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>tau <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">median =</span> <span class="fu">qnorm</span>(<span class="fl">0.75</span>), <span class="at">upper_95 =</span> <span class="fu">qnorm</span>(<span class="fl">0.975</span>)) <span class="sc">*</span> <span class="fl">0.5</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">rbind</span>(<span class="at">tau =</span> tau, <span class="at">multiplier =</span> <span class="fu">exp</span>(tau)), <span class="dv">2</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt;            median upper_95</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; tau          0.34     0.98</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; multiplier   1.40     2.66</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The default prior expects a
+typical year-to-year multiplier near 1.4 and gives only a 5% chance to
+multipliers above 2.7. If scales in your system could not plausibly
+differ that much among years, lower <code>scale_group_sd</code>.</p>
+</div>
+<div id="prepare-the-model-and-read-the-specification" class="section level2" number="5.4">
+<h2><span class="header-section-number">5.4</span> Prepare the model and
+read the specification</h2>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>prepared_annual <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  count <span class="sc">~</span> habitat <span class="sc">+</span> <span class="fu">factor</span>(year) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), inputs_annual, dat,</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="at">scales =</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="sc">~</span><span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> year)),</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>,             <span class="co"># column that links rows to landscapes</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,               <span class="co"># negative binomial counts</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="at">priors =</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="dv">250</span>, <span class="at">scale_group_sd =</span> <span class="fl">0.5</span>),</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;prepare&quot;</span></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>)</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>prepared_annual</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co">#&gt; Experimental Bayesian landscape-scale model</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; Inference: prepared </span></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt; Family: nbinom2 | observations: 100 </span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a><span class="co">#&gt; Scale formulas:</span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt;   habitat : ~1 + (1 | year)</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>info <span class="ot">&lt;-</span> prepared_annual<span class="sc">$</span>inference_metadata</span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="fu">unlist</span>(info[<span class="fu">c</span>(<span class="st">&quot;target&quot;</span>, <span class="st">&quot;method&quot;</span>, <span class="st">&quot;population_priors&quot;</span>)])</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt;            target            method population_priors </span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt;       &quot;posterior&quot;         &quot;prepare&quot;          &quot;proper&quot;</span></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a>info<span class="sc">$</span>uncertainty<span class="sc">$</span>intervals</span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co">#&gt; [1] &quot;not_provided&quot;</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Preparation matches every
+row to its landscape and checks the formulas, the priors, and missing
+values. Errors in the data or formulas surface here, before you spend
+any time sampling. The metadata states what the object is.
+<code>target</code> is <code>&quot;posterior&quot;</code> and the priors are
+<code>&quot;proper&quot;</code>, so this will be a Bayesian fit with a prior on
+every parameter. <code>method</code> is <code>&quot;prepare&quot;</code> and the
+intervals are <code>&quot;not_provided&quot;</code>, because nothing has been
+estimated yet. A prepared object has no posterior draws and cannot be
+used for prediction.</p>
+</div>
+<div id="sample-and-check-the-fit" class="section level2" number="5.5">
+<h2><span class="header-section-number">5.5</span> Sample and check the
+fit</h2>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>bfit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  count <span class="sc">~</span> habitat <span class="sc">+</span> <span class="fu">factor</span>(year) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), inputs_annual, dat,</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  <span class="at">scales =</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="sc">~</span><span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> year)),</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  <span class="at">priors =</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="dv">250</span>, <span class="at">scale_group_sd =</span> <span class="fl">0.5</span>),</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;sample&quot;</span>,                <span class="co"># NUTS</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">iter =</span> <span class="dv">6000</span>, <span class="at">warmup =</span> <span class="dv">3000</span>, <span class="at">seed =</span> <span class="dv">5211</span>,</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>  <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>, <span class="at">max_treedepth =</span> <span class="dv">12</span>)</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>bfit <span class="ot">&lt;-</span> annual<span class="sc">$</span>fits<span class="sc">$</span>pooled          <span class="co"># the stored result of the call above</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">summary</span>(bfit)<span class="sc">$</span>diagnostics      <span class="co"># checks computed on the full chains</span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">passed =</span> d<span class="sc">$</span>passed,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>           <span class="at">max_rhat =</span> <span class="fu">max</span>(d<span class="sc">$</span>parameters<span class="sc">$</span>rhat),</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>           <span class="at">min_bulk_ess =</span> <span class="fu">min</span>(d<span class="sc">$</span>parameters<span class="sc">$</span>ess_bulk),</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>           <span class="at">min_tail_ess =</span> <span class="fu">min</span>(d<span class="sc">$</span>parameters<span class="sc">$</span>ess_tail),</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>           <span class="at">divergences =</span> d<span class="sc">$</span>divergences,</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>           <span class="at">depth_hits =</span> d<span class="sc">$</span>max_treedepth_hits,</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>           <span class="at">min_ebfmi =</span> <span class="fu">min</span>(d<span class="sc">$</span>ebfmi))</span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt;   passed max_rhat min_bulk_ess min_tail_ess divergences depth_hits min_ebfmi</span></span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co">#&gt; 1   TRUE 1.000869     3758.789     3569.568           0          0 0.6211173</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Compare each column with the
+table in the first example. R-hat is below 1.01, both effective sample
+sizes are far above 400, no transition diverged or reached the
+tree-depth limit, and E-BFMI exceeds 0.3, so the fit passes. The stored
+object keeps 2000 of the 12,000 draws without their chain order, so
+<code>diagnose_bayes_scales(bfit)</code> reports
+<code>available = FALSE</code>. Run it on your own fit as in the first
+example.</p>
+</div>
+<div id="read-the-annual-scales-and-the-between-year-spread" class="section level2" number="5.6">
+<h2><span class="header-section-number">5.6</span> Read the annual
+scales and the between-year spread</h2>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="fu">posterior_scales</span>(bfit)[<span class="fu">c</span>(<span class="st">&quot;group&quot;</span>, <span class="st">&quot;median&quot;</span>, <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>, <span class="st">&quot;p_below_min_D&quot;</span>)]</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="co">#&gt;       group   median    lower    upper p_below_min_D</span></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="co">#&gt; 1 year=2021 173.0828 39.08530 431.8495        0.1935</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; 2 year=2022 173.7422 41.71146 423.5986        0.1840</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="co">#&gt; 3 year=2023 143.6104 34.01918 376.3533        0.2665</span></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co">#&gt; 4 year=2024 175.0161 41.81391 441.1051        0.1665</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; 5 year=2025 155.9366 49.68400 373.9298        0.1870</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="fu">summary</span>(bfit)<span class="sc">$</span>group_sd<span class="sc">$</span>log_scale_group_sd   <span class="co"># tau, spread of log sigma among years</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt;        mean    median        sd      lower     upper         term</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt; 1 0.2907021 0.2351976 0.2327386 0.01032759 0.8547712 habitat:year</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="fu">summary</span>(bfit)<span class="sc">$</span>group_sd<span class="sc">$</span>response_group_sd    <span class="co"># spread of site intercepts, log scale</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="co">#&gt;        mean    median         sd     lower    upper term</span></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co">#&gt; 1 0.3178393 0.3152256 0.08444491 0.1623303 0.508197 site</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Each row of
+<code>posterior_scales()</code> is one year’s sigma in meters after
+partial pooling. The medians run from 144 to 175 m, and every interval
+spans more than 300 m. These are separate intervals for each year, not a
+joint band. <code>p_below_min_D</code> shows that 17 to 27% of each
+posterior lies below the 100 m cell size of the maps, so part of each
+posterior sits below what the maps can resolve.</p>
+<p>The posterior median of tau is 0.24, a multiplier of 1.27. Its
+interval runs from 0.01 to 0.85, or multipliers of 1.01 to 2.35. Five
+years cannot tell you whether the scales are nearly equal or differ more
+than twofold. Tau describes variation among years. It is not the
+standard error of any one year’s sigma. Its prior also rules out exactly
+zero, so a positive lower limit is not evidence that years differ. The
+response standard deviation of 0.32 is on the log count scale, so a site
+one standard deviation above average has 1.37 times the expected
+count.</p>
+<p>Report medians and interval limits for sigma. The mean and standard
+deviation of a distance can be unstable when the upper tail is long, and
+<code>posterior_scales(bfit, scale = &quot;log&quot;)</code> gives them on the log
+scale instead. <code>plot(bfit)</code> draws the annual intervals, and
+<code>plot(bfit, type = &quot;group_sd&quot;)</code> draws the two standard
+deviations.</p>
+</div>
+<div id="compare-shared-separate-and-partially-pooled-scales" class="section level2" number="5.7">
+<h2><span class="header-section-number">5.7</span> Compare shared,
+separate, and partially pooled scales</h2>
+<p>To see what pooling does, compare the fit with two others that the
+package also stores. One uses <code>scales = list(habitat = ~1)</code>,
+a single sigma for all years (seed 5212). The other uses
+<code>scales = list(habitat = ~0 + year)</code>, a separate sigma for
+each year with no sharing (seed 5213). Every other argument matches the
+call above.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>comparison <span class="ot">&lt;-</span> annual<span class="sc">$</span>comparison     <span class="co"># posterior_scales() of the three stored fits</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>ggplot2<span class="sc">::</span><span class="fu">ggplot</span>(comparison, ggplot2<span class="sc">::</span><span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> median, <span class="at">ymin =</span> lower,</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>                                         <span class="at">ymax =</span> upper, <span class="at">color =</span> model)) <span class="sc">+</span></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">geom_pointrange</span>(<span class="at">position =</span> ggplot2<span class="sc">::</span><span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.6</span>)) <span class="sc">+</span></span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">geom_point</span>(ggplot2<span class="sc">::</span><span class="fu">aes</span>(<span class="at">y =</span> truth), <span class="at">color =</span> <span class="st">&quot;black&quot;</span>, <span class="at">shape =</span> <span class="dv">4</span>,</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a>                      <span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">scale_color_brewer</span>(<span class="at">palette =</span> <span class="st">&quot;Dark2&quot;</span>) <span class="sc">+</span></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Year&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Sigma (m)&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Scale model&quot;</span>) <span class="sc">+</span></span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a>  ggplot2<span class="sc">::</span><span class="fu">theme_classic</span>()</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Posterior sigma by year under three scale models. Crosses mark the values used to simulate the data." src="data:image/png;base64,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" alt="Posterior sigma by year under three scale models. Crosses mark the values used to simulate the data." />
+<div class="figcaption"><strong><em>Posterior sigma by year under three
+scale models. Crosses mark the values used to simulate the
+data.</em></strong></div>
+</div>
+<p><strong>How to read this plot:</strong> Points are posterior medians
+and bars are 95% credible intervals. The legend labels the partially
+pooled model Hierarchical and the separate-year model Independent. Look
+at 2023, the year with nine surveys. Estimated alone, its sigma is 101 m
+against a true value of 350 m. With partial pooling it moves to 144 m,
+closer to the other years. Pooling steadies a poorly sampled year by
+pulling it toward the rest, and the same pull can drag a truly unusual
+year too far. The shared model reports 184 m for every year. In this
+data set its intervals and those of the pooled model contain all five
+true values, and the separate-year model misses one. A single simulated
+data set cannot rank the three models. It shows how each one
+behaves.</p>
+</div>
+<div id="check-how-much-the-prior-on-the-spread-matters" class="section level2" number="5.8">
+<h2><span class="header-section-number">5.8</span> Check how much the
+prior on the spread matters</h2>
+<p>With few groups, the prior on tau can drive the answer. The stored
+example repeats the pooled fit with <code>scale_group_sd</code> set to
+0.25 (seed 5214) and 0.75 (seed 5215).</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>annual<span class="sc">$</span>sensitivity      <span class="co"># posterior of tau under three priors</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="co">#&gt;   prior_sd    median       lower     upper</span></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a><span class="co">#&gt; 1     0.25 0.1502693 0.007986508 0.4876333</span></span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a><span class="co">#&gt; 2     0.50 0.2351976 0.010327586 0.8547712</span></span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a><span class="co">#&gt; 3     0.75 0.2757591 0.011352487 1.1957444</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>prior_sd</code> is
+<code>scale_group_sd</code>, and the other columns summarize the
+posterior of tau. Its median rises from 0.15 to 0.28 as the prior
+widens, and the upper limit more than doubles. As multipliers, the
+medians are 1.16 and 1.32.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> With five years, the
+data say little about how much the scale varies, and the prior fills the
+gap. State the prior you used, repeat the fit with a defensible
+alternative, and report whether your conclusions change.</p>
+</blockquote>
+</div>
+<div id="check-the-model-against-the-data" class="section level2" number="5.9">
+<h2><span class="header-section-number">5.9</span> Check the model
+against the data</h2>
+<p>A posterior predictive check simulates new data sets from the fitted
+model and asks whether the observed data look like them.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>replicated <span class="ot">&lt;-</span> <span class="fu">simulate</span>(bfit, <span class="at">nsim =</span> <span class="dv">200</span>, <span class="at">seed =</span> <span class="dv">94</span>)   <span class="co"># one column per data set</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="co"># Three features of a count data set</span></span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>features <span class="ot">&lt;-</span> <span class="cf">function</span>(y) {</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>  <span class="fu">c</span>(<span class="at">mean =</span> <span class="fu">mean</span>(y), <span class="at">zero_fraction =</span> <span class="fu">mean</span>(y <span class="sc">==</span> <span class="dv">0</span>), <span class="at">maximum =</span> <span class="fu">max</span>(y))</span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>}</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>sims <span class="ot">&lt;-</span> <span class="fu">vapply</span>(replicated, features, <span class="fu">numeric</span>(<span class="dv">3</span>))</span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">observed =</span> <span class="fu">features</span>(dat<span class="sc">$</span>count),</span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>           <span class="at">lower    =</span> <span class="fu">apply</span>(sims, <span class="dv">1</span>, quantile, <span class="fl">0.025</span>),</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a>           <span class="at">median   =</span> <span class="fu">apply</span>(sims, <span class="dv">1</span>, median),</span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a>           <span class="at">upper    =</span> <span class="fu">apply</span>(sims, <span class="dv">1</span>, quantile, <span class="fl">0.975</span>))</span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a><span class="co">#&gt;               observed     lower median    upper</span></span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a><span class="co">#&gt; mean             26.44  23.05725  26.72  30.9475</span></span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a><span class="co">#&gt; zero_fraction     0.04   0.00000   0.01   0.0400</span></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a><span class="co">#&gt; maximum         220.00 124.97500 201.00 337.0250</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Each row compares one
+feature of the observed counts with its central 95% range across 200
+simulated data sets. The package sets no pass mark for this check. An
+observed value far outside its range means the model cannot reproduce
+that feature. Here the mean and the maximum sit inside their ranges, and
+the share of zeros sits at the upper edge, so look at where the zeros
+fall by year and site. When a feature is missed, revisit the family, the
+covariates, and the random intercepts in the response formula, then fit
+again. <code>aic_tab()</code> and <code>bic_tab()</code> do not accept
+Bayesian fits, so compare candidate models with checks like this one.
+<code>vignette(&quot;v14-bayesian-prediction&quot;, package = &quot;multiScaleR&quot;)</code>
+covers expected counts, new sites, and years that were not surveyed.</p>
+</div>
+</div>
+<div id="current-restrictions" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Current
+restrictions</h1>
+<table>
+<colgroup>
+<col width="42%" />
+<col width="24%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Part of the model</th>
+<th align="left">Supported</th>
+<th align="left">Not supported</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Family</td>
+<td align="left"><code>&quot;nbinom2&quot;</code> (default),
+<code>&quot;poisson&quot;</code>, <code>&quot;binomial&quot;</code>,
+<code>&quot;gaussian&quot;</code></td>
+<td align="left">Zero inflation, imperfect detection, other
+families</td>
+</tr>
+<tr class="even">
+<td align="left">Landscape covariates</td>
+<td align="left">Gaussian and exponential kernel means prepared with
+<code>bin = TRUE</code>, and the weighted surface metric
+<code>&quot;sq&quot;</code></td>
+<td align="left">Other kernels and other optimized surface metrics</td>
+</tr>
+<tr class="odd">
+<td align="left">Response formula</td>
+<td align="left">Fixed effects, interactions with landscape covariates,
+offsets, random intercepts</td>
+<td align="left">Random slopes, spatial random fields, observation
+weights</td>
+</tr>
+<tr class="even">
+<td align="left">Scale formula</td>
+<td align="left">Intercept, covariates, random intercepts</td>
+<td align="left">Autocorrelation among years or other groups</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>method = &quot;marginal&quot;</code></td>
+<td align="left">Exactly one group standard deviation across all scale
+formulas</td>
+<td align="left">Two or more. Use <code>&quot;sample&quot;</code>,
+<code>&quot;slice&quot;</code>, or <code>&quot;laplace&quot;</code></td>
+</tr>
+<tr class="even">
+<td align="left">Model comparison</td>
+<td align="left">Posterior predictive checks</td>
+<td align="left"><code>aic_tab()</code> and <code>bic_tab()</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>?multiScale_bayes</code> gives the full rules for formulas,
+including splines and transformed covariates.</p>
+</div>
+<div id="quick-reference" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Quick reference</h1>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="co"># 1. Prepare binned inputs and look at the priors</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>prepared <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, inputs,</span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>                             landscape_counts, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>                             <span class="at">priors =</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="fu">c</span>(<span class="at">land1 =</span> <span class="dv">300</span>,</span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>                                                            <span class="at">land2 =</span> <span class="dv">300</span>)),</span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a>                             <span class="at">method =</span> <span class="st">&quot;prepare&quot;</span>)</span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>prior <span class="ot">&lt;-</span> <span class="fu">simulate_bayes_prior</span>(prepared, <span class="at">nsim =</span> <span class="dv">1000</span>, <span class="at">seed =</span> <span class="dv">63</span>)</span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a><span class="fu">kernel_dist</span>(<span class="at">sigma =</span> <span class="dv">300</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>)   <span class="co"># a sigma as effective distance</span></span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a></span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a><span class="co"># 2. Fit one scale per layer, check the fit, then read it</span></span>
+<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, inputs,</span>
+<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a>                        landscape_counts, <span class="at">family =</span> <span class="st">&quot;poisson&quot;</span>,</span>
+<span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a>                        <span class="at">priors =</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="fu">c</span>(<span class="at">land1 =</span> <span class="dv">300</span>,</span>
+<span id="cb19-16"><a href="#cb19-16" tabindex="-1"></a>                                                       <span class="at">land2 =</span> <span class="dv">300</span>)),</span>
+<span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a>                        <span class="at">method =</span> <span class="st">&quot;slice&quot;</span>, <span class="at">seed =</span> <span class="dv">5211</span>)</span>
+<span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a><span class="fu">summary</span>(fit)<span class="sc">$</span>diagnostics<span class="sc">$</span>passed           <span class="co"># parameter checks</span></span>
+<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a>precision <span class="ot">&lt;-</span> <span class="fu">diagnose_bayes_scales</span>(fit)   <span class="co"># scale checks and MCSE</span></span>
+<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(fit<span class="sc">$</span>chains, <span class="at">regex_pars =</span> <span class="st">&quot;^scale_beta&quot;</span>)</span>
+<span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a><span class="fu">posterior_scales</span>(fit)                     <span class="co"># sigma in map units</span></span>
+<span id="cb19-22"><a href="#cb19-22" tabindex="-1"></a><span class="fu">summary</span>(fit)<span class="sc">$</span>coefficients                 <span class="co"># coefficients on the link scale</span></span>
+<span id="cb19-23"><a href="#cb19-23" tabindex="-1"></a></span>
+<span id="cb19-24"><a href="#cb19-24" tabindex="-1"></a><span class="co"># 3. Let the scale differ among years (method = &quot;prepare&quot; checks it first)</span></span>
+<span id="cb19-25"><a href="#cb19-25" tabindex="-1"></a>bfit <span class="ot">&lt;-</span> <span class="fu">multiScale_bayes</span>(</span>
+<span id="cb19-26"><a href="#cb19-26" tabindex="-1"></a>  count <span class="sc">~</span> habitat <span class="sc">+</span> <span class="fu">factor</span>(year) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), inputs_annual, dat,</span>
+<span id="cb19-27"><a href="#cb19-27" tabindex="-1"></a>  <span class="at">scales =</span> <span class="fu">list</span>(<span class="at">habitat =</span> <span class="sc">~</span><span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> year)),</span>
+<span id="cb19-28"><a href="#cb19-28" tabindex="-1"></a>  <span class="at">row_id =</span> <span class="st">&quot;site_year&quot;</span>, <span class="at">family =</span> <span class="st">&quot;nbinom2&quot;</span>,</span>
+<span id="cb19-29"><a href="#cb19-29" tabindex="-1"></a>  <span class="at">priors =</span> <span class="fu">list</span>(<span class="at">scale_median =</span> <span class="dv">250</span>, <span class="at">scale_group_sd =</span> <span class="fl">0.5</span>),</span>
+<span id="cb19-30"><a href="#cb19-30" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb19-31"><a href="#cb19-31" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">iter =</span> <span class="dv">6000</span>, <span class="at">warmup =</span> <span class="dv">3000</span>, <span class="at">seed =</span> <span class="dv">5211</span>,</span>
+<span id="cb19-32"><a href="#cb19-32" tabindex="-1"></a>  <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>, <span class="at">max_treedepth =</span> <span class="dv">12</span>)</span>
+<span id="cb19-33"><a href="#cb19-33" tabindex="-1"></a>)</span>
+<span id="cb19-34"><a href="#cb19-34" tabindex="-1"></a><span class="fu">summary</span>(bfit)<span class="sc">$</span>diagnostics                   <span class="co"># R-hat, ESS, divergences, E-BFMI</span></span>
+<span id="cb19-35"><a href="#cb19-35" tabindex="-1"></a><span class="fu">posterior_scales</span>(bfit)                      <span class="co"># sigma for each year</span></span>
+<span id="cb19-36"><a href="#cb19-36" tabindex="-1"></a><span class="fu">summary</span>(bfit)<span class="sc">$</span>group_sd<span class="sc">$</span>log_scale_group_sd   <span class="co"># tau, spread of log sigma</span></span>
+<span id="cb19-37"><a href="#cb19-37" tabindex="-1"></a><span class="fu">summary</span>(bfit)<span class="sc">$</span>group_sd<span class="sc">$</span>response_group_sd    <span class="co"># spread of site intercepts</span></span>
+<span id="cb19-38"><a href="#cb19-38" tabindex="-1"></a>replicated <span class="ot">&lt;-</span> <span class="fu">simulate</span>(bfit, <span class="at">nsim =</span> <span class="dv">200</span>, <span class="at">seed =</span> <span class="dv">94</span>)   <span class="co"># predictive check</span></span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="7.1">
+<h2><span class="header-section-number">7.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>check_bayes_setup()</code></td>
+<td align="left">Report whether the optional packages for a method are
+installed</td>
+</tr>
+<tr class="even">
+<td align="left"><code>kernel_prep()</code>,
+<code>kernel_prep_by_group()</code></td>
+<td align="left">Prepare binned landscape inputs for one map or for one
+map per group</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>multiScale_bayes()</code></td>
+<td align="left">Prepare, sample, or approximate a Bayesian scale
+model</td>
+</tr>
+<tr class="even">
+<td align="left"><code>simulate_bayes_prior()</code></td>
+<td align="left">Simulate scales and responses from the priors before
+fitting</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>diagnose_bayes_scales()</code></td>
+<td align="left">Check chain agreement and numerical precision of the
+fitted scales</td>
+</tr>
+<tr class="even">
+<td align="left"><code>posterior_scales()</code></td>
+<td align="left">Summarize sigma for each layer and group, in map
+units</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>summary()</code></td>
+<td align="left">Report coefficients, group standard deviations, and
+sampler diagnostics</td>
+</tr>
+<tr class="even">
+<td align="left"><code>plot()</code></td>
+<td align="left">Draw the fitted scales or the group standard deviations
+with intervals</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>kernel_dist()</code></td>
+<td align="left">Convert a sigma to an effective distance</td>
+</tr>
+<tr class="even">
+<td align="left"><code>simulate()</code></td>
+<td align="left">Simulate replicated observations for posterior
+predictive checks</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>predict_scales()</code>,
+<code>predict()</code></td>
+<td align="left">Predict scales and expected responses for observed or
+new groups</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="7.2">
+<h2><span class="header-section-number">7.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow with <code>multiScale_optim()</code>.</li>
+<li><strong><code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+preparing a separate map for each year.</li>
+<li><strong><code>vignette(&quot;v15-bayesian-computation&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+sampler settings, parallel chains, and the faster approximations.</li>
+<li><strong><code>vignette(&quot;v14-bayesian-prediction&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+predicting new sites, new years, and totals.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what each interval includes and leaves out.</li>
+<li><strong><code>vignette(&quot;v07-fitting-methods&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+which covariate types each fitting method accepts.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

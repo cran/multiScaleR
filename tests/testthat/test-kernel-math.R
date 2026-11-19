@@ -1,23 +1,23 @@
 test_that("kernel distance helpers match expected formulas", {
   expect_equal(
-    kernel_dist(sigma = 10, kernel = "gaussian", prob = 0.95),
+    kernel_dist(sigma = 10, kernel = "gaussian", prob = 0.95, dimension = "1d"),
     round(stats::qnorm(0.975, mean = 0, sd = 10), 2),
     tolerance = 1e-8
   )
 
   expect_equal(
-    kernel_dist(sigma = 10, kernel = "exp", prob = 0.95),
+    kernel_dist(sigma = 10, kernel = "exp", prob = 0.95, dimension = "1d"),
     round(-10 * log(1 - 0.95), 2),
     tolerance = 1e-8
   )
 
   expect_equal(
-    kernel_dist(sigma = 10, kernel = "fixed", prob = 0.5),
+    kernel_dist(sigma = 10, kernel = "fixed", prob = 0.5, dimension = "1d"),
     5,
     tolerance = 1e-8
   )
 
-  expect_true(kernel_dist(sigma = 10, kernel = "expow", beta = 2, prob = 0.9) > 0)
+  expect_true(kernel_dist(sigma = 10, kernel = "expow", shape = 2, prob = 0.9) > 0)
 })
 
 test_that("kernel distance helpers validate arguments", {

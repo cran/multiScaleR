@@ -306,7 +306,8 @@ test_that("optimized surface specs evaluate during model refits", {
     y = c(1, 0, 1, 0, 1),
     kernel_inputs$kernel_dat
   )
-  mod <- glm(y ~ elev_sq, family = binomial(), data = dat)
+  expect_warning(mod <- glm(y ~ elev_sq, family = binomial(), data = dat),
+    "fitted probabilities numerically 0 or 1 occurred")
   opt_context <- build_opt_context(
     fitted_mod = mod,
     cov_df = kernel_inputs$raw_cov,
@@ -316,15 +317,16 @@ test_that("optimized surface specs evaluate during model refits", {
     n_cols = kernel_inputs$n_cols
   )
 
-  neg_ll <- kernel_scale_fn(
+  expect_warning(neg_ll <- kernel_scale_fn(
     par = 0.5,
     d_list = kernel_inputs$d_list,
     cov_df = kernel_inputs$raw_cov,
     kernel = kernel_inputs$kernel,
     fitted_mod = mod,
     opt_context = opt_context
-  )
-  final <- kernel_scale_fn(
+  ),
+    "fitted probabilities numerically 0 or 1 occurred")
+  expect_warning(final <- kernel_scale_fn(
     par = 0.5,
     d_list = kernel_inputs$d_list,
     cov_df = kernel_inputs$raw_cov,
@@ -332,7 +334,8 @@ test_that("optimized surface specs evaluate during model refits", {
     fitted_mod = mod,
     opt_context = opt_context,
     mod_return = TRUE
-  )
+  ),
+    "fitted probabilities numerically 0 or 1 occurred")
 
   expect_true(is.finite(neg_ll))
   expect_s3_class(final$mod, "glm")
@@ -340,15 +343,12 @@ test_that("optimized surface specs evaluate during model refits", {
 })
 
 
-test_that("optimized surface specs are rejected with the expow kernel", {
+test_that("optimized surface radii can coexist with the expow kernel", {
   elevation <- surface_test_raster(606)
   vars <- msr_vars(
     elev_sq = surface_var("elevation", metric = "sq")
   )
-  expect_error(
-    .msr_validate_scale_vars(vars, elevation, kernel = "expow"),
-    "expow"
-  )
+  expect_silent(.msr_validate_scale_vars(vars, elevation, kernel = "expow"))
 })
 
 
@@ -713,13 +713,12 @@ test_that("weighted surface metrics are allowed with the expow kernel", {
   # Weighted metrics use the kernel (including its shape), so expow is allowed.
   expect_silent(.msr_validate_scale_vars(weighted_vars, elevation,
                                          kernel = "expow"))
-  # Unweighted optimized surface metrics remain unsupported with expow.
+  # Unweighted metrics retain their radius; the shape slot is inapplicable.
   unweighted_vars <- msr_vars(
     elev_sq = surface_var("elevation", metric = "sq")
   )
-  expect_error(.msr_validate_scale_vars(unweighted_vars, elevation,
-                                        kernel = "expow"),
-               "expow")
+  expect_silent(.msr_validate_scale_vars(unweighted_vars, elevation,
+                                         kernel = "expow"))
 })
 
 
@@ -890,4 +889,81 @@ test_that("sdr integrates through kernel_prep and projection", {
   # sdr is a slope-family metric, so kernel weighting is not offered.
   expect_error(surface_var("elevation", metric = "sdr", weighted = TRUE),
                "not supported for the slope metric")
+})
+
+test_that("prepared surface neighbors preserve exact radius and missing-cell semantics", {
+  skip_on_cran()
+  elevation <- surface_test_raster(111)
+  ki <- kernel_prep(surface_test_points(elevation), elevation, max_D = 120,
+    scale_vars = msr_vars(slope = surface_var("elevation", "sdq"),
+                         area = surface_var("elevation", "sdr")), verbose = FALSE)
+  # Reorder one existing buffer and introduce missing values/distances.
+  order <- rev(seq_along(ki$d_list[[1]]))
+  cells <- .msr_extract_cells(ki$raw_cov[[1]])
+  ki$d_list[[1]] <- ki$d_list[[1]][order]
+  ki$raw_cov[[1]] <- ki$raw_cov[[1]][order, , drop = FALSE]
+  attr(ki$raw_cov[[1]], "cell") <- cells[order]
+  ki$raw_cov[[1]][c(2, 7), "elevation"] <- NA_real_
+  ki$d_list[[1]][3] <- Inf
+  cache <- .msr_prepare_surface_neighbors(ki$d_list, ki$raw_cov,
+                                         ki$scale_vars, ki$resolution, ki$n_cols)
+  for (i in seq_along(ki$d_list)) {
+    radii <- sort(unique(c(.01, .5, 1, ki$d_list[[i]][is.finite(ki$d_list[[i]])])))
+    radii <- radii[radii > 0]
+    for (radius in radii) for (name in c("slope", "area")) {
+      metric <- if (name == "slope") "sdq" else "sdr"
+      expected <- .surface_neighbor_by_buffer(ki$d_list[[i]],
+        ki$raw_cov[[i]][, "elevation", drop = FALSE],
+        .msr_extract_cells(ki$raw_cov[[i]]), radius, ki$resolution, ki$n_cols,
+        metric, validate = FALSE)[[1]]
+      expect_equal(.msr_eval_surface_neighbors(cache[[i]][[name]], radius),
+                   expected, tolerance = 1e-12)
+    }
+  }
+  dat <- data.frame(y = c(1, 0, 1, 0, 1), ki$kernel_dat)
+  model <- glm(y ~ slope + area, data = dat, family = gaussian())
+  context <- build_opt_context(model, ki$raw_cov, scale_vars = ki$scale_vars,
+    unit_conv = ki$unit_conv, resolution = ki$resolution, n_cols = ki$n_cols,
+    binned = ki$binned, d_list = ki$d_list)
+  baseline <- context
+  baseline$surface_neighbors <- NULL
+  ram <- testthat::with_mocked_bindings(
+    estimate_multiscale_ram(ki, fitted_mod = model, n_cores = 2),
+    .msr_detect_cores = function(logical = FALSE) 4L,
+    .msr_total_ram_bytes = function() 8 * 1024^3,
+    .package = "multiScaleR")
+  expect_equal(ram$component_bytes$bytes[ram$component_bytes$component == "opt_context"],
+               as.numeric(utils::object.size(context)))
+  expect_gt(as.numeric(utils::object.size(context)), as.numeric(utils::object.size(baseline)))
+  context$complete_idx <- baseline$complete_idx <- c(4L, 2L)
+  expect_equal(.msr_kernel_cov_w(c(.6, .8), ki$d_list, ki$raw_cov, "gaussian", context),
+               .msr_kernel_cov_w(c(.6, .8), ki$d_list, ki$raw_cov, "gaussian", baseline),
+               tolerance = 1e-12)
+  testthat::local_mocked_bindings(.landscape_cells_to_matrix = function(...)
+    stop("Unexpected grid reconstruction"), .package = "multiScaleR")
+  expect_no_error(.msr_kernel_cov_w(c(.6, .8), ki$d_list, ki$raw_cov, "gaussian", context))
+})
+
+test_that("prepared neighbor indices never wrap rows and retain legacy fallback", {
+  specs <- as.data.frame(msr_vars(slope = surface_var("z", "sdq"),
+                                 area = surface_var("z", "sdr")))
+  cells <- c(4, 5, 8, 9)
+  frame <- data.frame(z = c(1, 3, 7, 9))
+  attr(frame, "cell") <- cells
+  cache <- .msr_prepare_surface_neighbors(list(rep(1, 4)), list(frame), specs, 1, 4)
+  expect_true(is.na(.msr_eval_surface_neighbors(cache[[1]]$slope, 1)))
+  expect_true(is.na(.msr_eval_surface_neighbors(cache[[1]]$area, 1)))
+  attr(frame, "cell")[2] <- attr(frame, "cell")[1]
+  expect_null(.msr_prepare_surface_neighbors(list(rep(1, 4)), list(frame), specs, 1, 4)[[1]])
+  frame$z <- c(.Machine$integer.max, -.Machine$integer.max,
+               .Machine$integer.max, -.Machine$integer.max)
+  storage.mode(frame$z) <- "integer"
+  attr(frame, "cell") <- c(1, 2, 5, 6)
+  cache <- .msr_prepare_surface_neighbors(list(rep(1, 4)), list(frame), specs, 1, 4)
+  for (name in c("slope", "area")) {
+    metric <- if (name == "slope") "sdq" else "sdr"
+    expect_equal(.msr_eval_surface_neighbors(cache[[1]][[name]], 1),
+      .surface_neighbor_by_buffer(rep(1, 4), frame, attr(frame, "cell"), 1, 1, 4,
+                                  metric, validate = FALSE)[[1]], tolerance = 1e-12)
+  }
 })

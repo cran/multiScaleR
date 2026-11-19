@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>03. Mapping Predictions and Limiting Extrapolation</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">03. Mapping Predictions and Limiting
+Extrapolation</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#project-the-fitted-model" id="toc-project-the-fitted-model"><span class="toc-section-number">2</span> Project the fitted model</a>
+<ul>
+<li><a href="#fit-the-model" id="toc-fit-the-model"><span class="toc-section-number">2.1</span> Fit the model</a></li>
+<li><a href="#apply-the-fitted-kernels-to-the-raster" id="toc-apply-the-fitted-kernels-to-the-raster"><span class="toc-section-number">2.2</span> Apply the fitted kernels to the
+raster</a></li>
+<li><a href="#predict-the-expected-count" id="toc-predict-the-expected-count"><span class="toc-section-number">2.3</span> Predict the expected
+count</a></li>
+</ul></li>
+<li><a href="#find-where-the-map-extrapolates" id="toc-find-where-the-map-extrapolates"><span class="toc-section-number">3</span> Find where the map
+extrapolates</a></li>
+<li><a href="#clamp-the-covariates-to-the-surveyed-range" id="toc-clamp-the-covariates-to-the-surveyed-range"><span class="toc-section-number">4</span> Clamp the covariates to the surveyed
+range</a></li>
+<li><a href="#move-the-limits-with-pct_mx" id="toc-move-the-limits-with-pct_mx"><span class="toc-section-number">5</span> Move the limits with
+<code>pct_mx</code></a></li>
+<li><a href="#choose-a-setting" id="toc-choose-a-setting"><span class="toc-section-number">6</span> Choose a setting</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">7</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">7.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">7.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p>A fitted model becomes a map when you apply it to every cell of a
+raster. Many of those cells hold landscape conditions that no survey
+point sampled. There the model extrapolates, or predicts beyond the data
+used to fit it. This vignette answers two questions. Where on your map
+is the model extrapolating, and what can you do about it?</p>
+<p>You will project the Quick Start model across its landscape with
+<code>kernel_scale.raster()</code> and <code>terra::predict()</code>,
+then map the cells that fall outside the surveyed conditions. The last
+step is clamping, which replaces any covariate value beyond a chosen
+limit with the limit itself. Read
+<code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code> first,
+because this vignette starts from that fitted model.</p>
+</div>
+<div id="project-the-fitted-model" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Project the fitted
+model</h1>
+<div id="fit-the-model" class="section level2" number="2.1">
+<h2><span class="header-section-number">2.1</span> Fit the model</h2>
+<p>The example uses the counts at 100 survey points and the three
+landscape layers from the Quick Start.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>)   <span class="co"># counts and one site-level covariate</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)           <span class="co"># survey locations</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)      <span class="co"># convert to a terra SpatVector</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co"># Three landscape layers on one grid, in meters</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co"># bin = TRUE stores the distance-binned summaries the fast backend needs</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>df    <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>start <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="co"># Estimate the scales of effect and the coefficients</span></span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>                        <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="fu">round</span>(fit<span class="sc">$</span>scale_est)       <span class="co"># sigma and its standard error, in meters</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a><span class="co">#&gt;       Mean SE</span></span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a><span class="co">#&gt; land1  238 33</span></span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a><span class="co">#&gt; land2  500 47</span></span></code></pre></div>
+<p>The <code>profile_glm</code> backend keeps this vignette fast. A
+model fitted with the default backend projects in exactly the same
+way.</p>
+</div>
+<div id="apply-the-fitted-kernels-to-the-raster" class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Apply the fitted
+kernels to the raster</h2>
+<p><code>kernel_scale.raster()</code> smooths each landscape layer with
+its fitted kernel, so every cell holds the value a survey point at that
+location would have received. With <code>scale_center = TRUE</code> it
+then standardizes each layer with the mean and standard deviation from
+the survey points. The model was fitted to standardized covariates, and
+it needs the raster on that same scale.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>r_unclamped <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">multiScaleR  =</span> fit,       <span class="co"># supplies the fitted kernels and the scaling</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">scale_center =</span> <span class="cn">TRUE</span>,      <span class="co"># standardize as the model data were standardized</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">clamp        =</span> <span class="cn">FALSE</span>,     <span class="co"># leave every value as computed</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">verbose      =</span> <span class="cn">FALSE</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>r_unclamped</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; size        : 200, 200, 3  (nrow, ncol, nlyr)</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; resolution  : 20, 20  (x, y)</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; extent      : 0, 4000, 0, 4000  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt; coord. ref. : </span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt; varnames    : landscape</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt;               landscape</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt;               landscape</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; names       :     land1,     land2, site</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt; min values  : -4.013304, -3.197253,   -0</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt; max values  :  3.470949,  3.031827,   -0</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The result has one layer per
+model covariate. <code>land1</code> and <code>land2</code> are in
+standard deviation units of the survey data, so zero is the average
+survey point and a value of 2 is two standard deviations above it.
+<code>land3</code> is absent because the model does not use it. The
+<code>site</code> layer is a placeholder. <code>site</code> was measured
+at the survey points and has no raster, so the function fills a layer
+with zeros, which is the mean of <code>site</code> in these data. To map
+a different value, pass it through <code>site_values</code>, for example
+<code>site_values = list(site = 1)</code>.</p>
+</div>
+<div id="predict-the-expected-count" class="section level2" number="2.3">
+<h2><span class="header-section-number">2.3</span> Predict the expected
+count</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Expected count in every raster cell</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>pred_unclamped <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(r_unclamped, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="fu">plot</span>(pred_unclamped, <span class="at">main =</span> <span class="st">&quot;Expected count, unclamped&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">points</span>(pts, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.5</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Expected count from the unclamped projection, with survey points." src="data:image/png;base64,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" alt="Expected count from the unclamped projection, with survey points." />
+<div class="figcaption"><strong><em>Expected count from the unclamped
+projection, with survey points.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Largest expected count on the map and at the survey points</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">c</span>(<span class="at">map =</span> <span class="fu">minmax</span>(pred_unclamped)[<span class="dv">2</span>], <span class="at">survey_points =</span> <span class="fu">max</span>(<span class="fu">fitted</span>(fit<span class="sc">$</span>opt_mod)))</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt;           map survey_points </span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;     30.602440      8.759543</span></span></code></pre></div>
+<p><strong>How to read this map:</strong> Each cell shows the count the
+model expects from one survey at that location, at an average value of
+<code>site</code>. The largest expected count at any survey point is
+8.8. The map reaches 30.6, which is 3.5 times higher. No survey supports
+a count that large. The model produced it by extending its fitted trend
+into conditions it never saw.</p>
+</div>
+</div>
+<div id="find-where-the-map-extrapolates" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Find where the map
+extrapolates</h1>
+<p>A cell is an extrapolation when its covariate value lies outside the
+range of values at the survey points. Compare the two ranges
+directly.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>covs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;land1&quot;</span>, <span class="st">&quot;land2&quot;</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># Range of each covariate at the survey points (row 1 = min, row 2 = max)</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>lim <span class="ot">&lt;-</span> <span class="fu">sapply</span>(fit<span class="sc">$</span>opt_mod<span class="sc">$</span>model[covs], range)</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co"># Range of each covariate across the whole raster</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>full <span class="ot">&lt;-</span> <span class="fu">minmax</span>(r_unclamped[[covs]])</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>range_tab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="at">covariate  =</span> covs,</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="at">survey_min =</span> lim[<span class="dv">1</span>, ], <span class="at">survey_max =</span> lim[<span class="dv">2</span>, ],</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="at">raster_min =</span> full[<span class="dv">1</span>, ], <span class="at">raster_max =</span> full[<span class="dv">2</span>, ]</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>)</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(range_tab, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">covariate</th>
+<th align="right">survey_min</th>
+<th align="right">survey_max</th>
+<th align="right">raster_min</th>
+<th align="right">raster_max</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">land1</td>
+<td align="right">-2.70</td>
+<td align="right">2.08</td>
+<td align="right">-4.01</td>
+<td align="right">3.47</td>
+</tr>
+<tr class="even">
+<td align="left">land2</td>
+<td align="right">-2.42</td>
+<td align="right">2.19</td>
+<td align="right">-3.20</td>
+<td align="right">3.03</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># TRUE where a covariate is below the survey minimum or above the maximum</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>out_land1 <span class="ot">&lt;-</span> r_unclamped<span class="sc">$</span>land1 <span class="sc">&lt;</span> lim[<span class="dv">1</span>, <span class="st">&quot;land1&quot;</span>] <span class="sc">|</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>             r_unclamped<span class="sc">$</span>land1 <span class="sc">&gt;</span> lim[<span class="dv">2</span>, <span class="st">&quot;land1&quot;</span>]</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>out_land2 <span class="ot">&lt;-</span> r_unclamped<span class="sc">$</span>land2 <span class="sc">&lt;</span> lim[<span class="dv">1</span>, <span class="st">&quot;land2&quot;</span>] <span class="sc">|</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>             r_unclamped<span class="sc">$</span>land2 <span class="sc">&gt;</span> lim[<span class="dv">2</span>, <span class="st">&quot;land2&quot;</span>]</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>outside   <span class="ot">&lt;-</span> out_land1 <span class="sc">|</span> out_land2</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="fu">plot</span>(outside, <span class="at">main =</span> <span class="st">&quot;Outside the surveyed range&quot;</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="fu">points</span>(pts, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.5</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Cells where at least one covariate lies outside the range at the survey points (yellow), with survey points." src="data:image/png;base64,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" alt="Cells where at least one covariate lies outside the range at the survey points (yellow), with survey points." />
+<div class="figcaption"><strong><em>Cells where at least one covariate
+lies outside the range at the survey points (yellow), with survey
+points.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co"># Percent of cells outside the range: either covariate, then each one</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>pct_out <span class="ot">&lt;-</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">global</span>(<span class="fu">c</span>(outside, out_land1, out_land2), <span class="st">&quot;mean&quot;</span>)[, <span class="dv">1</span>]</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="fu">names</span>(pct_out) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;either&quot;</span>, <span class="st">&quot;land1&quot;</span>, <span class="st">&quot;land2&quot;</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="fu">round</span>(pct_out, <span class="dv">1</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; either  land1  land2 </span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;   11.2    5.4    5.9</span></span></code></pre></div>
+<p><strong>How to read the table and map:</strong> At the survey points,
+<code>land1</code> spans -2.70 to 2.08 standard deviation units. Across
+the raster it spans -4.01 to 3.47, so some cells have less habitat
+around them than any survey point did, and others have more.
+<code>land2</code> shows the same pattern. The yellow cells make up 11%
+of the map. Every prediction there is an extrapolation, and the survey
+data cannot tell you whether it is right. Most of the yellow area lies
+along the map border, beyond the outermost survey points. A few patches
+sit among the survey points, so a grid that surrounds an area has not
+necessarily sampled its conditions.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Extrapolation
+compounds under a log link. In this Poisson model each additional
+standard deviation of <code>land2</code> multiplies the expected count
+by 1.87, and the multiplication continues past the last survey point.
+Map the cells outside the surveyed range before you interpret any
+projected surface.</p>
+</blockquote>
+</div>
+<div id="clamp-the-covariates-to-the-surveyed-range" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Clamp the covariates to
+the surveyed range</h1>
+<p>Clamping acts on the standardized covariate layers before prediction.
+With <code>clamp = TRUE</code>, a cell below the survey minimum is set
+to that minimum and a cell above the survey maximum is set to that
+maximum. Cells inside the range keep their values. Clamping applies only
+when <code>scale_center = TRUE</code>.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>r_clamped <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="at">raster_stack =</span> land_rast,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">multiScaleR  =</span> fit,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">scale_center =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">clamp        =</span> <span class="cn">TRUE</span>,      <span class="co"># hold values at the surveyed minimum and maximum</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="at">verbose      =</span> <span class="cn">FALSE</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>)</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>pred_clamped <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(r_clamped, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co"># Ratio of the two predictions: 1 means clamping changed nothing</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>change <span class="ot">&lt;-</span> pred_clamped <span class="sc">/</span> pred_unclamped</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="fu">plot</span>(pred_clamped, <span class="at">main =</span> <span class="st">&quot;Expected count, clamped&quot;</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="fu">plot</span>(change, <span class="at">main =</span> <span class="st">&quot;Clamped / unclamped&quot;</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Left, expected count from the clamped projection. Right, the clamped prediction divided by the unclamped prediction." src="data:image/png;base64,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" alt="Left, expected count from the clamped projection. Right, the clamped prediction divided by the unclamped prediction." />
+<div class="figcaption"><strong><em>Left, expected count from the
+clamped projection. Right, the clamped prediction divided by the
+unclamped prediction.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">par</span>(op)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># Smallest and largest ratio, and the new largest expected count</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">c</span>(<span class="at">min_ratio =</span> <span class="fu">minmax</span>(change)[<span class="dv">1</span>], <span class="at">max_ratio =</span> <span class="fu">minmax</span>(change)[<span class="dv">2</span>],</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>        <span class="at">max_count =</span> <span class="fu">minmax</span>(pred_clamped)[<span class="dv">2</span>]), <span class="dv">2</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; min_ratio max_ratio max_count </span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt;      0.53      1.97     21.63</span></span></code></pre></div>
+<p><strong>How to read these maps:</strong> The left panel is the
+clamped prediction. The right panel shows what clamping changed. A ratio
+of 1 means no change, and that holds for every cell inside the surveyed
+range. Ratios below 1 mark cells where clamping lowered the expected
+count, by as much as 47%. Ratios above 1 mark cells where it raised a
+count that extrapolation had lowered, by a factor of up to 1.97. The
+largest expected count on the map fell from 30.6 to 21.6.</p>
+<p>The clamped maximum still exceeds the largest fitted count at a
+survey point. Clamping limits each covariate separately. The cell with
+the largest clamped count sits on the western border, where
+<code>land1</code> is held at its survey minimum and <code>land2</code>
+at its survey maximum. Each value occurred at some survey point, but no
+survey point had both.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> Clamping keeps a
+prediction from running away. It does not make the prediction correct. A
+clamped cell reports what the model expects at the edge of the surveyed
+conditions, which is a placeholder for a place you did not sample. Show
+the map of cells outside the surveyed range next to any projected
+surface, and treat those cells as unsupported.</p>
+</blockquote>
+</div>
+<div id="move-the-limits-with-pct_mx" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Move the limits with
+<code>pct_mx</code></h1>
+<p><code>pct_mx</code> moves both clamping limits. It takes a value
+greater than -0.5 and no larger than 0.99. Each limit moves outward by
+<code>pct_mx</code> times the observed range of that covariate at the
+survey points. A positive value widens the allowed range and permits
+some extrapolation. A negative value narrows it, so cells near the edge
+of the surveyed range are clamped as well. The default,
+<code>pct_mx = 0</code>, uses the observed minimum and maximum. For
+<code>land1</code> the observed range is 4.78 standard deviation units,
+so <code>pct_mx = 0.1</code> places each limit 0.48 units beyond the
+observed value and <code>pct_mx = -0.1</code> places it the same
+distance inside.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Narrower limits: each one moves inward</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>r_narrow <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(land_rast, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>                                <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>                                <span class="at">pct_mx =</span> <span class="sc">-</span><span class="fl">0.1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co"># Wider limits: each one moves outward</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>r_wide   <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(land_rast, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>                                <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>                                <span class="at">pct_mx =</span> <span class="fl">0.1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>pred_narrow <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(r_narrow, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>pred_wide   <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(r_wide,   fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co"># For each setting: the limits in force, the percent of cells clamped,</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co"># and the largest expected count</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>layers <span class="ot">&lt;-</span> <span class="fu">list</span>(r_narrow, r_clamped, r_wide)</span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>preds  <span class="ot">&lt;-</span> <span class="fu">list</span>(pred_narrow, pred_clamped, pred_wide)</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>pct_tab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>  <span class="at">pct_mx      =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">0.1</span>, <span class="dv">0</span>, <span class="fl">0.1</span>),</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>  <span class="at">land1_lower =</span> <span class="fu">sapply</span>(layers, <span class="cf">function</span>(r) <span class="fu">minmax</span>(r<span class="sc">$</span>land1)[<span class="dv">1</span>]),</span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>  <span class="at">land1_upper =</span> <span class="fu">sapply</span>(layers, <span class="cf">function</span>(r) <span class="fu">minmax</span>(r<span class="sc">$</span>land1)[<span class="dv">2</span>]),</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a>  <span class="at">land2_lower =</span> <span class="fu">sapply</span>(layers, <span class="cf">function</span>(r) <span class="fu">minmax</span>(r<span class="sc">$</span>land2)[<span class="dv">1</span>]),</span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>  <span class="at">land2_upper =</span> <span class="fu">sapply</span>(layers, <span class="cf">function</span>(r) <span class="fu">minmax</span>(r<span class="sc">$</span>land2)[<span class="dv">2</span>]),</span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a>  <span class="at">pct_clamped =</span> <span class="fu">sapply</span>(layers, <span class="cf">function</span>(r) {</span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a>    changed <span class="ot">&lt;-</span> r<span class="sc">$</span>land1 <span class="sc">!=</span> r_unclamped<span class="sc">$</span>land1 <span class="sc">|</span> r<span class="sc">$</span>land2 <span class="sc">!=</span> r_unclamped<span class="sc">$</span>land2</span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a>    <span class="dv">100</span> <span class="sc">*</span> <span class="fu">global</span>(changed, <span class="st">&quot;mean&quot;</span>)[<span class="dv">1</span>, <span class="dv">1</span>]</span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a>  }),</span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a>  <span class="at">max_count   =</span> <span class="fu">sapply</span>(preds, <span class="cf">function</span>(p) <span class="fu">minmax</span>(p)[<span class="dv">2</span>])</span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a>)</span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(pct_tab, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="9%" />
+<col width="15%" />
+<col width="15%" />
+<col width="15%" />
+<col width="15%" />
+<col width="15%" />
+<col width="12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">pct_mx</th>
+<th align="right">land1_lower</th>
+<th align="right">land1_upper</th>
+<th align="right">land2_lower</th>
+<th align="right">land2_upper</th>
+<th align="right">pct_clamped</th>
+<th align="right">max_count</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">-0.1</td>
+<td align="right">-2.22</td>
+<td align="right">1.60</td>
+<td align="right">-1.96</td>
+<td align="right">1.73</td>
+<td align="right">25.94</td>
+<td align="right">12.85</td>
+</tr>
+<tr class="even">
+<td align="right">0.0</td>
+<td align="right">-2.70</td>
+<td align="right">2.08</td>
+<td align="right">-2.42</td>
+<td align="right">2.19</td>
+<td align="right">11.16</td>
+<td align="right">21.63</td>
+</tr>
+<tr class="odd">
+<td align="right">0.1</td>
+<td align="right">-3.18</td>
+<td align="right">2.56</td>
+<td align="right">-2.88</td>
+<td align="right">2.65</td>
+<td align="right">3.60</td>
+<td align="right">28.63</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to read the table:</strong> Each row is one setting. The
+four limit columns give the smallest and largest value left in each
+covariate layer, in standard deviation units, and these are the clamping
+limits in force. <code>pct_clamped</code> is the percent of raster cells
+whose value was replaced, and <code>max_count</code> is the largest
+expected count on the resulting map. Reading down the table, the limits
+move apart, fewer cells are clamped, and the largest expected count
+rises toward the unclamped value of 30.6. The middle row matches the map
+in the previous section.</p>
+<p>A negative <code>pct_mx</code> changes cells that lie inside the
+surveyed range, so it removes real variation from the map along with the
+extrapolation. Use it when the most extreme survey points are few and
+you do not trust the model at those values. A positive
+<code>pct_mx</code> accepts the fitted trend a short distance past the
+data, which is reasonable only when you expect the relationship to
+continue there.</p>
+</div>
+<div id="choose-a-setting" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Choose a setting</h1>
+<table>
+<colgroup>
+<col width="45%" />
+<col width="54%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Your situation</th>
+<th align="left">Suggested setting</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Few or no cells fall outside the surveyed range</td>
+<td align="left">Clamping changes little. Either setting of
+<code>clamp</code> gives nearly the same map</td>
+</tr>
+<tr class="even">
+<td align="left">A noticeable share of cells falls outside the surveyed
+range</td>
+<td align="left"><code>clamp = TRUE</code> with <code>pct_mx = 0</code>.
+Report the share and show where those cells are</td>
+</tr>
+<tr class="odd">
+<td align="left">You are projecting to a different landscape or time
+period</td>
+<td align="left"><code>clamp = TRUE</code>, and consider a negative
+<code>pct_mx</code>. Interpret cells outside the range with caution</td>
+</tr>
+<tr class="even">
+<td align="left">The model has a log link</td>
+<td align="left">Compare the largest unclamped prediction with the
+largest fitted value first. Extrapolated predictions grow
+multiplicatively under this link</td>
+</tr>
+</tbody>
+</table>
+<p>No setting substitutes for survey points that cover the conditions
+you want to map. If the area outside the surveyed range is large, the
+more useful response is to sample it.</p>
+</div>
+<div id="quick-reference" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Quick reference</h1>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">library</span>(multiScaleR)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co"># 1. Fit the model</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;landscape_counts&quot;</span>); <span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>pts       <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>land_rast <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>                              <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> land_rast, <span class="at">max_D =</span> <span class="dv">1700</span>,</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>df     <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(landscape_counts, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>start  <span class="ot">&lt;-</span> <span class="fu">glm</span>(counts <span class="sc">~</span> site <span class="sc">+</span> land1 <span class="sc">+</span> land2, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> df)</span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>fit    <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, inputs, <span class="at">backend =</span> <span class="st">&quot;profile_glm&quot;</span>, <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co"># 2. Project without clamping and predict</span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>r_unclamped <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(land_rast, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a>                                   <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a>pred_unclamped <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(r_unclamped, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a></span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co"># 3. Map the cells outside the surveyed range</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a>covs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;land1&quot;</span>, <span class="st">&quot;land2&quot;</span>)</span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a>lim  <span class="ot">&lt;-</span> <span class="fu">sapply</span>(fit<span class="sc">$</span>opt_mod<span class="sc">$</span>model[covs], range)     <span class="co"># survey min and max</span></span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a>out_land1 <span class="ot">&lt;-</span> r_unclamped<span class="sc">$</span>land1 <span class="sc">&lt;</span> lim[<span class="dv">1</span>, <span class="st">&quot;land1&quot;</span>] <span class="sc">|</span></span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a>             r_unclamped<span class="sc">$</span>land1 <span class="sc">&gt;</span> lim[<span class="dv">2</span>, <span class="st">&quot;land1&quot;</span>]</span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a>out_land2 <span class="ot">&lt;-</span> r_unclamped<span class="sc">$</span>land2 <span class="sc">&lt;</span> lim[<span class="dv">1</span>, <span class="st">&quot;land2&quot;</span>] <span class="sc">|</span></span>
+<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a>             r_unclamped<span class="sc">$</span>land2 <span class="sc">&gt;</span> lim[<span class="dv">2</span>, <span class="st">&quot;land2&quot;</span>]</span>
+<span id="cb11-27"><a href="#cb11-27" tabindex="-1"></a>outside   <span class="ot">&lt;-</span> out_land1 <span class="sc">|</span> out_land2</span>
+<span id="cb11-28"><a href="#cb11-28" tabindex="-1"></a><span class="fu">plot</span>(outside)                                      <span class="co"># where the model extrapolates</span></span>
+<span id="cb11-29"><a href="#cb11-29" tabindex="-1"></a><span class="dv">100</span> <span class="sc">*</span> <span class="fu">global</span>(outside, <span class="st">&quot;mean&quot;</span>)[<span class="dv">1</span>, <span class="dv">1</span>]                <span class="co"># percent of the map</span></span>
+<span id="cb11-30"><a href="#cb11-30" tabindex="-1"></a></span>
+<span id="cb11-31"><a href="#cb11-31" tabindex="-1"></a><span class="co"># 4. Clamp to the surveyed range and predict again</span></span>
+<span id="cb11-32"><a href="#cb11-32" tabindex="-1"></a>r_clamped <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(land_rast, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb11-33"><a href="#cb11-33" tabindex="-1"></a>                                 <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-34"><a href="#cb11-34" tabindex="-1"></a>pred_clamped <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(r_clamped, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb11-35"><a href="#cb11-35" tabindex="-1"></a><span class="fu">plot</span>(pred_clamped <span class="sc">/</span> pred_unclamped)                <span class="co"># 1 = unchanged by clamping</span></span>
+<span id="cb11-36"><a href="#cb11-36" tabindex="-1"></a></span>
+<span id="cb11-37"><a href="#cb11-37" tabindex="-1"></a><span class="co"># 5. Narrow or widen the limits</span></span>
+<span id="cb11-38"><a href="#cb11-38" tabindex="-1"></a>r_narrow <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(land_rast, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb11-39"><a href="#cb11-39" tabindex="-1"></a>                                <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb11-40"><a href="#cb11-40" tabindex="-1"></a>                                <span class="at">pct_mx =</span> <span class="sc">-</span><span class="fl">0.1</span>)     <span class="co"># limits move inward</span></span>
+<span id="cb11-41"><a href="#cb11-41" tabindex="-1"></a>r_wide   <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(land_rast, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb11-42"><a href="#cb11-42" tabindex="-1"></a>                                <span class="at">scale_center =</span> <span class="cn">TRUE</span>, <span class="at">clamp =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb11-43"><a href="#cb11-43" tabindex="-1"></a>                                <span class="at">pct_mx =</span> <span class="fl">0.1</span>)      <span class="co"># limits move outward</span></span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="7.1">
+<h2><span class="header-section-number">7.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>kernel_prep()</code></td>
+<td align="left">Extract raster values around each survey point and
+prepare the optimizer inputs</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_optim()</code></td>
+<td align="left">Estimate sigma for each landscape covariate together
+with the regression coefficients</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>kernel_scale.raster()</code></td>
+<td align="left">Smooth each raster layer with its fitted kernel.
+<code>scale_center</code> standardizes the result, <code>clamp</code>
+holds it within the surveyed range, and <code>pct_mx</code> moves the
+limits</td>
+</tr>
+<tr class="even">
+<td align="left"><code>terra::predict()</code></td>
+<td align="left">Apply the fitted model to the smoothed layers, cell by
+cell</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>terra::minmax()</code>,
+<code>terra::global()</code></td>
+<td align="left">Report the range of a layer and summarize a layer
+across all cells</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="7.2">
+<h2><span class="header-section-number">7.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow and how to read a fitted model.</li>
+<li><strong><code>vignette(&quot;v02-user-guide&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+kernels, intervals, and model selection in depth.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what a prediction interval includes and what it leaves out.</li>
+<li><strong><code>vignette(&quot;v06-year-specific-rasters&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+projecting one fitted model onto the map from each survey year.</li>
+<li><strong><code>vignette(&quot;v14-bayesian-prediction&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+predicting new sites and years from a Bayesian fit.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

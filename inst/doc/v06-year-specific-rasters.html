@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>06. Using Year-Specific Rasters in One Model</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">06. Using Year-Specific Rasters in One
+Model</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#build-the-annual-maps-and-the-observations" id="toc-build-the-annual-maps-and-the-observations"><span class="toc-section-number">2</span> Build the annual maps and the
+observations</a></li>
+<li><a href="#prepare-one-pooled-set-of-covariates" id="toc-prepare-one-pooled-set-of-covariates"><span class="toc-section-number">3</span> Prepare one pooled set of
+covariates</a></li>
+<li><a href="#fit-one-relationship-across-years" id="toc-fit-one-relationship-across-years"><span class="toc-section-number">4</span> Fit one relationship across
+years</a></li>
+<li><a href="#map-the-fitted-model-onto-each-year" id="toc-map-the-fitted-model-onto-each-year"><span class="toc-section-number">5</span> Map the fitted model onto each
+year</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">6</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">6.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">6.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p>Habitat changes between survey years. When it does, each observation
+should be paired with the map from its own year, and a single map for
+the whole study misstates the landscape around some of the survey
+points. This vignette shows how to fit one model to observations that
+draw on different maps.</p>
+<p>You will build two annual habitat maps, prepare them together with
+<code>kernel_prep_by_group()</code>, and estimate one scale of effect
+and one habitat coefficient across both years. You will then map the
+fitted model onto each year’s landscape. Read
+<code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code> first
+for the basic preparation and optimization workflow.</p>
+</div>
+<div id="build-the-annual-maps-and-the-observations" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Build the annual maps
+and the observations</h1>
+<p>The example starts from the Quick Start landscape and its 100 survey
+points. Year 1 uses the binary habitat layer as it is. In year 2,
+habitat has been cleared from a square 1,600 m on a side. Each point was
+surveyed in one of the two years.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>pts  <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)     <span class="co"># 100 survey locations as a terra SpatVector</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>land <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>                         <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># The bundled objects carry no coordinate reference system (CRS).</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># Assign the same projected CRS, in meters, to both.</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="fu">crs</span>(pts)  <span class="ot">&lt;-</span> <span class="st">&quot;EPSG:26915&quot;</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="fu">crs</span>(land) <span class="ot">&lt;-</span> <span class="st">&quot;EPSG:26915&quot;</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co"># Year 1: the binary habitat layer (1 = habitat, 0 = not habitat)</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>habitat_1 <span class="ot">&lt;-</span> land<span class="sc">$</span>land1</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="fu">names</span>(habitat_1) <span class="ot">&lt;-</span> <span class="st">&quot;habitat&quot;</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co"># Year 2: the same map after habitat is cleared from one square</span></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>habitat_2 <span class="ot">&lt;-</span> habitat_1</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>cleared   <span class="ot">&lt;-</span> <span class="fu">ext</span>(<span class="dv">1000</span>, <span class="dv">2600</span>, <span class="dv">1400</span>, <span class="dv">3000</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>habitat_2[<span class="fu">cells</span>(habitat_2, cleared)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="co"># One row per observation, with the year of its survey: 50 points per year</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">93</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>obs <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">year =</span> <span class="fu">factor</span>(<span class="fu">sample</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;year1&quot;</span>, <span class="st">&quot;year2&quot;</span>), <span class="at">each =</span> <span class="dv">50</span>))))</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">plot</span>(habitat_1, <span class="at">main =</span> <span class="st">&quot;Year 1&quot;</span>, <span class="at">legend =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="fu">points</span>(pts[obs<span class="sc">$</span>year <span class="sc">==</span> <span class="st">&quot;year1&quot;</span>, ], <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.5</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">plot</span>(habitat_2, <span class="at">main =</span> <span class="st">&quot;Year 2&quot;</span>, <span class="at">legend =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">points</span>(pts[obs<span class="sc">$</span>year <span class="sc">==</span> <span class="st">&quot;year2&quot;</span>, ], <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.5</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="fu">lines</span>(<span class="fu">vect</span>(cleared), <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lwd =</span> <span class="dv">2</span>)   <span class="co"># outline of the cleared square</span></span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Habitat (yellow) in each year, with the points surveyed that year. The red square in year 2 marks the cleared area." src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAtAAAAFZCAMAAACG3ugjAAAAsVBMVEUAAAAAADoAAGYAOmYAOpAAZpAAZrY6AAA6ADo6AGY6OgA6Ojo6OmY6OpA6ZpA6ZrY6kNtEAVRmAABmADpmAGZmOgBmOjpmOpBmZjpmtttmtv+QOgCQOjqQOmaQZjqQkLaQtpCQttuQ29uQ2/+2ZgC2Zjq2kGa229u22/+2/7a2//++vr7bkDrbkGbbtpDb27bb29vb/9vb///95yX/AAD/tmb/25D/27b//7b//9v///9ARO6cAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAgAElEQVR4nO2dC5vcxnKelzrHohVbsVqWT2xSdpxISWyKiRO2yEPy//+w7Ay6qr66ADO4NbBzqp9ndzBAX6re/rq6gRkMnr5myvRA6eloAzJl2jKloDM9VEpBZ3qolILO9FApBZ3poVIKOtNDpRR0podKKehMD5VS0JkeKqWgMz1USkFneqiUgs70UCkFnemhUgo600Olcwr616enH2jjzf2F/vhhL4MeNM3n/Oc/PT09/e2/7WjTynROQX/+8enVL8+vn17fLdIv/+MpBT03zeb88fXTJV0LnTOdU9Bf3z89ffss0rd3o/s///CUgp6fZnJ+zvjNL3PCTP90UkE/k3ueAz+2GfESfV/93ZXhVbh/e6H//unVv/7D0zfD7PfcMa/OjPmsaSbnz396/az/5wXKN++Os3k6nVTQ1yjw/94O4J4nxkv6w/P2xyee8t5ft5qG3z/94X+9TUHPTzM5DykFvSA9c/ybdqby6yU+PJP/4RJQ/urDsHnJ8Md/+/p/h9z/++8+fElBL0nzOF9TLjmWpMtkeFnfXQPHZUJ838LCf/zP/3Q98N6cmKegF6XZnK+B/I2t5jTptIK+zHrDmcqn4cz6+vbLvwybV9D6RCYFvSzN5fznH0999n1eQT8L9Bo4aD13AX0JJ3/4r//xYwp6uzST80X2Z+b8AgT9jPBN2zes6j6noDdM8zifXc8vQdAD12v6eF290clKCnqLNIvz53OvN76+CEE/n32/+qfL0u2PH67n139+m2voDdMszr+eXc83BP3xwA86BXS7Pno5V3n79JAnhS+FM583vtDr0F/evrm8fPr+CKEI6K9//pdnkP/58lnV5ez7D//temXpgQT9Yji/f3rZgv780zt4ybRXSs7bpbsi9HcJeteUnLdL02voYc104i8LPkhKzpul817lyJRpQTrvVY6/pJScN0vnvcrxF5SS83Ypr3KcICXn7VJe5ThBSs7bpbzKcYaUnDdL91/l+O05PWWCtE+PJGebZuGbd5XjqehUnxNt0bvnvzqkcnmHueW1Vs4z1FDLSKqYe8g87NFZbA2t9WYFGUoWuiTuuCOYQ+XeUNDJeTPO865yJOjFoJNzH87zrnJ40Nplck0ZFMKDHITA9oeutDECstAPJSiL/eK6fIT1COio+i0FnZy34zzvKsdI5CAzYbwONo6R5g5xoG33qCjja3H5pX51XIGOKYchBYOjtmqPCJ2c13Oed5UjQS8GnZzPIGiX27XHlGjpxOyqnycNCc4NVdBbbKLB4TkPsU+1QM00e1TjAlFxDUBzTVjrfNDJuQ/n27m//CyXR4O1XRF79SgbJ2AJSSWOiKYW7JkAHeWnJjRbXGla1lHrdQ9BJ+dNOE+fFA735Mj9CfFUKIMMQsEN0DD4vd9IMqhKMZiZbGiQCDEKWrdUCwliw5PC5LwZ51tr6B9uRI4EvUVKzp0E/fXr+1f/fRR0RbsKgYZF2JTDBiQ4djcssOJGU7asxQkGR+u7OG265EjOG3G+mfvL21cxaDoNENPFlbsQKCdwpN4ABksxGuthvugYFacWMVv7c71gq6D3266hk/M2nGfmruia2FvVeMOzj1FcMbywlNl1c0hrwG4aVR7UsK/8fBjk2fMqR3KWlILWVE4COjlHDE8gaGytTUaDKQhZrB0FIRn8asqXw120zQDG2mh5TH04UXNjpiuLtique19BJ2dKPSK0kCrGJjtOJyDIakr1lKy6WifoExvYFtDxkpCKRlboFs2RG73eUocIXZLz7p8UOru8adNwYUuDxopgyhqZH4vupyGbuzJPDaqO0sZSN6NDAe2+S47kvJRzCroT6OTch/Oq73LElt++YgkFC7pRERvPcbhLuUtwx1qVPjJLN/PFAl1v1X3njnMt/b7LkZxnoNsAtFraiWl3gWZKJnY0GrBDKCER2g5IFIkaVLkzF7q4ShHtDfXwOtDJuQ/ndYKuPGkp28BFd2qhi/OwR6i0YboDoHLj3JKJD3bqM0bbREBVv2EHRMZ3FHRyvh9dgk5BPxLn1YJWiBSQZnINjGwe+dIIgtyOK5biyLXaHGilpsiqQJRVZMPVYR9iLX0FnZzvRLcCtIoYSAOZkK0B7UJZsXBV10On+pBNsGCjZnDTGVwBJPNXkUkXH7a6CTo5z0G3ADRQrNbGiEaAoOKuamOPK8vumzkNo8dYUlHFMpbCtVAfFGBsFQLN7b/kSM4LOKegU9APxXn1ZTu18JlCHSNwRal4Vd05UInnpag111dGHggazWWKDfi4sz3vKTRNJ+cpdAtBownVJrW+x3wqXOhFmeVsjhU5qIa6rd+b5/qIe1KiQ4HOJQd8t5rURdDJ+fBPCu1gBARk+++/Gy6jM+E1pxrmVFoDrb//jpGhqJymXmyCti7FoTuHDsA6rSuzQe/MWSGtRmmqimevwj5ynFU5eQ04G/sYqefclhuac2BK/wh9L2hlXcPx++9NpyNVyO4hpwbdSmvQemeDRDtvC/qa04JWda4GvS9njXRK0JecPQQ9tONteAmC1u6M0CqyEmOmmpK77N5y6spBZ407ZXQjRAua93tk1A515DA9ttFkS3Gh/h99j3M2o1wgOs4iaLucMZx1i6hpy1lb1raxm7T9ljNUvwHn9YK2Dk0Juv3BXA5hswTluJugZtRzCyS1YDhoVlVZcqi8QeBpxdWnE9eGpJuh5vams6CnOdt1GK9SHWcdTPxxV7fibIviuNCco5VhgWrAm7Ih580EbQKHHseYQYAbkPwXpmCsmCBDVNo/F2QqvQSTbctOhytWaIMSpWMEnZxvoEvQpQvo5Fy6cN5sDd1sVO40ojydGFBIy7joSWDxAUox1VEzGmChRZtqveosPFuKErDKwJzZoJNzH87bCJoYO3/E0sDRCmDCTsAGYlZBfjIkLFyaEMBwMYR31wgvxrsyH3Ry7sN5sy/400TW7FVTHfaBuGdBiOsUQQCDo0XNBsaYI0YBk1MtbAec9ZtjvuCfnG+gS9B9QCfnPpy3+WCluQM+Ma1qUnFrOJ4pCaqaqAS2mU2Lh6GYIXDaVv1sOiO0AI67PQd8sJKcb6PbALRapKnhrh0XZ7z/cOS6F3ZwE0X2VzOUHWcTbFqPVZ1FDNbGRQ6iQ0M6IEIn59votgJdjI2GpE2FvCICAh+Pq1EME1UwuBXpIFYIaNfxqlUlEajSkT5G0Mn5BroE3Qd0cu7DeUtBC+/hjRBDwAE8cVNDQGqtMyj3pCHcQFSb6/JmbLE7i6rMt3iYoJPzFLq5oCdGLPpbR+kpl4vqh5gEus3jXIHQXFqfRKRHK2db26uqC1aU2FTfX05Kzneim5d7agbyvCN4dvhTMKECqgtUx0gOhO57HvKoVvHVkDZHxrzRc32fH2tMzinoU4JOzn04z19D38Gazac/8QAnGaRE7hZwxzreSLXsMskibCmuutj0nuEdzdWqHuyJhaCTcx/Ou0dos6IaXRtCfGAPPQd3YbSBrTqoqG7i/qH+I3JRGJHsFYqAZaKBc0Xo5NzQ7QWaQgMMYEICWTwbgVC4jCDx3SPEFEjqpxa7TD/ekYIu5caGY+cQdHI26HYGbe9yve6nO0kU6OGuvqWgh7tcDeh2X9UpQO/MeaWg6Y5W5KxuOZkvaLkZF5LfWWrRt26eVdCDg+qWTLpWCjfAyQUafa+bTDhFFnHF9RP3F93lWvEY3mKrepJmw2CurSq7AS3lL6/nEHRxiw3mjJnUW8d5wKc5cy8h54oUgmPCuVWpOYMcJLu5GXkl50UfrOgFTwCYCJKg+X1lX01NRUmfg3OFpqygsXcUKaySYhdFkkpvJRg5NUswV42IxcO7/T9YuZ+zEjNoiDNrXJYz9ogTtC9oOIM9wpkFjZyNoIdi2NB6zlv80IzdR4hpLqPZg+a4yjpDHKLniFkMUVwfSoMJuLSx/edEHcoZZ1ZRDyunz7ft7uVMRinOYrnjaDi7m5FLMSsBBcxw1mXbFq9isFXUM7vQ7s3fhvPegl4J2h0faXYG6BT0Q3Pe7nc5Imgwh6Bv46QqUeJ5lLJUd4EHNrE9oeMtYtLaTM05mEuhb8S6g36XIzlPo1sMOhjFzRgFGhhjNtyFUHGcAhQJDdJPqkodKewxqd5vOtBYM3S/sv6yq5Ogk/M8dJNHPz5dkjxV/fYnWLVqF0r1+R0pmSmlDEDlY0FbRCOYnLmbA5QI0VLG2FTkShRbSsc3FHRy3ozzZO4vb99cXj59/yFB7yno5NxJ0J9/egcvX/0PcXvM3iW9ILPTIC7GuF9sNSGnGLoG7TteLw3vqX6sxQ0FnZy343xXhP4OQPNo9cSdyWzjaLSR8UjBgbqnyNrO9ZwHMhI5bPFaVMdXyTUCesqB7SN0cl7PeTr3p9d+bUcU7nDL2a3M9zMizVutKg4lt+qj2VA30TqqQNEKaFVZaMi4Nh4mN1xDJ+fNOC/9pDBB9/mkMDnvfpUjbh8nKXFrFAx5iK80KeF7V6vMeTWqiq3BbvE9XyFbkVppprwN+ZJ2vsoRm5Ccb6T5VzmEqjKETA7HqWRyWGCZxVCMu46Tapb+G9S+Atpb2fIqByFO6Uqqc3IZ6OTch/PMqxwjUxu6pG3XbnNvqCKqJqmCiyJmM+Fhdo4KFAqAXtXbpvfjfXIs8nnfqxzJeSnnmVc5EvRS0Mn5BIIeO/sOQPMcR6AZcMUTEEwF+4JnVzjO1KrZyzRkMhuxiPrG9CthR03o8mCwVKfz7H+VYxXn3zumE3G+P/dvz2nsl+WNoKzd4NGoPrWwIdQoINgQee/GgFgVDXoMEc4waTUMKGjpXlc5tuHcU872+TaHcl56lcO3O5bIXuMRvRg/zNwJFUSC9llwj7GjSNCP6lUljL26npa6XOVAHycxG87RE+n2SuZGgGM5L7rKoVIKenXagXMKOko3z769bMJrikbFzXYq3KqA+3CQVStWjM8Iyy47eHOiV82ivuj5m4pThaYDhh0dr3Lc5ow3I19svL5fp+qwdLQzfOIuPtu2Yo94ztJxRQ4s5Tz7uxwm6YGFEZI2nFM4TiubfT23kCJDFdf1WdtlGoAFtBE0jRW5oREKg4XRwh69aovDqp2k4bX3dznmcW5nZsL5AhOQLkhh6ZGdLuzCgzd1hDGPXPXdtpbz2qscKegt0mrOKWhGNy+3WeaQCkiVfp2HywxwIJhFHSnql0ZFFmW+dSvKtuFuWw6KDzDBrsJVDIMJqqS1T9la0Os567tPD11yNM7qgb/EmX+qAjkD4PWcb13lePWvr5++oZnQRg6jS6fRZmAUCSu4Hq3A6HTB7gtqp6xVaKC4bRGN3o0HqY5Kx1VtfJVja859TwpPxHl6Df3zL59ev5k4+65Vh83qJVcqGFpxXFLACfVssThkSrSVq4HhHeOxxgdjTeEfGo+G14Zr6O05dxb0eTjfusrx5Z/fuTsprK36PR5u+1LQ02kHzinoKLWz78//xUcOv1ZAy/T+onwQm28ITlViN7jnqnrLAMWg8arUoAiQq+NORdtf5diSc29Bn4bzjascf/184v3Rnn3XUsKwSmLVO0qJB2ihv/uSrLQsJzmFgOoqjJuJOuPggTVztU5FW17l2JzzARH6HJxX/3JScD6gSBc0esSf28nPsLzEMKcWba/Qmaz2lm2UBfIuBN2Zc+dPCs/DOQWdgl6bXragufUR04O5EO1U5pMHtooxJrLNe8bGBRGcwgy1jtEWh2wr+/6c7mrOvQV9I0s/zot/CqyaV9hfi882NjiDGiIaY1dDWNlWwCiHiejB5aoaZso8PXyk2T4/BbaQ8xFXOU7Becknhe4jO2e63jEi5ql5Kui+KA8tOwQHHp6o3xpcVXQILeRslHf3TwrXcD72g5UodeKcgk5Br00vXtBqciGuFd7SdvHGF70dz1N+8RucG/E0VxEWVnfHGrpMLOs0bXvW1eU5hcs5n2wNXbpxXv2cQrdqZfLjtisPQt/v4QirS16LQ5XU5XwyMkE6NAuhUjOY+j6ncCbn/oI+CectfvC8gr10BjfsD2Ab2fl6ikSj6FhcyoX6oYqgorCKgLUfb+LA8Nf9B8/ncD7+k8Ig9eCcgi4p6JXpZQt6/DxOf8KBNle00Z29hVWNHrqBCndA9onmqrG0+GI1zLfzdegJOHdwPmgNfTznpV/wR+UM78UGNMs926oRuCeN9EtYWoY7WyMPYiojsbqCoTziwCnTgkldvuB/L2fxgLiPUd3+W/8YoWULcgpn/II/O3Xj8XG97ljREaJZaUj7Jy0OXt2GSq6ahz/iPl8Czi6kccSqLoRJdnRBzQ9VWq7Vzu2d7li5i7NzZJTwLvdliYwJGnQycFa3YInyr4/524hzCjoFPSM9oqBx9aNh4nqOTlqChzvLHe5OQG4NNtydH+zTiVvFHWrJQXlUoWgBqqrFvNhOD0HP43y3oHdecghneJanGCxyiOtcz3m2oFF9VqpGuNWvUaOThnvOjyeS7VptWeGBg6vSWmw+yQ31YvarwiquB/cV9ErOR3wf+hScF32wouz0kcOFkEDQ1nX/lt+oMkHilnAHdDXsajNaDU4Hx6Jx/NHc3oJezfmgW7CO55yCTkGvTS9Z0EqR8Qcntc0/pc0m9pBbplYgUWuk23ClAkcZU3X7yBo0gZsZIc3dQA7ouqmFPieFCzn3/m2703Be8kkhjawxzrIcCnwBj2qFGNMGNRRFp+S/S1XV6PeGK3lvsVYGlZjqx90/KVzDuf+PNZ6E87KPvmG2MIB5xMEMwr4V2Vcw8ECfkBc25Jpt2amHN7QgfT6a0NhhU6r0mO37Dh99L+d80Enh8ZxT0CnotekBBK3t4ZkjmD+wF8zqKco0OfdESa8e9fUeXSe+bcZaA5U9bUM1ppzv9OWkZZz7fznpJJyXR2gtmtoMoQhhaQcDmA+xGkWV1jfbf7pyKF50tLfFIPBXBC0Rb4DYnFFD0FbVKUIv43zwXd/HcV719dEqyIsY7ZUnTrTr5tGAli6rUj1lwbemYi1oaN6ODc2NxWGKjhZ3E2O/r48u4HzkHSuHck5Bp6DXpgcQNKhGjHLX4JRT7JjsU8ckD4pd1RGwVKtKrLVNyr4iZRMcpGqiXmEHae+1R/qdFC7gfMwHKyfgvPw6dLMA2q4I2uTjJRM64sMruazdM45rmauLnY6Po4+1gPohapgIAiZhwx0EvYbzeX59tDPnRRG6qhdljoq75A8tGtTA9J/gGmFLG4JCNVtdkhCtAI1SA2PtkLFRxXVUh8t2KzgfcwvWCTinoFPQa9OLF3S4lKikO7FdrfdsqnJA907olAjbth0sO6KS0eTMFRQLmsopu2yOrkuOuZwP+Oi7/TuY8yJBW5utilzQDEVaW1CxpYrKP7U8K9zNqniUzValVMAgjQfiLI08rHN/Qa/gfNCDN4/nvHjJgXCDAWlB4zW4eD7Ut9N6VtyS2kdDWj8FaqR0K95iGtmpZgvB2UzhV+donyXHnZz507o64vqOaeyhQQFnfT9texmeSLcR5yMEPfoEPCdol7PafY2UuncRq3Sg6emDjyVouVnv1IJWT44kptwjRwhael5Nhd7JGiS65ERCU/OTFTQD8PjME/AKClqan350JAw2Eo6Z6ljs3sFh1863YM3irAd0PWzJoUxj+7SgLed2k+xGnBcJullqTQdLeEVEBaCYXXK0Q+p2Wjp9wAdvOn44WOhppqLQMdL8a8bSNEhXHOFjoZC6CHoGZ5rLqdjxguboXIAlS7foJcd2nJcIujUUtg+WSJDhYFOxeyRX4bpgCOi+HGtBasD9k8UwG4cPpRU1GgsNL5t2FzTZsoTz8YLm1JdzCjoFvTa9fEGj6pTp2g+17qDzK6s9cLKCe61oXLUqrD7unuz+WOjkkK94xEtqYn9Br+B8pKAP5bz0pDA8X6lVrgrTCoo5o3q1m6q8LAPpM4SJ1GxxdaIlml1cR3QIg39oRZeTwqWcjxL04ZyXCVpbxW/sMeoU9z9IoEDsyztWDyPB2+WpI3OaGUZQxMUPmCq7CHo55wM/WDmWcwo6Bb02vWxBg8YqrPXpa6xkVTVWynnAiKKrfBuyiut36LkVdvCqOTpW2xh/sqDqKiRjl9+2uza7gPMRgj4F58VXOdSKuIFuCz42puoU+gKvdtF75wq6yEpS1VqD3GAFWGSNEwUV1o+aQ66pz1WOhZyPOyk8mPN07o9Pl6Qeqg6tk9moVlon0IGiQI+o2vote25E6OiLqVRWvw3mNWzZNlRljqgCXle7oaC353yMoE/AeTL3l7dvLi+fvv+wGegUdB/OKegoff7pHbx81Y/sbVYwTHKIBKkh4/rOJO4bcItbmEYpRcIDus2qk6U/VUWF4gtBd+bc/7ftrMUHcb4rQn/HoEO7ZTXLKyLnFq6jAmUrp2nfSF5VrowLv5rNqm1mG8VwbY9YWxE059s+Qm/I+aAI3f4dyHk696fXZm0HoUFslKmvoKkedRUF8mxKVUiPcUcVmFVVEiQ8LUeSDqY8CHiBUlRusgBedfTYcA29PecDPyk8lvOin9NNQc8H3ZlzCjpMwdm3slvM5vXcYGTAufDEUnR3iZs07+hizU9uFvpTziLu4A7LE6cAh7nKWKGS2u29r3Ks5HykoMuRnGdf5QCzWXHWQ8eYfHEOuRVTpaoh9EYYCg8Io/E7EpVRLbtoXtj2KqBp92V736scKzmf4dt2h3CefZWjiil28PHgUrOGUezgk500Aw9pBHBEl+K8KEESo6Ku+hjFMDWU/JDRAUYtczZfcuzA+QBBn4PzzKsc2wha34TWDvGz3lDQeEcr579b0HKn1/Ggd+ZsbxLeQNAj9/uM7jOc5U431Z+66HWvuh10V0GPnH2TIvQsAbY4yZB9JF18hl17pccv4liQR2caRd/32Yt+oiMWCA3U+XBoYTHyb9OfAlvNGe4+HQqsF/TUHZl2J0MRfteclrO/6bniDc5bcL4/92/P6YkJW8jKxkLHIH7CSnjwFWRE2i26+lqASrikGHaPiRpup1WEXJLluK0eQcvIHP7vdJVjEWd4aC4FjRDJjDRX0Ne25TV6hjD1vK9zO84zr3JwoyJQeCU7aAuETbpp82FVpgsWWTtUnRMHgLSka9Cp0t2XRarDC4eKtJ8DAt1LgLy+2/Mqx2zO7UlUzLnvkkMACme0CBQdcHbKX8N55lWObQTtjWfvCv/DVcVCQdcI9AkFvQPn/r/LcRLOM69y4LQgK4ZCs3ZpSziaEK1rRtB2Jm3VQDZipPKptqnTq6oGJ2TdQh0j6BY1MWY5sudVjtWcjxI0WncI5/nf5dBNyyKvsK68H1jEvy2EA5xRzkkwGnAox32ElviNdCN2EcLRDsH25oPuzPmYL/ifgPP8qxzrQKeg+3BOQd+Xm80hgEaglT/ZKjztq/2yjpAuwJm0QAtmJSF5Ki8qSiRok50tDUjTPO5hByIxndXht+2Wcz7ig5VTcL4Zob+Nv6crWtMGyS7yUNZ1AN/2jU4KhNI0XIDmP3VUqkOyeN266JaVG6waY4NgB4e3jdAbcz7gWd/n4HxzDf3xm3fhF8/JOiVRsEOcYcvt0aa+sRDLKOzO6rqSj5YK7KhEkWvV1Scd4EwWKgodwEZsu4bemPMxz/o+AefbVzk+//TvKeh9Bb0D5xR0lL78fDlN+fyn7wxos7CVxSrvrKJG2eb8oEajPqxWLt/h/lorbFZcdtSgLiFkOVNVOO35TGr6VM5tGaG353zALVjn4HxrDf3m+f/zbKhBm8QDq5BpDToORMwf7MOD6p05xkNhtIKoOjXkkXVrQ1VXXaK9BZ3adg29NecD1tDlFJzXPDRIJhcxjwMvadFqr/KYnZIjX/8pPiCh/xi3wghdODSo4ohW7xavSDFV+blHhN6B8zFfHz0B5xR0CnpteuGCRtVY88FumRDJ26LtnRQ0KVU3BkI20q7S7VFVwVDgKlUOAFuMSKqubXdBr+N81Bf8D+e8OkIrLwqvonSHyDu2M46mnB0Y2GZA6aDoWoCSqStgzVZADaFVUZVDgb4ReibngyJ0OZzzogjdxCSNitJGdUoxpnB/2HDq/cGdQKhwXNLoguIwCRZY7TT4QUypWHxsYTTk3D9Cr+B8xAcrp+Ccgk5Br00vWdCgRmNkKWptH6Ym6GJ9KqE/esbFlrgK1HlUHBcn2oiCfTBVEZ6ergHdmfMBXx89B+fFj6QIIuS4uMDVWuGxp2i++VFW7ZvpUJ/oVgg4s+C7Lx0iXoDzrktxaKBVIZ9eaTcG+H0eSXEnZ/2DibPX0BP3vt5T2NlDndy22wuxM5yHG/I24jx7yUHmWEWpOVHA4ppBYAdKix77Sjlo7Po+FT3LfbeqSjGODkIVvCqBG+CKarWB5moJ/CXtu+SYx9ncdzw3Qk8/4PR2aTSucebbdpGzsp04U85tOKegU9B/yYJmjmNTPzO3XtMMMsgPxdl8uBPfSJv+Ud/V/uCD7Getco36tl3vHBQnZ/ZeQ8/jjOO5zhb0NksODYp+ZFdx1ovH5lzcTQs5L1pDW/t8GPGJhiR2BrkQFKj2bbygDPuZC3EzuhokJr5YoMYva1ivRyMv5Nz7pPA0nJdctsMhF4Eu1QgSjcUSxXDA/CPwjKQLNE7bQERTAiMMaFhaqFaMmrQpu1+2W8O5s6DPwzkF3Ql0Z84p6HtBw8wfzf9yDgCwoTNA0bIKUZ5rWRbBEfZpaIPQ4hqL6m6bVOGJ6hXsnU8K13E+4jr0KTgvjdCiSAE87o10DblVKquUDnMVpRS5CqwriPoXhwoV5TFCXU9NGKNoU6tCsVbtoVNdIvRSzv3X0CfhvEzQrcVqkj6q5kOSXPOJXBA3ocMkG1ehW7Fa1kVVw2BpKXxuWQu8pfww6oxTBTaXgu7M+aCHBh3POQXdCXRnzinoWaDFtjAZ9wpmbbMS9IiWJuRHr0ZaInVHnJmeLHLijKqIA60WO8tBd+Z8jKBPwHnpD5AqMBwAABMqSURBVM3wSskrDA2XHS3kchG9mpLLFToyIynVBm5yfMDapLuhVVUzHKOWjIIs8DWgO3M+7rFuB3NeJGiWimXsfVHKxd1guRqdtL/1ZbHHjKBxbMhcVqEYcFN73OpEYFvxRJh7CHoF5/6X7cTOQzmnoDuB7sw5BT0LNJsVJj44RkDbrinoPsRq+Hjbi/mrkjMvOaQKnNeYbjVGqjXRDcxdBL2c8xGCPgXnZWtobI8Uxu9UyB2DAP1h/SqqKl3GxGvRd4HFm9qAKhGaWmIrw9C8KrV64XRYQy/nfNAnhcdzXhqhsXE3q0QeoJ3V9JQWqi1iNR0NbIjOFaziCk0UQP0HBqvzSc5vPeoSoZdyPkLQ5QycU9CdQHfmnIKeCRqsUJOenS8q59SrKLukAvVFqy2pJFC0n3b5c1ivfDY5Zqzc8u+xkX5r6AWcj1lynIDzki8neYu0F+qYc0Lti8OpyyZ5xwV9M5IX5KxqNTuK1wu6tAx0Z86/d00n4rzok0LduEz3/Dqern758OFHeOCsiwNK32wYC9w/L2zUMrCoeh9lzl8OemfOFumBgm6cb80Rwhnhr+Z8hKAvCOzuPQQdoB6xCi16kYJ2SCeG7p3P07w7Ywl65o5bEpmzgt9b0HXsKgx3gNJNoIuqBV2xGKlzpD9CNct+leuyYQU9DtfQ91CjtO8tWPM4Wwecy8yqQdGcdXHpJccZMgrnqE/uusd24HwrZ69fTrK2GacqLZtsxmqfJ4q6RHW6E8QxQUsVBYpVs+SIkbYFaHsCc4EWOYKAQx3X0DM5R3Ne8fxKO4WznL2eQ3rYDnAOesQsOWCh7zkri9ZyXvIzBjHowpO9oIwFrfyuVX1Oje4aHYbX66R5U2OcL7BG0dXV1QbaGb0AdHLuwzkF3Ql0cu7DedkPzQSQiRaYHblYBUPhYki27ammuEySVU+YIbyI9ChsPRXiPmqCa4RO6CDo5LyA82JBO7tk+aNBGxza+2g/RxMev+3VRw4sbiuyue881cPKELDv2D6CTs6dL9uVwqOsWFuqegHjg6FPY9TkhSJ8ngkkTUvcApSUQBUbPvKeKzGdJtb2vWyXnO9El6D7gE7OfTiv+aEZbSIs0tpfuKKqMOuBd8QFs8H7ys4XzblKaUSExCmvskaVo4mXD5n+qdh5nLr90ExynoNuLmjfoGLP9tc4qyUAUGVb51PVVRjKJjuFHjXidbdGkaKK/eJFnHTh7ieFyfkedPNyQ6M4yo3bo7YBwrEQJAiwkgoY2vupz9JwElXV6CYpwLATUFyXxMiyDHRy7sM5BZ2CfijOS3/wnL0vaAvMZ1OYCUEhgq0GjcAS0ljgzXgTmpiU4+O2Ndc5Yplzp8sPnifnboL2Y5ONLmpPTAFoTZAylVu6U5xDYirecQBSoKPIEbrSSdDJeR66yaMfny7p1S+c2xmtLu5UGv53gJaZCSOCzkNVtf926BfoL1u8hrgwL4EmQ9VrgHnPJUdy3ozzZO4vb99cXj59/yFB7yno5Lwd58ncn396By9fo7Wdt8tOjyO4xfPpHpEmcLoazWlA47xmc0DL2EJIOmpsO0En5+043xWhv2PQbD41H0FubjR3p+mN94TKqgjAEVO4mmK1SGyLmi8AdxTyGOvtI3RyXs95Oven12ZtNz62qkUh+xw4C3qiPzycYMpkWnqfNGV7oB1Cu/nATqCTcx/Oy74PvRI0PRxagb7jjp0J0O1X5O8Afbk/woEeGjegb9zA1eH70PdzJq8UF4B2Q9DRDVzBTTAjgm53IL0AQbuzb3F4wiRyGadGTW94GC6D5p3TacTjAf61tJvwKINpnHe1+siiovWsnobj2t3zKsdczldbI2T3LTnG7in0+GkzKh33DXLmMTHm1HrOM69yiGtjIaSIC9HnTEM0beqTInSrZMicKUZyHg6M3Y1s8eMtmRRQqjz2tAEdsIugwYjFoPfl7ASNPivOCiklBb9l9khj+ihoA95xFoOBs5Lzas6zr3IUpOMHmPynbAbKQGBwE/ygWc9Bw36AbQvP/LCGzQPHED4rAx7kJIf4Ac5xP+57lWMmZ/9c6UKCMZyJjQmynrOd8ywF4Rz8zoruA+Zca8BZnNqA88yrHLNBh4K+H/Tdgh6HeRLQyfkEgo7OvoFIbUsKbROA5qUTetj+YykkIq5aWnJdyHjvu+t2UvkNWeuTtAXObPpo5OS8Gef7c//2nJ60qRQpOGIozystk/CjKD7pBdewHKF2XLTrqpR5vRs1xSDuNzRHN6chDwd3usqRnFdxXnKVg5kxOGq/EKdqyUsxNzit/8F8qAY3mhDlmpm4TmuPvCeLVaH9r3Ik5wWcl1/lSNDzRJucjxd0ePZdZDoDs8jUgrap44ZurTYL9w/sVOTGDk2v60YPmjUcGV6UQc0ZV7TufpUjOS/iPPsqB7dc23Vm+quyMAPYbK936h7Q1r2xQzepjqAODItarNatbQWdnLfjvOi7HAl6W0En5+04L/sF/yofy9NfSJDWeNQJk7Cpn2S1FYGR/gv7Qu/HD8dUNYWNizjzbMvGiwNSvMMv+Cfn2ZwXPzRIQgZECzC8cJ+M9YHaRgIjFNHlMdBF+kFZOpIvUkYLiXGetvarG0fo5LwZ5yURGmGOxwOhMZbDuCcuxFy4uvgQojEd5PPXQvM4Tr4MEiuD8CJrgMub3SN0cl7Aefoqx4/X66NP3+DJSoLeXNDJeTvO07k///0v6n37ZXlwZxrzPZShPwpUH7F2L4YoU+BqXEfoLuFXeINNoCHOqQ0jdHLejPON3B//+AHfwvd0q5CZAj1y1i0+WApVxyXTX6WOcXMYuTNGMAtPNhGL8UVg8YSjzbB7yyVHct6K8/yHBlF7Vc0StRlQ2I4iRo2AHkMmGdQ+8rvWUkZZQ8to3VgrgpkCjmlUg2ZTLi87PzQoOS/inIJOQT8U56XXoRGuvIP9ZeiM4U6ICPUULHZZP8FONau9D4GHT8Gi77KDGoi0JsvVqI6RPV2uQ9/LWZ1EUhpuNDSMzEMBrQqFM37Bv/rSClDAuZSAc7v1U2e83v62FedFEZpsQuSIWZzje3sCSY+JWrl6vZXE9KIjFya6L8tAHqqsEtaKVKu6zlTG1nLb+0fo+zkPxhvOfA8ZeqVuQTPUFWcoXYLSuruq41xlmAnndu+m5uwfW7mG85JfH3U0FFil2MGDETkb7aiL/ZV9jSufCM6Mme4UxGkMxghPglAVysdbp/ft/uujMziDiU7QmtSw03DGuqlyyjgtaLBFc8YJgOvl4sjZ3KG7kvPOgi6jS467BK0WDbMF3W4KNKBbN/0FCJr8157IBD8t6ErPw7SlPWc24pagi8wOwNk8xXcd50W/D02my9TAZx+BbGUuK6YjSpxw5ipxrVVn09RlYiZl2q6jlaO1xNXsbaT5fd9PCpPzUs7LnrFSxdBgaFf12gYdO2L6IOBc2Zla9U4Z61UfsxWolqBKiDi+53SDziwstregk/NSzouucmhYYmmN0mAdDV4DGhEpdoBCrg3JrAqZ/bQYWEBlCgUDoxApWorEK+oztEry73+VIznP55yC7gQ6OZ9S0FXWamSj37KYxwgQf3bDvK/wB3uw+6jYBObwMp/0Fc6o0gvUgq5eS2Pny3bJeRHn+SeFMnwdNecmjOkqDugMbtxaYq4GDhkVs/Jr1N8BaIbY/rBeV0S2BfzOJ4XJuUeEdlMhgytBB5hZRA196QfxQfcNnvOUKGGrQjtkTP+gw6DTZIJt1gRd7M9eui45kvO96BJ0CvqROC9actTIncJrfPTBgKkOdXOTKnXZoSL7Cl2siOIm9SNWHU3alY2vNKNa09eBTs59OC9+8OYdyZLjsa4zMTvbOy4XcoJTYQGM3czFGHf701kwajBPCi7cpO7dJaCTcx/OS65y3EnZnKyKlRA8gm5gxiO5MIDoWBKbUW1327hnC8p0yJbIXgC++1WO5LyAcwo6Bf1QnNc8SXaScoAGJhvMqDdUR0m+qny0zLlnCiqBIItBYzIBe/h9iB9d6/Yk2eQ8B9283NqsUcy8ZBtj4wAyWAAPGVVVDi+Mcek4HRKoGNCEQ84jZWJVbvD2/t+2S87zOS/6XY7AHN0DQM9yHrLpWQ6rkvdXVtFcZqpq3qsTFoatmym2dpVfClCVhvEa0Mm5D+cUdAr6oTgvuQ4tsMU9zZtcH6WjAKj+IiJyNLzgzzBc9dgBpkOHimW/mxJ5ZxmjDJbtfh06OS/gvOyeQoVmBujWOfLCB4CKDjrWWRj+YTwRQpZkC0RCi6+Jcp8p7C0bWMgudBB0cl7GedmPNYq32jI9u4whIDeqO8aFcMtWwZxDzGIhxjWuSFXr+yqaSb2VQ/sdfqwxOc/mnILuBDo59+G89Od0NR3AzZwD5/XsIrNMK0Z41VQYVzPSAtIi+2wfYh+rF7BrFHSbIK9HuvycbnLu8fvQFdsNYCMxR4kDCA1tCjbu+BRkm8W8Q/MgHMRV2h1KNa4QH91f0Mm5k6Bjs8CuhjvIzKOUpkPNTWZRgI8kqykgU1wYq1RwMl2owhhwR4esE2hxxwidnO9Hl6D7gE7OfThvI2hYP1WdXPbhT3qEd/FxJohlsDUDGpZg8Xyoq4VDkYXoxNQ0eYigk/NtdItA23WVT+xEALvRQVfVYow7wzrJo111IraEdRnQLAk5ZkFXjmgUNahm72mXZ6wk59mcl50Uega1ih2Iws807LVYrsFLFLJRxXamJlSgLPSSTJmUhy3RSpBYph3QE7IoqcNJYXKezTkF3Ql0cn4hgq5gH7jmYWhbkZDtm2gahP5E0Lps1Af+0pKYrVupcD6DkmEdFV6VXg/2FXRyvhPdEtCWG/ik3fbZB3/0WTf3VXOruRw1JflUV5segB4D2qpcq0o2jYFSCQclqWKorf9JYXK+A9283CE8Np5MN/wjYHU8FXbRllNluV3EBzT1VCn9pPZpB9SWmjVxPqUm9/+2XXKezzkF3Ql0cj6roK25eg/NY3XCL7J0lHRYREqWqihU+TPcx1rXMKe007al/5sU9l5yJOelnJfdU6iJFR7merCNho4ipGkdR3QgCAVcEAGEDR7OlOFe0LWoxrFaXYwyLI8cybkP52V3rABDxzOaoJzXMp8V8FXXG3AxQaLoqTEsNGZm4WLTiigkBYx217cd7lhJzrM5p6BT0CGrl8p56TNWxm2CVdAYMcIloG/NnAyrwtRJTUVz2e26sAozh5sKVYu1Up4uz1iZsj45R+iWgFZDHlGC3VP+KkhFgZskozuoYpqmHEYh02TrMXpVtlTMQ2+7/LYdN5+c70Q3G7SJBc0kMmAYWPLHhNhQGX8W2FT0qDghWVZxuYiUBh02Qw5hH9A/nts7ROjk3ClCJ+gU9Ik5L/uhGTU58OUlIs6wgSPNd8YVnDmnL6lKf1Z5W2huLONdFCfoHpjX2ytaSe+5azhfhx+aSc6zOS/5XQ60UYeB6hITqoKEXYCeIGYjxLgT/FHpUrPvBmhTSHwCxwxotKbD73Ik5y4RmiZDABsBVjkIK/C3s9HE0DdToDkUXYW6FUZcVbqYcgr3Vdnu8OujyXkB5xR0J9DJuQ/n+V8frdVgDqdAtsvBV28JoloeRpwVzRgZHh8l7RG3f4oo2u1m7JZl76+PJudFnJd8H1raB1ss7rAb2BUVNmBzNFHf3sonVd6Zc6hcurqgyTZEslou+Xb/PnRyXsB5WYRGkAa6YoywC5+J8A7aJS5Mw7sXW5HJ+o6qMIZJUfRGzeN8rEOETs6zOU/n/vh0Sa9+SdD7Cjo59xH0l7dvLi+fvv8goGlpU8Aab12VS4poL7tjZ8rSQFfPgbyPsMXLvfv7BKpRDSjhaOdk/3aCTs7bcZ7M/fmnd/Ly23N6ygRptnCT86I0i+VdEfq7d23Hb7P7yqVzVHEWM4aUnLerYlr+n15fRois7c5B6UWCnkzJebMq5sXzc1B6kaB7V32OKlLQnao4ixn7VX2OKlLQnao4ixn7VX2OKs4u6EyZTp5S0JkeKqWgMz1USkFneqiUgs70UCkFnemhUgo600OlOYL++PT0ZmEz1+/dDOXx//3py9unp2/XVfH166+u9AKX3v+wuoobKTlf0kLOMwT9+e9/ka/PzEuff/zmXSuP/2fU8P7by1d4VlXx9eO3lw5fV8fXT69/WOfJzZScL2kp5xmC/vT9hy8//3I7n09f/vnfnyPHUB7/z6zm/Q+rq3gGva6OLz//4w/rPZlMyfnrCs4zBP088L7++maOVZIuU+FQHv/PrmNtFe+fZ611dbz/4XkqXGvGdErOX1dwfjmCfp5zNlCSLj27juc48eiCfuGcuyw5BtDr5qBPf/3L1w3m+pXT6fvL95bXz8iTKTmv4dznpPAKetVZwpB79cnK8yBfe0b3/sQnhcn5xVy2+/U6ZNdfTlp/ze2xL9u9eM75wUqmh0op6EwPlVLQmR4qpaAzPVRKQWd6qJSCzvRQKQWd6aFSCjrTQ6UUdKaHSinoTA+VUtCZHiqloDM9VEpBZ3qolILO9FApBZ3poVIKOtNDpRR0podKKehMD5X+P8ZH7Cdvy1gFAAAAAElFTkSuQmCC" alt="Habitat (yellow) in each year, with the points surveyed that year. The red square in year 2 marks the cleared area." />
+<div class="figcaption"><strong><em>Habitat (yellow) in each year, with
+the points surveyed that year. The red square in year 2 marks the
+cleared area.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">par</span>(op)</span></code></pre></div>
+<p><code>kernel_prep_by_group()</code> places three requirements on its
+inputs.</p>
+<ul>
+<li>All maps share one grid, with the same extent, cell size, and
+CRS.</li>
+<li>Layer names match across maps, here <code>habitat</code>.</li>
+<li>Points and maps share a projected CRS, so that distances are in map
+units (meters here).</li>
+</ul>
+<p>If your maps hold land-cover class codes, convert the class of
+interest to a binary layer first, as <code>habitat</code> is here. A
+kernel-weighted mean of a binary layer is the proportion of that class
+around a point. A mean of class codes has no ecological meaning.</p>
+<p>The response in this example is simulated, so the estimates can be
+checked against known values. The expected count depends on habitat
+within a Gaussian kernel of sigma 250 m, measured on the map from the
+year of the survey.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Kernel-weighted habitat at the true scale (sigma = 250 m) on each map</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>true_1 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(habitat_1, <span class="at">sigma =</span> <span class="dv">250</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>                              <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>true_2 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(habitat_2, <span class="at">sigma =</span> <span class="dv">250</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>                              <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co"># Read each point&#39;s value from the map of its own year</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>hab <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(obs<span class="sc">$</span>year <span class="sc">==</span> <span class="st">&quot;year1&quot;</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>              <span class="fu">extract</span>(true_1, pts)[, <span class="dv">2</span>],</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>              <span class="fu">extract</span>(true_2, pts)[, <span class="dv">2</span>])</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>hab_z <span class="ot">&lt;-</span> (hab <span class="sc">-</span> <span class="fu">mean</span>(hab)) <span class="sc">/</span> <span class="fu">sd</span>(hab)    <span class="co"># standardize across all 100 rows</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co"># Poisson counts: habitat lowers the expected count, year 2 raises it</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>obs<span class="sc">$</span>count <span class="ot">&lt;-</span> <span class="fu">rpois</span>(<span class="fu">nrow</span>(obs),</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>                   <span class="fu">exp</span>(<span class="fl">0.25</span> <span class="sc">-</span> <span class="fl">0.5</span> <span class="sc">*</span> hab_z <span class="sc">+</span> <span class="fl">0.3</span> <span class="sc">*</span> (obs<span class="sc">$</span>year <span class="sc">==</span> <span class="st">&quot;year2&quot;</span>)))</span></code></pre></div>
+</div>
+<div id="prepare-one-pooled-set-of-covariates" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Prepare one pooled set
+of covariates</h1>
+<p><code>kernel_prep_by_group()</code> works like
+<code>kernel_prep()</code>, with two differences. It takes a named list
+of maps in place of a single raster, and a <code>group</code> vector
+that names the map for each observation.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>prepared <span class="ot">&lt;-</span> <span class="fu">kernel_prep_by_group</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">pts             =</span> pts,                  <span class="co"># one point per observation</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">raster_stacks   =</span> <span class="fu">list</span>(<span class="at">year1 =</span> habitat_1, <span class="at">year2 =</span> habitat_2),</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">group           =</span> obs<span class="sc">$</span>year,             <span class="co"># which map each observation uses</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">max_D           =</span> <span class="dv">1700</span>,                 <span class="co"># largest distance (m) considered</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">kernel          =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">store_cell_data =</span> <span class="cn">FALSE</span>,                <span class="co"># keep only the distance-binned summaries</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">verbose         =</span> <span class="cn">FALSE</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="fu">head</span>(prepared<span class="sc">$</span>kernel_dat, <span class="dv">3</span>)              <span class="co"># starting covariate values</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt;     habitat</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; 1 1.1074882</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 2 0.9710966</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 3 0.7299806</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="fu">table</span>(prepared<span class="sc">$</span>raster_group)              <span class="co"># observations assigned to each map</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; year1 year2 </span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt;    50    50</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>kernel_dat</code> has
+one row per observation, in the order of <code>pts</code>. Its
+<code>habitat</code> column is the kernel-weighted proportion of habitat
+at a starting value of sigma, centered and divided by the standard
+deviation across all 100 observations. One mean and one standard
+deviation apply to both years, which keeps the covariate on a single
+scale in the model. <code>raster_group</code> records the map each row
+used, and the table confirms 50 observations per year.</p>
+<p>A year-2 observation uses the year-2 map even when the point lies
+outside the cleared square, because the neighborhood around the point
+can still reach into it. Set <code>max_D</code> beyond any plausible
+scale of effect, as you would in <code>kernel_prep()</code>.
+<code>store_cell_data = FALSE</code> keeps the prepared object small
+when every landscape covariate is a kernel-weighted mean. Landscape and
+surface metrics need the individual cell values, and the function keeps
+them whatever you set.</p>
+<p>The points here differ between years. When you survey the same site
+in several years, give each survey its own row with the same coordinates
+and its own year label, and choose a response model that accounts for
+the repeated visits.</p>
+</div>
+<div id="fit-one-relationship-across-years" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Fit one relationship
+across years</h1>
+<p>Fitting proceeds as in the Quick Start. Add the prepared covariate to
+the observations, fit a starting model, and pass both to
+<code>multiScale_optim()</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>model_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(obs, prepared<span class="sc">$</span>kernel_dat)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co"># Starting model: one habitat slope, plus a shift in the baseline for year 2</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>start <span class="ot">&lt;-</span> <span class="fu">glm</span>(count <span class="sc">~</span> habitat <span class="sc">+</span> year, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> model_data)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co"># Estimate the shared scale of effect and the coefficients</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, prepared, <span class="at">n_cores =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>est     <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit)<span class="sc">$</span>opt_scale         <span class="co"># sigma, SE, and 95% interval (m)</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>dist90  <span class="ot">&lt;-</span> <span class="fu">kernel_dist</span>(fit)               <span class="co"># radius holding 90% of kernel weight (m)</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>ci_beta <span class="ot">&lt;-</span> <span class="fu">confint.default</span>(fit<span class="sc">$</span>opt_mod)   <span class="co"># Wald 95% intervals, log scale</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>check <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="at">Parameter =</span> <span class="fu">c</span>(<span class="st">&quot;sigma, habitat (m)&quot;</span>, <span class="st">&quot;effect of habitat&quot;</span>, <span class="st">&quot;effect of year 2&quot;</span>),</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="at">Truth     =</span> <span class="fu">c</span>(<span class="dv">250</span>, <span class="sc">-</span><span class="fl">0.5</span>, <span class="fl">0.3</span>),</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="at">Estimate  =</span> <span class="fu">c</span>(est[, <span class="st">&quot;Mean&quot;</span>], <span class="fu">coef</span>(fit<span class="sc">$</span>opt_mod)[<span class="fu">c</span>(<span class="st">&quot;habitat&quot;</span>, <span class="st">&quot;yearyear2&quot;</span>)]),</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="at">Lower     =</span> <span class="fu">c</span>(est[, <span class="st">&quot;2.5%&quot;</span>], ci_beta[<span class="fu">c</span>(<span class="st">&quot;habitat&quot;</span>, <span class="st">&quot;yearyear2&quot;</span>), <span class="dv">1</span>]),</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="at">Upper     =</span> <span class="fu">c</span>(est[, <span class="st">&quot;97.5%&quot;</span>], ci_beta[<span class="fu">c</span>(<span class="st">&quot;habitat&quot;</span>, <span class="st">&quot;yearyear2&quot;</span>), <span class="dv">2</span>])</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>)</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(check, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Parameter</th>
+<th align="right">Truth</th>
+<th align="right">Estimate</th>
+<th align="right">Lower</th>
+<th align="right">Upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">sigma, habitat (m)</td>
+<td align="right">250.0</td>
+<td align="right">236.02</td>
+<td align="right">141.31</td>
+<td align="right">330.74</td>
+</tr>
+<tr class="even">
+<td align="left">effect of habitat</td>
+<td align="right">-0.5</td>
+<td align="right">-0.50</td>
+<td align="right">-0.62</td>
+<td align="right">-0.39</td>
+</tr>
+<tr class="odd">
+<td align="left">effect of year 2</td>
+<td align="right">0.3</td>
+<td align="right">0.27</td>
+<td align="right">-0.05</td>
+<td align="right">0.58</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co"># Did every prepared observation enter the fitted model?</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="fu">unlist</span>(<span class="fu">diagnostics</span>(fit)<span class="sc">$</span>sample_size[<span class="fu">c</span>(<span class="st">&quot;fitted_n&quot;</span>, <span class="st">&quot;prepared_n&quot;</span>)])</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt;   fitted_n prepared_n </span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt;        100        100</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> The model estimates a single
+sigma from both years, 236 m, with a 95% interval of 141 to 331 m. A
+Gaussian kernel of that width holds 90% of its weight within 506 m of a
+survey point. The two coefficients are on the log scale. A one standard
+deviation increase in kernel-weighted habitat multiplies the expected
+count by 0.60, a decrease of 40%. The year coefficient shifts the
+baseline. At equal habitat, the expected count in year 2 is 1.31 times
+the count in year 1. The last line shows that all 100 prepared
+observations entered the fitted model. <code>summary(fit)</code> prints
+the full report described in the Quick Start.</p>
+<blockquote>
+<p><strong>What this means for your study.</strong> This model assumes
+that the habitat effect and its scale are the same in every year. The
+<code>year</code> term lets the baseline differ and does not test that
+assumption. With few years, the data say little about whether the
+relationship changed. To let the scale of effect itself differ among
+years, see
+<code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code>.</p>
+</blockquote>
+</div>
+<div id="map-the-fitted-model-onto-each-year" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Map the fitted model
+onto each year</h1>
+<p>Project each annual map separately. Both calls use the same fitted
+kernel and the same pooled mean and standard deviation, so the two
+surfaces are directly comparable. The model also contains
+<code>year</code>, a categorical predictor with no raster. Name its
+level for each map with <code>site_values</code>. Without it,
+<code>kernel_scale.raster()</code> warns that it cannot fill in a
+categorical predictor.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>surface_1 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(habitat_1, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>                                 <span class="at">scale_center =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                                 <span class="at">site_values  =</span> <span class="fu">list</span>(<span class="at">year =</span> <span class="st">&quot;year1&quot;</span>),</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>                                 <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>surface_2 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(habitat_2, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>                                 <span class="at">scale_center =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>                                 <span class="at">site_values  =</span> <span class="fu">list</span>(<span class="at">year =</span> <span class="st">&quot;year2&quot;</span>),</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>                                 <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co"># Expected count in every raster cell, for each year</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>pred_1 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(surface_1, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>pred_2 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(surface_2, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co"># Draw both years on one color scale</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>zlim <span class="ot">&lt;-</span> <span class="fu">range</span>(<span class="fu">minmax</span>(<span class="fu">c</span>(pred_1, pred_2)))</span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="fu">plot</span>(pred_1, <span class="at">main =</span> <span class="st">&quot;Year 1&quot;</span>, <span class="at">range =</span> zlim)</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="fu">plot</span>(pred_2, <span class="at">main =</span> <span class="st">&quot;Year 2&quot;</span>, <span class="at">range =</span> zlim)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Expected count across the landscape in each year, on a common color scale." src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAtAAAAFZCAMAAACG3ugjAAABEVBMVEUAAAAAADoAAGYAOjoAOmYAOpAAZpAAZrYem4kfk4wgo4YijI0lhI4lq4IofI4rdI4tsnwubY4xZY41XY05uXY6AAA6ADo6AGY6OgA6Ojo6OmY6OpA6U4s6ZpA6ZrY6kNs+S4lBQYZEAVREOIJHDWBHLXtHwG5IGGpII3RYx2RmAABmADpmAGZmOgBmOjpmOpBmZjpmtttmtv9qzVp90k6QOgCQOjqQOmaQZjqQkLaQtpCQttuQ29uQ2/+S10Go2zO2ZgC2Zjq2kDq2kGa225C229u22/+2/7a2//+93yW+vr7T4hrbkDrbkGbbtpDb27bb29vb/9vb///p5Bn95yX/tmb/25D/27b//7b//9v///8sz3mTAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAgAElEQVR4nO3diXvcRpYY8LYzjg5KpEnKo2Sns+o2RZOWZ2cT2fJsNrGlHLvrg5tNNKaG0v//h6RxFOqdVa8KQAMN1fvmG0tiH+iHH1+/KgCF1YcSJRYUq6k3oESJIaOALrGoKKBLLCoK6BKLigK6xKKigC6xqCigSywqCugSi4oCusSiooAusagooEssKgroEouKArrEoqKALrGoKKBLLCoK6BKLigK6xKKigC6xqCigSywqCugSi4oCusSiooAusagooEssKgroEouKArrEoqKALrGoKKBLLCoK6BKLigK6xKKigC6xqCigSywqCugSi4oCusSiooAusagooEssKgroEouK6UC/Wa2euT+8tD/ps7ejbdEyIz3Pf/3TarX6m38ec6PGi+lA371YffLD7r/vvjAjff8/VgV0aiTn+faLVRX1kw4vJmw5blarezukr8yp+z9/tyqg0yMxz7sHfvpDSpmZV0wIepe53XfgbfuNWFXfT/62zmEN92+q7N+sPvnHv1t92nz77XbMJ4ea5ikjMc93f/pi53/XoHz603TbnB9TDgqrKvD/XjWJ230xVvG73Z9vV91X3k39p9bwzep3//SqgE6PxDw3UUBnxC6P/7Edqbyp6sMu88+qgvLv3zZ/rB7w2T9/+L/No//1b9++L6BzIi3PdZSWIyeqL8Oqv6sLR/WFeNOWhX/7X/+h/sENGZgX0FmRnOe6kJunnmYV085D37rB9LtmZF3/9f0/NH+sE40HMgV0XqTm+a8vDnb0PS3oHdC6cLh+rkp0VU5+91//7UUBPVwk5rlif6h5ngnoXQrdN1zT1d0V0ANGWp4P2fNcQDd5reO27t7cYKWAHiKS8nx3uP3GBw307Z6OFXWJ3o2+P/kvVev22dt6fP3XVx9FDz3LPL85ZM8y6Pev6u+ld38Y+3P5RLfzo9VY5dXqYxkUzjLP3bhxQfPQd3/8CfxnxPCJ/vDXf9gl8j9Vx6qq0ffv/ls9s7Rw0LPM881qeaBd5Xh6kB/pcKLkefiQe+jma+dAz7c6oCh5HjzKCf4lFhXTznJ87FHyPHhMO8vxkUfJ8/Ax7SzHRx4lz8NHmeWYMEqeh48yyzFllDwPHvFZjl+qWC0+SFpCPxwnSp4HybNxlmO12Wy324tdXO7imkX1r5e7n+4etNnFuo3qz9vmiZfyE8HTXVy0UT2xfrX65c5h+Jf2G3RVxXMXX7LoflQ9rn3T5m2qd6CJ/g3GaKB5ns/Oqk+3QemGiWlyUqXjbBenbZxVT2ue2D4PPREktckqTm2T2+blTqo4rqL+U/vS7Qs32e6SDdKNovmZT3GzxfUmn46eZ+Msx6pO8WigEWkZNCS9zgCN091l2wGZBLSQ5xDoSwTaEexAN1lRQAuiRdCd6NazAvo6APqqA33pUuxAn04Emo++E0FvsGcOuiEVFu2zvlFBX2igqWic7/YdLyYGLeTZCnoNQTcFeq0+LyS6+/o7AyXaRQy0JPoKFehLXKAnrtB+9L1ah0FfE9Cblhwq0F5z95FF0RbQXYHGoBXRNN9dgW43eOIK/dQOuttgT7D6DwQtFmhJNAZ9zkG3L54E+gqBdj3dxKD56Hu1hinWWoaugoDgoK+urkTSsmjQwogdhwrak2YJd283NWghz6cO9EYHDXsOF7GOQxdNe45TAho35wQ0E409zwY0f9jaPircUs8Y9BUMWTQDDUs06maCoKW4wqC7b/BpQPM8V4Lgp0M0ddDxjkMSLfYcp9DzqX9pGfQVz670HehAn0wI+v33YHo0CfQWg3a7hRXomGgKus6799wP9CVuSWmi/wJjVNA4z6e059BAI9HnNtCyaAr6lHbQcHsY6CuaXPIVeNH9/lWvzkAPnmd5UNhc1gBO8V759iwMmpToLf8twKBl0UrP4UOYPbGAZumeFrSQZyPojW8TvGehhb4mU6KEdFeiz5loN9wEHYcM+grldp6gd73dM16hC+jBg+e5gO4Z2mvcfPLfMejIqBAlfAs9E9BXNAKiec8hz2+DF04HvZm05aB59qCdzQussQPdKYQjZfxbQJKqiWY9RxdnqIWGoPl+ZLv0ErbQk4P+8P7VJzpoLrrLFuzOOs8h0Ff8ZdSZO+6ZtNBh0P4N2zfZTg6a5vm0GRXKExZdUthEJp7JxJ7tB2KpaHAAkn09R0GDAj0L0ORh4ofSS7QP4llKhFSjQyV6Qwp0Imj3Luj7e7pBIX7f07ZEA9AXxKIv0WvoOQBaPBBLj8R2DQz0TKcDTaBhgfaTdrMDvebf8mKJJqSjBVoWDUHjGs2bcyto8G6zBX3iQfMSDUGzmUw21SfVCfnrr3spCFqdDoyB9m9IJxnnBPo8AfQF9RzNg5R6WqLbvPPmHL2w3XMY9K8w9go6UKJ9dvk4mUxksl2kNR3dLwcYZDrOZ9Jg89oM+gKBPhNBD57nJNDoG00mjUVfUM9qHnjqeYkGwUq/e53UAu1G+bMBLZXoCywRMlTbMLZ/lBKNq/0ZCnF6O6VA4wP1p7MCTUt0EDQKlN9IHsIlGnqWE2zzPG/Qp93BDFwSGGhAmk0pqd+hYtOxJiU6NBto24+4QM8WdLBE4+8zGbT+i81F6yWa9+bxAg3fBnQccwN9DEH7D3rBegWXizXKSgg0P1tGKNHniLMweWIqTCDBqIUuoOcI+t0X3elE718NvGBWAd03z3bQrOdQu7ScjkMQDUGzE56Ub8CkjiMP9N2Llx9u2vS+uVf9b8DYgSY9B2g6fE61NgyexyGAZl2HABoefSSe7WMhnOA80Jl5toIGx68iXTQWfYnTGwJ9RV+HlhGy43I8SwU6EXR19vLdN3XpqP4z7CXbq2OtRKPgv+VgFK57hqRxbtdoWhscfQQFxLQfxQLtLxhLAJ2Z5wTQ5KSrkOg2X/6v17FESKLRzoMHH/cA+mcY6IfVWfm3zRqoIOcDxerRMbuQLyDamd7StBgu39RLtHy0xuIZvocE+oSBHjzPZtBkLikqGocN9BV+GbrzfFzgBEc5o7M43DGsTNBgTd9RQB/XM3dn4RItZgUdhtFAC5NIG1ai4dEaId+GhoMMUdQKPXie7aDpSTNy1np5JqD5YRrRc7w8o/rcNXjoAsjw5fVVuB/dvXjmersxQD9qmw7S4xlEt/9uBU1ES9dtKp5ju4+BPtdBD55nK+hT8bB+eCjNPEdB20p0smcZNNqV9soBsjsC6KNHTdNxGq/RJDPu32KglRKNa/Q6x7MMeh0EPXiezaD5AaxA3mTOBtDoW+tS2m9wGisVtH/tYUCPMCg8OmqaDpxuVTQPIesh0R40O+ecDQjZmdAB0M1rb4YBPcag0K/9gJuOUOJ4mEHrJTrHMwPdvWoG6Pevno04bffgqG06TpWm4xJNImWB5h2dBHoD3xq8oq0YXeAWOgN0Zp4L6FTQbsL/TXOXv4EPrBTQPfNsBX3Cr2gfB7TYc+hnO5k8i0dVwqBfw9jjoe8HR00XTZsOAjbqeRjQaZ4NoNkyBoPnOQE0vqQ9MHfXhzMGjUWjvYZfM+z5kEC3JdqfdccOGHaRDZrN8wugYYE2ej4s0CfCNe2JNToFtH7yXuoMdBy0dAnWVKDvNyW6O2BIS/QliT6ghTTEGg66s57jv4ZBn80L9EnvEm0DTSd/5F2GX3FJoB/UEx38nA52DbikGvxjL9AbQ4EmyT0w0Md45b7wmdHDgeai4e6yen5OVkyaM+j7bdNx3DYdZDJaBO3zNCjoLQMtcEak/atT0K7pmBNo1HQoJZqgHB402ltmziroblfOBfTDpkQ/eqScdqeBZmfPWGaiVdCoQIugA1+BHPR6jqBRiSbndMhke4Jm40LFMwOtrtFIpu3gSZgzAt2KbpsOWqJ10PXHQn+NgaZZkEHzhAs5RztPB80XPC+g9wT6RxgF9GigB89zCugTuFywBFrHmQIa9xyBs6vF3MqrQpM1k+iX7WYzO9DkJCUjaGMX7R++VT27gagEmnqOXhDUiZ4R6GO/vuraHy+MgM4iTUBfUs7BEaGyzrnaRG9nBroVfSScR2oCbRI9PGhlkQhWomcDup3sP2Uplj6vKjoPNA38WrpndicKAvpi1qCFU/0No0LTyBA8wadAmuNIBx3oOc7nBhqV6I1QosM+7aJJ3vuAFu4VxFYtmxlo3EXngEaPsnoWFw9MAK0ve9L1HOfzA+1PmmlybAINSQ8Amr5SGDQRjb4SoejZgXankZ5aQV/gCJAmoBnn+KBQAi0kuH31NRA9S9BoqSoL6ETRewENSvR2RqAfw57DnXWn3HRFXLFOajwkzrhAr9eCaDAPbQdNlw7EC0seAGjp8/YUHQTNXicC2lKitxz0dzCmBk0XtO0SEfBMiznNaNCzdm5SELReooHo0fOcDprOcySCTr4OS/bcHzQWPVPQJwg0WIlRBBoxzR6N+w10NSE9ezSt54BLgeFVEgroArqATsqg8WEDgrauZRC83FY9aqWLBq/OQG/nAvphJmgn2H2esGnuWVyQI7HnuMIZdpuDfmUmAs1vqn4s9NC5oCOmA6DFV+hXoi+mBM3z3BP0FoRq2j9U9txTdLdlvEufCrRwU/X2duZDgTbN8THR2vMzSzQUPQloIc+V53zQWxqs/ej+Bj2fd9PEbhEwv4xuyiJVVzjD/PeGL+izH9DCTdVhx6GANlXdKGrdc+C5YdFakwcZTAJayHPjWZnl0EEjz91hEWYaNyZw+oGuCw1Ey+ugGEu0b2ya95q2Qj+FoPnNchNAK6Lp0/BPApzpuwVFaxUEdp6TVuinCPQDVKAV0CRDSGkXimr/QIkzW+qcdB1iypUEoxItXru5px6a31QdeBaWUKLEnoMTCmOg9QhwDopOLtG7rNNEfwtjtB6a59k1HCLoizjoDQ3WhfiHQc74Zm7kbhR20dJpukj06HlOuKbwpLvTFwTNvovAJ+0HOuyZfiGEarRYQbDoaUDzPLcF+pG/CousKSiCxp7xAWzOehPiDG9QqKygHAUduNZtItB89O3r89k5ynDwc+aDDnUbMmlT0wErCBoZTgOa5/mB89wNCfG5HDglFDTkLLD24Xpnd+1qd8N6d1NksqPFkzoMJZp9d0wDWhh9F9AjhJDnArpnWGc5iGc8SEG6hG8gBBpS1axeWh6UIFr8SkTXeE0CWsgz8hwFDT4C8owmlCns9RpwPiWaO9OCaD55p4EWTwKbQYUGo2/uWQEtfz7jGUfiA1TPlLSpRguiL6eu0CDPzQTHo+NjVKDtoPlBEgp7Dc5O7jQfwwiO/2NtNNzfvl50oifqofnoGw8VhI5D+4gEtOg5HCHQKumUpqNK+lxmObBn7fx+8tvfkNl4z2wOjoZrNTrMj9roSMui6ZRWuETTSymEsxr3BBrGL1WsuvKsFOjJQGvHDE2T0X5zaKK/hrGXWY4mz8CzvlSVCpo0xt0knBBA8yMa8LAw2QAi2lKikejR82yd5aCe6eyk7TdWOJsmct2nATQybS3RdIOmAc3zjDyBNhaB9h+8y6VrOEBnLMzFAemt5hrwEQqyCcKY6TKtRIdOMdgPaGH0rRwS7fKbCPpCiUzQ0pg0Bhp/Z0wCWsiz5FnvOCDoTQuazVrAyQvwI6j5gQ9n+hiOSumw1Fyi4SXJ4ikG+wEtjL7B8dDA4SPh4wUOz4UiFTT/lTKW6HabJgEt5PnRMfm+DxZoArrzTId57kXhANBV5prx/TY61GRcSg++h3Y5Bw1ET1uhnxbQe6nQTwvokXtoPvr2/YbLr7HjCIHuDsYGTRtBx0RrGW+2apoeWjhnBp+mS9aH5gmhoJvbW3b9BBnqwSGgw1xDfthEpxoe22HrVLfbkNBz6OfM7Ak0f5ifzCSeISbRMwNNNcPoI9oMWhI9/SxH8754yozPmdF0YNC7At16ZkO9tjX2fyGWfWjnR6GVKxJBq+fM7An07eqTf/wC3qdlRS5jkK81C4EWl+GSg4o2go6IDoG+vqaJ/grGiLMcNM/SSWCh+yUA0OumQLflGQ/1eHSWH+OApMHxSnrGsM93DDRedHP0PMs99Pc/vPviJRp9d90GWas47vk5OJbhP5jDC84v4KYTQbcbYgcNRE8CWsizcIpB8P4frZVte0/tqkBXnn0B1qKz/DmK1nTXd1DR3VdzMmj5FIP9gN4Nu9//+Sc0+g55zgBNMTPWUHQu6OdzBy3k2ZVn7tkAuuo4dgX6Ue3ZNxNt3YXx2Ft+AqM1jUTT272Ar2Z5t5P0zgB0O/q++3tfObqzWzI8K6BFz5h0KuhQiZ4haCHPvjxL9VlIBQJddRx1+7zzTCow6ivaf6sNg8/pSXdtB7yy8bzrop3oMGj0S9fu+WlAf3j3+93A+xaOvsECfvT7L8aZg0b1WTghLEk0+jndFNHzbEALeQ4dkVVXXvQtdNVxNPW54owrsO8r3L80n64bk3nTXrR0uxcC2n4+2nSg+cMC0HqBpmfvgu8B22228CPol4XoWTpNexrQPM+C53AeCOi24ag88wr8Ff6H1nF7ZhAw3Yiu2g7xdi+RnqOALqD9+xbQfTNofJjqOdpAQ9DXFDTzTIeeMdAuV1g0eG/OWbyOhiYaDZX2Clo9gEWWQWOgz88b0M2AsPEMOwoW37JoSHvRXRctNNFyuoXsXoZAD55nO2h58sHiOQqanobuSBtKdBS0tjn5oN+/Wq2edX8c+Ob1oucLwfMVmtlvQJ91oGvPjWbOtovvSLR1uhX92JVo3ETzUSFKOE9uLui8PJtBBz33A82vraCzVXHQ7iGG7bniOU8C/eazt/Vgrvrjvep/A8bKdxvihBI6+5uDbjzfrxuOJ44zZQsCrc78Y00aiG5KdNdzoJPuCGj1trI9QOfl2QqaesbZDXtmoAPrBHLRI4IGr2NP9N03P8A/gjOLBoiVckBW8oxAbzDoxnOr+Uc9ulsEOtJ141F3Ha5EB0Fj0Vds66jnBNCZeU4BzTxroMWmFaQ/CPp8ZNCi5wTQILPVH0HeB4iV4lkEDcbZEujGM2ArOK7iZ4C6bTt2oqvp6KbnOGqb6DBoGrLnBNCZebaDvkjwbAG91UAbzmDgns2ghZxLoHm4H91+9j9Xq5fJiTbmOcWzDPpB23B83XJ+rcXPOBrSbdvRNB1Vz5EJmu+hCxH04Hk2g4btc6ThMIAOlmh0FW64RGugVdGK54QKfbsbqbTHQsYBDactAw0HAd0e+D4+8qCrboPDxfFrFZ50I9p30c08R3cPUA5aFq1xTqnQmXm2ghY8K3j4NBldfEQr0d0Fyuae45KBNp34xz0z0OiMHZzoz97CM/OHBh06VCq5qRPqZu2ajuPhw7ZAV+W5UxsOL/rH75ouuuk5skDrnhnowfNcQKeCrrLrTsIYflBYQPfMcxJo47e7fBwDgxZEgzUk1uBUxTzQodVeBc8JoD+82X0VtrOiw0/bBc9lkUFftLN2bhb6/uO246ga6Djnv/zFm3YDw6rn8KPCappDAK020QHPCaAz85wCOrFdFUGLXfS5F30mg5ZFA88W0Drna3bFSiDR1YT/yzrfH+5eDH1gBXsOF2gZ9P2HHeiqPjdmI0FEVyX6STVz14wKg6DlrUK75+IiC3RenhNAK54zQKOuY41F43mOIGjomVcxe3munp6Q6DFjFfBsA/2gBt0U6AZ0lHNHuhLdluhmKtoCWph5IbsnE3RmBo0P41f4pYJGoh1ofJ9RPnEXmOa4xBHbLNVz8/T5gN7mgN440Ec16LZA/9x5/q0JSPi3Lrzppo3u5jnqaY563q5dqRovzyFtV8TzjEBrcmKclStyqOgYaPlSDUG0z62iGXt2z54NaMA5F/TnnxPQv8XCiXZTd03P0YwK46CvQ4mFnrd8GYPJQKtuzJ7JsSNtqsN2aIVxFr8ARc7yfYlootEFHnsELXhWW+ir6+7kGAe6HhMC0DbPVHTTc3z1pJnmeBAFXW+csoMQZw568Dwngma/lNmg4ciQNR0CaGF9lSjoevPEusZeZ1agLxBotUBD0PX1V/UkR32iHSzQBs+taFCiLaAtx7voIiwFdAFdQCdl0PgwzXMGaINoDBqPRyXM4f2uep4paOw51kK7k0fb6wnrU6F9C2303JJ2Ex3ftScoPW5ua9uAPue3Eoh6JpznBtpvsh20JAl8WrmNVkAHIwM0ePaMQF8MBvpXc4FuRXvQ37agHxbQBtBwwTNJ9HpE0HLiZwSaejZPQ3egnzzpB/p1T9AgrfMGDbbZDFqhhEWTi1fWFLRJ9DJA+0mBPNAPhgH9XQv6sQMNTx/1WxfzPG/QcKOHAc1P9sfXytIjDEODDvTQaJ2hSUDHP9gYoH9FoD9XQeNN0zzHQQ+eZzNovNW9QQPRW9h10OtkFdBsry8XtJDzMOjP80HDUWF78BuD3iwGtOY5G7RwxJAtoiQcZEBZQv9s86zN/88ONPtFNYE+6gH6Nwr6Kwn0NgJaKz3KtN2hgdYphUWTsygDkViglwl6Mz5ocH+5PNDykcICuoAuoIMZND5sVNBo9UbHeSTQymbMCzQUMQHo1/WRla8V0GALDaCJ6HmChlnNbaGvxRKNwgQ6egaPTfSsQCMQKaCbc5Mq0NXZ0COC1jhLB3LBvpopaJTV3qDVBaO3KaDVvW4gLYFGq93vF7TMWbzkG51sR0C/Hhg0HxOKoKVTE4Do0fOcARrnNbvjwKB5kd7aQCcXaJn0XEATCmodiYD+dkjQjxDoiGeRtN9dMwSd4DlcoMk1Z61frFnhDP45DzTboAMH3Sx2fjwk6HpQ2FyC1czarXHHoXoWVU8Mmt+DWgPTB7RQomlImPFPcj2TTZoGNM+z6lne+st6DQMIulpk5kni6f0K6CftFSttC12BNi7arZueBrRwD2rNyxCgddEqZ3rAJYMz3qhJQAt5ttZnCrpalONkTNB4tXOLZ256MtDCPagVLWHPaaApabHXkEEr+zyB9CSghTwrnOWz+5tJjm17oHA40D9KoLuOI8EzQz1xhX5aQO+lQj8toEfuofk9qBUPw4C+ZGQlzCJoreMg7x41TRON7ro6Wg/N8yxzVpdz2TPoruNI8IxJj55n6yxHlmczaLJ4gx4yaLLLlS0Ikp4GNM+zqFkt0Bx0dcHKV6nXfIdAN8vMVGPCTV6Bxnt6ItB89J3l2ThtlyA60HFoW2UjPQ1oeZaDZ0r+JfQXYA0N2p0P/bBewb8dE1agaYEO7F15b08DWhh9Z3lOAS2QFv5dKtBknwe3Qo1JQEuzHJIFzTMHXZ/fPwDoZqGZxwC00EELGxQlPQ1oYfSdw9l25JuZ1v4dib7QQFs2SyA+CWhpNsnmmXYcQ4J+LYP2HYe2WRbR01bopzpok5vgep9JQYt0P88C6kkr9NMgaMkz6jg86OZku0zQ8BKsDnSzOHTdcWzxikniZsWIT9VDR2c5ktH04kxI46YEpdfumYieyyxHimcAuloH7LhZ7bwfaD8mfNK20Meu49jGb0URNz2DWY5fqsCgM8ika2aPNXhOAo22jyb6CMZeZjmaPFs0w3Uv6zOTmhb62J3K0Rt0tYqBW6rRgd5kgo7cy2bwPGfNchTQA4V6zkwBnRs5sxw5YBI8X9PQSPtH53mGGzgJaO2cmQhnNscBQD8EoH/NB/21W8PgqL0t8poMCe2ewyeB7Qd0cJYjh7MZNMOsk4ZPOFDQkVmOmJAO9LoDfb8X6GpM+Po1AN0tmpTdQs8DdGiWI0cL+lDJmkXS6CmZnCcHHZ7liAhpk9EU6Bb0AwQ67XxoMGlXgW6X73egSceR4hmJnqiHVmc5srDkeBZyoT8l1/PUoEOzHFEfl7TjeFRPcjDQJtF4vfO6QNeg27ur1KBT5+zmBJo/rJ9nC2i9NulPRY8+QNA8z3HO+P549SR0GLRBNLjHSnvPoAr0/Qf+YpVN+iT0nEDvKsc9oYfO5WwBHSxN8pPJ4wcF/QjGmBX6ntRDx3lc+gLtbopMQYN7BjHT8n2wmtu6tZ4fPgSgN2OBHjzPag99++lPFHQ2ZwPo2Fctez57QobnqUELeTbWZ1Cgm8X7OWh3003pJm6S5q6B9qDbi6+6jiMTNPA8Eeg6w3d//JcCelzQQp4L6J4hV+jvq2HK3Z+e5oCOfKYwaFtWYHQP6OV5ogrN82wEjToOt/IoBe3ui2zS7O4j23m+f/+BvzyWdByHBnrX21XzSbefItDZmuOz0Lw8Sy8Z9Nxr0m66HprmOcbFZ/HCFehzN2mHQH+HblwP5ao3r29vUSiApi109jQ0OzlpT6D5w0xiLJ/J5Fl72YDndNBoC5MS3U0cv3819L2+zZ5Bw+Hu8n30wINuSrTh3vUtZnf7q+86z3TFJAQ678j3JT99dPA8Dwna8pksd2QLvbLGea+g37jsvrlX/W/AsIG+ZAW6BX3/YQu6LtGt6K5O/6zH69fOs7AEmOs4xLvHpnlOA52T5wFBWziHDo+EDvgJL8fep4dn3tsdwyA/vP13beW4++YHeJhvgIiA9jm8AAXaXX7lQdcleie6Iv1a4UvjR+L5yK/RqFxMmMZZXhRz8DwPBtrGWRQd9xx4/VzQZBsTEv3+z/+7TW6V5CrZw4UJ9CUGfXbWnsjhQFeLNVYluhL9o4iXW/6xbTf8rVWOaMfBQLOIe04BnZfnoUAbJGugTZ5NpO3S2ZYmJPrm2buJQKMCvQUddAe6vkthA7oSXZP+EbsVo3ps6/kreOkVXb4germ3RsDt7NHzPBBom+V+oAckzTeWJpqH+9Hd378dGbQq2ifQrT/cFuhm0g6ArkXXpL+T6PL4toqvuzsFwau9U1cAkxS0u5ovBTZ4ngtoGbReOd68/FBADwZ68DynnJxkkxb9wKEhYYhzH9FX8sy2vhSYmui7F3Udqc/7HGlQaLlOBXYczZjQgW6a6J3oivS3ml0eX7ecu/NG6SK6l1bR9UeQdvlFAujcPA8COoUzFY08o7f4sooBRV9Jr5EMuoouueNM23ZZg5sAABGsSURBVAVBX5ICjUA3o8KmRlekv9boSvFVU54fuxEhWF/Ge05eMwl7TqjQmXkeGHTSB0T5kT0PTFo2Iq3gfwJDTPSbZ3UZGeHAigLa566d4XAn2p0C0HWJ/rwp0l+1Upnir+RoynM3Be1OHMWgM0QDzwz04HlOOh96IM/gQ/p/IG/wpY8RRfuNSUr0eBE6fdTnzYF2cxwOdN1z7ER70l7115guiO5vn9ftRnvM211LyEDLYfPMbxo0eJ4HBZ34awv/emUGPaBpkPHZgwbb6jpoAbQT3ZLuVBPFn4MAf284d3ehQB1H9HbrYdAXjeeZgZZFZ3mmQV7/yy+DooOw+cvGPc8MdGC1UdZxtKB3ol3T8dBV6U41ZfwYBPiHh8Bze+mVHXTwrljO8wGAliBZvojsoFXPomn5hQOgm4TPDLR2GRrpOBjoWnRtGmhljNHNAeE/VZzdgNAV6O3W0HHou/sSgd7MDLTlvCHjF1EYdLjl0EHrL615br/EDwg06Dgg6E60I+2sPuaQ4bL56N8qzvUMdHtiP70XMgy8noS2t7HnArqALqDTMmh8mAaa5dzyNZQEOujZdIgyBNrtG5roUxhTgBbPinA6/JjQga5Ee9IPEFXu2K+PCGlXf0eeQcfBQLMlrMTdDR68FUEPnudE0PFz79kvsp0zefG45ue2Y5RR0ML86PSgr4VPRkG7Cg1EV6SPmFUC2a8cgFb/PKo5t8cIfYEWQF/QCIL2BXqGoK8UT5rnfNCWsHiOrUh76KBhje5IE6oM8tEj/0jyr63n83PYcUDQTLMueomgU85n6eOZnAxjA93le4agr/knE0AD0cA0pwodB6J6geYY4Tkq0AC06DkGettu8kcCOm81L6nigk1YPOhNB9q1Hc70cQeUSz5mgTm7KWgNtOy5gBZB9zjbjnmOXf+GhRwo6E70WbOlJ6JqIhnNLJxg3NW/NJ7X7UEVAhoYRjeUNIFeF9AWy2inS2+8ONBYNKjSDDXnetKYhQ/tHux+poImnIHoAnreoM9gFNCjgR48zzMDHTtdJMXzUkHjnqMRfe429ZRS3WFFHcYpixP287aDbltocEtI7hnfAVWftpsvaF2aJtoEOiA6rlnsoGOLoswetPrxHCck2pv2rDnV08ar+kj389ozBo2D3gH1UEGHtAmkckCjN7Fg1jwfOGjxA3bf+1A0QO1d80rMMNOqDh4TA72VQbO9OnfQ4W4gqCpFdGrkeG6eNVfQ6kdkoh1pzFqy2n2ciP4z13HooBXPhwY6NlyTXJk9x0TrD5Q5HzTowOfnojHqjrVUixFmGbV71NoPCqno7VYBLe3V+YJWOIui+RVWvUAHHk1zZ/c8X9DBLHQ1D5MmroW+GmDW7HdVPAha9XxQoHXOsuicsGsWI9Gzb6Il0KiG7RV09Pfai3a2NhuBtVCLsWbwKKGMQ9DbiOdQ+UKg+ZHCwfM8COg+l8kGT7qwv5ql4ZB++xyOuYDWOYuiMS+KOsq5e5AKmoreblXQgf3SPLOALqAL6OQMiv/K70EdBp3RdXB6VLSi1cQ5dE8A9AYOxzSgI/dUD5MWTbNxoohZekgQdEuXvJXiGe89D3o7GWjhHtQx0IOsnuQSEsEqqE7wPCPQkXuqR0WjM98Yal6MEWfabgugkWgeyoCQKJgDaOEe1FHQvRa4sz5OeY72M7BB0oZODjp4T3WTaH4yZ5S0MICkJToJtFpCJNDsBP/9VuinSaDDx/UiTlM5h6J7ush5RqBD91S/Uo+YCrkRSEsz1JSzJvocidZIiwVa3s6pQQv3oKZ2M5Y0CksNcsZFyApa8fwcb5AMGikYrYdW76luWQFYyCIyLZCmnN3Pz7FoAloWLXmW9ncY9OB5zpjlCK5qZBQdqqv0IexbNUI65pmDFq763g9onmd5i2luA4kUSG90ze6HGmhdNNwTQnnmoOVlDPYEOjDL8SULM+kwaEw6oDlCOup5RqDlWQ6Zs0aapVNoPITwP+IlGsyKuEene54TaHWWg2tOK9Nh0Jf8x5pnnXTc83xAi7McOucQaZi2qOgt+hkDfc5BM9Fxz3MCrc5yFNCDhjjLUUD3ipRZDoVzyvgwDJpFp5d+1emkWXYtoPlijXut0CmzSXKBkEyrortksib6nIFWRBs6jjmBFmc5ApxDaxz1Ac04x0UbCvR8QBtmk5JNg8wpon0ueYmuSJ/HQcP0a54l0Hz10T2BhvFLFauY5wBp02UtVs8R0Smeg6ARgb3McrR5NoX6zec/kCoa5lIADSIC2uY5AnrwPFtnOeKebaQTQMueEWkNdMjznECnnzOjib6iAxSQOdUz7DkY6TXyvOH5D3ueFWhh9G0CbRCdDpp5DoDOKNDtpkwCOn7OjJ5XibRyDQA0jTMZAL1eawUa5T4KmmzLNKCF0bcNtOH2EWbRaoFWQVs4zwp05JyZWGL1Ku3zh+iyTG5U0UN5ngdoYfRtBR0dHPYGrbbQ1yy7Qc8zAB2c5bCkNi6alwO1REtnmqqeDwu0MPouoMeI0CxHAZ0V1nM5zKBV0wOB7ul5XqB5ngOebaS1niMEmoomnKOeOWfpvO3DBS2Tln5z00FrnLM9K6DRm+4fdEJiVdAJotdiMM3Ec7w8o0trRNCD53kc0AbRZtDCqiacs7QY9AGDTkusdKQlr0Qzzdgzyb6x30DzVdOAvntRz4+C+yungg6UEmuJBr0F1ayX55jneYEW8hzxHOnnMkq0XKM5Z558c4GeHvSHu29+IA+bFDQNDfN1+BwO+cLHZNDVSO5l88f3r/rdvJ7nOeY5DpqVaFuNBqY3jLOY/cSOIxl0Xp6VX4rbz97ih6WCDoxfeooOaE7wnA/67sXLD7ftxMSbe9X/egTLcyZo7fZ6SaJxiMUZpD+rQCeAzszzSD30EMPCKGeqWb0qlu91mvME0JXBdgK5KrBgEnmAWMU8J1Xo0NGpCGgRM0y/lHMlt3mgM/O8x0EhBZ0hOqgZpdZUxbJA1xl+0R0RYV1DrxgLdKLoKOfQHZmUAp0zy5GR5wJaBs0D/vim6RQK6N6gB8/z/uaheROdKBr+ROCMMxve69dsE2ii0TvTJN20I5S5gBZBZYvu/llLPtoBumcT6MHzPApo2TMHbSetZFPjbF2aPQ/0jTtWPQfQDJQC2iba/1NIc1KBzgedlef9HfrOAi2EpJnn1eg5B/RNN4M0waAwyllfLSwkmkYI86U87x8r0Mmg8/I8PGiNs7yg4zicxwT97ve+VPSetmN5fh4RHfesLxY2lOdg6tUCLc9DD57nwUHrnuUVSvtyFvdp5F5avUC/qYcuLz+8eVYf6ut1YIXnOQI6zlk77pwgOlKeg6B5ZnNBZ+Z5aNABz+EmNsuzsksl0Qpo7cBK4KtwzIgd+o5z5vP8aaDBx7btBi2x/O0v0lqOzAwaHzaA58iXfjrn4G2GAp6lZYcOA7TFcy/QBs6Bw7NCoaALSR4Y6KDnfqA559iN4PS9T15HAo3eey5n25k8q/PAcdAQV+rOYNE9OGR2+DwX0AV0Ad0fdGoTnc4ZoNZ3uY95gVZEp3nmX/p2zrEliz8S0GHPPUDLKTORDu/zuYIWSZs8Z4NO8WwR7R97sKATPKeBDqSte6GeomcHmpMOlAbloxFQVs0W0HHR8MGHCVrQq4O2n9Bhvx9tH9EzBK2vyyF/DP4vZtDUswF0dLfQh88MdNradtCO8jVpB231nGL6IEAD03JliGXDCpp5NoGO7RrxGfMBnXLSDPPTB3SK5wTSRANNdOiHI0bS6qPRXGDQCZ6toIN7xwR68DwngDafY5DkqU/KlMghPRfQsQXPfXoNicgHLYsWfxB9+wK6gC6g8zNofNjziOhEzmbQht0mhdV0F/MBbbwnhSULCHTCkDAepn00f9CWkwysgkKfuj/oZNIzAh0WneB5RNCsVIfef8agNdOp/YbfIxHPNtDyIw8WdEg0SZ8hL8LCuoOANpGmO3j81i4ZtCg63bNyGnoCaZP/wwQdv1OhyTNfKlFZ+dzmV3xwavGZIWiBdO8Crf/eS2mSa7ny+EzQoR+OGPqtkTMKNF9sRl5IJgw61qakkR49zzmgqegMz9qVnDHRYcviUw4UtOX2MAmgmWeDaL3rxk9KIT1P0Ji0mPEU0DSRIlDNrvK0VNLzA225P0waaONiXzLm0C9Cgui5gn4uck4FTUnqooOSxWcePujQZWRDeNZFK5JDS9FYRRfQBXQBnZRB48OE7z/Bc+KYMBu0iJk+2S56t+FzAR1c/2lo0NJURxAzWGp3o4k+ENDxI7LpoHWcKZx5jUkT3Wz4bECHROeCBjj122nqTTNf318iHRctpHL2oJMOfJtahwBmvhPI06Og/XbTRKMPNR1o7YxyO2hUn/ka/THO8t1X8NPVOkIwS6AHz/PkoBHOqOgA5mTSoVxOCFov0TR/yaCjN1Ghnt1j9Zsmg6QHQPsNPzjQJtEg35dUZ4g016wPU0h2w5znC1q7eN3q+VLzHBINOUt3tYf3tQdJV0CjT7N40EK11UiT6iyMcWB2SXrDnD8K0KYbXW1xs936PYNBSEdAk09zeKAtosOgRdG010CO2SgHPFvKq7DVBwE6TTTMLxGq3h1IuPv3mRCyaAE02/UHCNpAOuyZXVEP/iKlXRp6M9Cx26/MBzRNlpZZM2hQoMWmQQj/2AbwKYiOtHsFpYSIngvoArqATsug8WEJnqOieb6DoplnSbM3rYhOBI3OvprLtF1wzckIaDbAW+ukUbsBLJ+ceNSSaApa2Pej57knaMtNbKrdIoOmSGOiOWdp/8RAixs8G9A0c8HEWjxfdFMc0kyFQJpzPoEBRJ+HQUvFbN6g5fM5cOaFPdHlmyCFpC2ctakknGCaXfk3cC6gI54TRIMCLXqWRfvMOs4O8nEVHWkmOtjk+U8zZ9DaKaRyhECjlMqkUfMsaMZtoZDgpYA2m/agYYGGM29O9Bprrh/pWmdv2UVLuhMNKkgY9H7ynA/6Sxx20KjjYJ7FKr0FnmF1lmZHoegLDlrcOJbLmYCOFwcSAdBSvqRxiHugazYc5EdVYNFnXcIF0KLnqUDf1ve3+MTftSUO2r5WIwXNmjhpmIg9M85wFyWDFnK5J9A8zxbPJtFsEpom7FwmfQ48u+r8CERbpcHI0AK62/JpQLe3WH73h+7O6vr50GbSOOeXAdCaaOT5DE8owel+0nTEQEu53A9oIc8mz4YbrIAEdwVaKgCE9DnxDDQfVeGrtBPdddFk0KL8Zk4D+u6PP/n//FKFcAvbhQVJS+iHg0XJc/CHWRGs0P5eh79kvnzu8/b+htkb2idKnocP+Zfi3RfV7wvo7UqiR4mS58HDWOVLovcTJc99o4Du97yBo+S5bxTQ/Z43cJQ89439HTMoUWIPUUCXWFQU0CUWFQV0iUVFAV1iUVFAl1hUFNAlFhUm0Ler1cuUF63PtmmeBP8/Fu9frVb3cp74hj3DusU3z/KeN06UPPcPC+i7b34A588YHv/i05/aJ8H/jz7v5l51uk76E2/vVbs24w0/vPviWc6GjhQlzwOEBfS7P7x9//0P8ce18f7P/7KrHM2T4P+bnnzzLOuJu0RnPO/99//5We6GjhAlzwOEBfTuN/PDm5RviOqrsHkS/H/jM3OeeLP7Ast43s2z3Vdh3oaOESXPA8S8QO++ijI/OH6G7Xm7OvGRgl5wnkdoOZpE53zDvPv9Dx8yv5pyvkJvqpOR8756R4mS5wFijEFhneiMMUDzmKzByu73PWvQcXPIg8KSZyHmNG33pv5Nznti5rTQRzltt+g8lwMrJRYVBXSJRUUBXWJRUUCXWFQU0CUWFQV0iUVFAV1iUVFAl1hUFNAlFhUFdIlFRQFdYlFRQJdYVBTQJRYVBXSJRUUBXWJRUUCXWFQU0CUWFQV0iUVFAV1iUVFAl1hUFNAlFhUFdIlFRQFdYlFRQJdYVBTQJRYVBXSJRUUBXWJRUUCXWFQU0CUWFQV0iUVFAV1iUVFAl1hUFNAlFhUFdIlFRQFdYlFRQJdYVBTQJRYVBXSJRUUBXWJR8f8Bf5LdAPgmk6oAAAAASUVORK5CYII=" alt="Expected count across the landscape in each year, on a common color scale." />
+<div class="figcaption"><strong><em>Expected count across the landscape
+in each year, on a common color scale.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">par</span>(op)</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># How many times higher is the expected count in year 2?</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>ratio <span class="ot">&lt;-</span> pred_2 <span class="sc">/</span> pred_1</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="fu">plot</span>(ratio, <span class="at">main =</span> <span class="st">&quot;Year 2 / year 1&quot;</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="fu">lines</span>(<span class="fu">vect</span>(cleared), <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lwd =</span> <span class="dv">2</span>)   <span class="co"># outline of the cleared square</span></span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Expected count in year 2 divided by expected count in year 1. The red square marks the cleared area." src="data:image/png;base64,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" alt="Expected count in year 2 divided by expected count in year 1. The red square marks the cleared area." />
+<div class="figcaption"><strong><em>Expected count in year 2 divided by
+expected count in year 1. The red square marks the cleared
+area.</em></strong></div>
+</div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">minmax</span>(ratio)[, <span class="dv">1</span>], <span class="dv">2</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt;   min   max </span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt;  1.31 10.05</span></span></code></pre></div>
+<p><strong>How to read these maps:</strong> Each cell in the first
+figure is the count the model expects from one survey at that location
+in that year. The second figure divides one by the other. Far from the
+cleared square the ratio is constant at 1.31, which is the year effect
+alone, because the habitat around those cells did not change. Inside the
+square the ratio rises to 10.05. Habitat lowers the expected count in
+this model, so clearing it raises the prediction. The change also
+spreads past the edges of the square. A cell outside the clearing still
+lost habitat from its neighborhood, and the fitted kernel reaches about
+506 m.</p>
+<p>These surfaces describe what the fitted model predicts for each
+annual landscape and its year term. They do not isolate a causal effect
+of the clearing, because other conditions can differ between years. Some
+cells on both maps also have more habitat around them than any survey
+point had, so the model extrapolates there.
+<code>vignette(&quot;v03-map-predictions&quot;, package = &quot;multiScaleR&quot;)</code>
+shows how to find those cells and limit the extrapolation.</p>
+</div>
+<div id="quick-reference" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Quick reference</h1>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">library</span>(multiScaleR)</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co"># 1. Align the annual maps: one grid, one projected CRS, matching layer names</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;surv_pts&quot;</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>pts  <span class="ot">&lt;-</span> <span class="fu">vect</span>(surv_pts)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>land <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;landscape.tif&quot;</span>,</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>                         <span class="at">package =</span> <span class="st">&quot;multiScaleR&quot;</span>))</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="fu">crs</span>(pts)  <span class="ot">&lt;-</span> <span class="st">&quot;EPSG:26915&quot;</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="fu">crs</span>(land) <span class="ot">&lt;-</span> <span class="st">&quot;EPSG:26915&quot;</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>habitat_1 <span class="ot">&lt;-</span> land<span class="sc">$</span>land1</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="fu">names</span>(habitat_1) <span class="ot">&lt;-</span> <span class="st">&quot;habitat&quot;</span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>habitat_2 <span class="ot">&lt;-</span> habitat_1</span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>cleared   <span class="ot">&lt;-</span> <span class="fu">ext</span>(<span class="dv">1000</span>, <span class="dv">2600</span>, <span class="dv">1400</span>, <span class="dv">3000</span>)</span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>habitat_2[<span class="fu">cells</span>(habitat_2, cleared)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co"># 2. Label each observation with its year (and add your response, here `count`)</span></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">93</span>)</span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a>obs <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">year =</span> <span class="fu">factor</span>(<span class="fu">sample</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;year1&quot;</span>, <span class="st">&quot;year2&quot;</span>), <span class="at">each =</span> <span class="dv">50</span>))))</span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a></span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co"># 3. Assign each observation to its map and prepare pooled covariates</span></span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a>prepared <span class="ot">&lt;-</span> <span class="fu">kernel_prep_by_group</span>(</span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a>  <span class="at">pts =</span> pts, <span class="at">raster_stacks =</span> <span class="fu">list</span>(<span class="at">year1 =</span> habitat_1, <span class="at">year2 =</span> habitat_2),</span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a>  <span class="at">group =</span> obs<span class="sc">$</span>year, <span class="at">max_D =</span> <span class="dv">1700</span>, <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>,</span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a>  <span class="at">store_cell_data =</span> <span class="cn">FALSE</span></span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a>)</span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a></span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="co"># 4. Fit one scale of effect and one habitat coefficient across years</span></span>
+<span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a>model_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(obs, prepared<span class="sc">$</span>kernel_dat)</span>
+<span id="cb12-30"><a href="#cb12-30" tabindex="-1"></a>start <span class="ot">&lt;-</span> <span class="fu">glm</span>(count <span class="sc">~</span> habitat <span class="sc">+</span> year, <span class="at">family =</span> <span class="fu">poisson</span>(), <span class="at">data =</span> model_data)</span>
+<span id="cb12-31"><a href="#cb12-31" tabindex="-1"></a>fit   <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(start, prepared, <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb12-32"><a href="#cb12-32" tabindex="-1"></a><span class="fu">summary</span>(fit)                           <span class="co"># shared sigma, distance, coefficients</span></span>
+<span id="cb12-33"><a href="#cb12-33" tabindex="-1"></a><span class="fu">kernel_dist</span>(fit)                       <span class="co"># radius holding 90% of the kernel weight</span></span>
+<span id="cb12-34"><a href="#cb12-34" tabindex="-1"></a><span class="fu">diagnostics</span>(fit)<span class="sc">$</span>sample_size           <span class="co"># rows prepared and rows fitted</span></span>
+<span id="cb12-35"><a href="#cb12-35" tabindex="-1"></a></span>
+<span id="cb12-36"><a href="#cb12-36" tabindex="-1"></a><span class="co"># 5. Map the fitted model onto each year</span></span>
+<span id="cb12-37"><a href="#cb12-37" tabindex="-1"></a>surface_1 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(habitat_1, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb12-38"><a href="#cb12-38" tabindex="-1"></a>                                 <span class="at">scale_center =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb12-39"><a href="#cb12-39" tabindex="-1"></a>                                 <span class="at">site_values  =</span> <span class="fu">list</span>(<span class="at">year =</span> <span class="st">&quot;year1&quot;</span>))</span>
+<span id="cb12-40"><a href="#cb12-40" tabindex="-1"></a>surface_2 <span class="ot">&lt;-</span> <span class="fu">kernel_scale.raster</span>(habitat_2, <span class="at">multiScaleR =</span> fit,</span>
+<span id="cb12-41"><a href="#cb12-41" tabindex="-1"></a>                                 <span class="at">scale_center =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb12-42"><a href="#cb12-42" tabindex="-1"></a>                                 <span class="at">site_values  =</span> <span class="fu">list</span>(<span class="at">year =</span> <span class="st">&quot;year2&quot;</span>))</span>
+<span id="cb12-43"><a href="#cb12-43" tabindex="-1"></a>pred_1 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(surface_1, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb12-44"><a href="#cb12-44" tabindex="-1"></a>pred_2 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">predict</span>(surface_2, fit<span class="sc">$</span>opt_mod, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb12-45"><a href="#cb12-45" tabindex="-1"></a><span class="fu">plot</span>(pred_2 <span class="sc">/</span> pred_1)                  <span class="co"># change in expected count between years</span></span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>kernel_prep_by_group()</code></td>
+<td align="left">Assign each observation to its own map and prepare one
+pooled set of covariates</td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_optim()</code></td>
+<td align="left">Estimate the shared scale of effect together with the
+regression coefficients</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>summary()</code>, <code>kernel_dist()</code></td>
+<td align="left">Report sigma and the effective distance with their
+intervals</td>
+</tr>
+<tr class="even">
+<td align="left"><code>diagnostics()</code></td>
+<td align="left">Check how many prepared observations entered the fitted
+model</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>kernel_scale.raster()</code></td>
+<td align="left">Apply the fitted kernel to one annual map.
+<code>site_values</code> sets the year</td>
+</tr>
+<tr class="even">
+<td align="left"><code>terra::predict()</code></td>
+<td align="left">Apply the fitted model to the smoothed map, cell by
+cell</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="6.2">
+<h2><span class="header-section-number">6.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the single-map workflow and how to read a fitted model.</li>
+<li><strong><code>vignette(&quot;v03-map-predictions&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+finding and limiting extrapolation in a projected map.</li>
+<li><strong><code>vignette(&quot;v04-landscape-metrics&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+land-cover composition and configuration metrics as covariates.</li>
+<li><strong><code>vignette(&quot;v13-bayesian-scales&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+letting the scale of effect vary among years.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what each estimate and interval includes.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

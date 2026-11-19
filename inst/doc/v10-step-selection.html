@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bill Peterman" />
+
+
+<title>10. Estimate Scales of Effect in Step-Selection Models</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">10. Estimate Scales of Effect in
+Step-Selection Models</h1>
+<h4 class="author">Bill Peterman</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-this-vignette-covers" id="toc-what-this-vignette-covers"><span class="toc-section-number">1</span> What this vignette covers</a></li>
+<li><a href="#simulate-steps-with-a-known-scale-of-effect" id="toc-simulate-steps-with-a-known-scale-of-effect"><span class="toc-section-number">2</span> Simulate steps with a known scale of
+effect</a></li>
+<li><a href="#prepare-the-inputs-and-fit-the-model" id="toc-prepare-the-inputs-and-fit-the-model"><span class="toc-section-number">3</span> Prepare the inputs and fit the
+model</a></li>
+<li><a href="#read-the-scale-and-the-selection-coefficients" id="toc-read-the-scale-and-the-selection-coefficients"><span class="toc-section-number">4</span> Read the scale and the selection
+coefficients</a></li>
+<li><a href="#plot-the-kernel-and-the-selection-curves" id="toc-plot-the-kernel-and-the-selection-curves"><span class="toc-section-number">5</span> Plot the kernel and the selection
+curves</a></li>
+<li><a href="#predict-choice-probabilities-and-relative-scores" id="toc-predict-choice-probabilities-and-relative-scores"><span class="toc-section-number">6</span> Predict choice probabilities and
+relative scores</a></li>
+<li><a href="#score-the-model-on-held-out-choice-sets" id="toc-score-the-model-on-held-out-choice-sets"><span class="toc-section-number">7</span> Score the model on held-out choice
+sets</a></li>
+<li><a href="#current-restrictions" id="toc-current-restrictions"><span class="toc-section-number">8</span> Current restrictions</a></li>
+<li><a href="#quick-reference" id="toc-quick-reference"><span class="toc-section-number">9</span> Quick reference</a>
+<ul>
+<li><a href="#summary-of-key-functions" id="toc-summary-of-key-functions"><span class="toc-section-number">9.1</span> Summary of key functions</a></li>
+<li><a href="#see-also" id="toc-see-also"><span class="toc-section-number">9.2</span> See also</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="what-this-vignette-covers" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> What this vignette
+covers</h1>
+<p>A step-selection model compares the location an animal moved to (the
+used step) with locations it could have reached instead (the available
+steps). Each used step and its available steps form one <em>choice
+set</em>, and a conditional logistic regression estimates which features
+raise the chance that a step is the one chosen. Here the scale of effect
+answers a specific question. How much of the landscape around the end of
+a step does the animal respond to when it chooses where to go?</p>
+<p>You will simulate steps with a known scale, fit the model with
+<code>multiScale_optim(backend = &quot;conditional_logit&quot;)</code>, read the
+scale and the selection coefficients, predict, and score the model on
+held-out choice sets. Read
+<code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code> first.
+The examples need the <code>survival</code> package, which
+<code>multiScaleR</code> suggests but does not install, so the code here
+runs only when <code>survival</code> is available.</p>
+</div>
+<div id="simulate-steps-with-a-known-scale-of-effect" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Simulate steps with a
+known scale of effect</h1>
+<p>Because the count data in the other vignettes are not movement data,
+this vignette builds its own. The landscape is a 4 km square of forest
+(1) and open ground (0) on 20 m cells.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">321</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># A 200 x 200 grid of 20 m cells in a projected CRS, so map units are meters</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>noise <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="at">nrows =</span> <span class="dv">200</span>, <span class="at">ncols =</span> <span class="dv">200</span>, <span class="at">xmin =</span> <span class="dv">0</span>, <span class="at">xmax =</span> <span class="dv">4000</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>              <span class="at">ymin =</span> <span class="dv">0</span>, <span class="at">ymax =</span> <span class="dv">4000</span>, <span class="at">crs =</span> <span class="st">&quot;EPSG:32617&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="fu">values</span>(noise) <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="fu">ncell</span>(noise))</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co"># Smooth the noise and cut it at zero to get patches of forest</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>forest <span class="ot">&lt;-</span> <span class="fu">focal</span>(noise, <span class="at">w =</span> <span class="fu">focalMat</span>(noise, <span class="dv">100</span>, <span class="st">&quot;Gauss&quot;</span>), <span class="at">fun =</span> <span class="st">&quot;sum&quot;</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>                <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">&gt;</span> <span class="dv">0</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>forest <span class="ot">&lt;-</span> forest <span class="sc">*</span> <span class="dv">1</span>                   <span class="co"># logical to numeric 0/1</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="fu">names</span>(forest) <span class="ot">&lt;-</span> <span class="st">&quot;forest&quot;</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="fu">plot</span>(forest)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="The simulated forest layer. Forest is 1 and open ground is 0." src="data:image/png;base64,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" alt="The simulated forest layer. Forest is 1 and open ground is 0." />
+<div class="figcaption"><strong><em>The simulated forest layer. Forest
+is 1 and open ground is 0.</em></strong></div>
+</div>
+<p>The animal in this simulation responds to the amount of forest around
+a candidate location, weighted by a Gaussian kernel with a sigma of 150
+m. It also prefers short steps.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># The landscape as the animal perceives it: forest weighted by the true kernel</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>true_sigma <span class="ot">&lt;-</span> <span class="dv">150</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>perceived  <span class="ot">&lt;-</span> <span class="fu">focal</span>(forest, <span class="at">w =</span> <span class="fu">focalMat</span>(forest, true_sigma, <span class="st">&quot;Gauss&quot;</span>),</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>                    <span class="at">fun =</span> <span class="st">&quot;sum&quot;</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>n_sets <span class="ot">&lt;-</span> <span class="dv">400</span>                          <span class="co"># choice sets (one per observed step)</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>n_alt  <span class="ot">&lt;-</span> <span class="dv">5</span>                            <span class="co"># candidate end points per choice set</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co"># Each choice set starts at a random location away from the map edge.</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># Candidates leave it in a random direction with a random step length (m).</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>start_x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">runif</span>(n_sets, <span class="dv">1000</span>, <span class="dv">3000</span>), <span class="at">each =</span> n_alt)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>start_y <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">runif</span>(n_sets, <span class="dv">1000</span>, <span class="dv">3000</span>), <span class="at">each =</span> n_alt)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>step_m  <span class="ot">&lt;-</span> <span class="fu">rgamma</span>(n_sets <span class="sc">*</span> n_alt, <span class="at">shape =</span> <span class="dv">2</span>, <span class="at">scale =</span> <span class="dv">100</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>angle   <span class="ot">&lt;-</span> <span class="fu">runif</span>(n_sets <span class="sc">*</span> n_alt, <span class="dv">0</span>, <span class="dv">2</span> <span class="sc">*</span> pi)</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>steps <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">step_id =</span> <span class="fu">rep</span>(<span class="fu">seq_len</span>(n_sets), <span class="at">each =</span> n_alt),   <span class="co"># choice-set ID</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="at">x       =</span> start_x <span class="sc">+</span> step_m <span class="sc">*</span> <span class="fu">cos</span>(angle),</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  <span class="at">y       =</span> start_y <span class="sc">+</span> step_m <span class="sc">*</span> <span class="fu">sin</span>(angle),</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="at">sl_km   =</span> step_m <span class="sc">/</span> <span class="dv">1000</span>                         <span class="co"># step length in km</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>)</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co"># Perceived forest at each end point, standardized across all end points</span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="fu">extract</span>(perceived, <span class="fu">as.matrix</span>(steps[, <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>)]))[, <span class="dv">1</span>]</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>z <span class="ot">&lt;-</span> (f <span class="sc">-</span> <span class="fu">mean</span>(f)) <span class="sc">/</span> <span class="fu">sd</span>(f)</span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co"># True selection: +1 per standard deviation of forest, -3 per km of step.</span></span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co"># The animal takes exactly one candidate per choice set.</span></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="fu">exp</span>(<span class="dv">1</span> <span class="sc">*</span> z <span class="sc">-</span> <span class="dv">3</span> <span class="sc">*</span> steps<span class="sc">$</span>sl_km)</span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>steps<span class="sc">$</span>case_ <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="cf">for</span> (s <span class="cf">in</span> <span class="fu">seq_len</span>(n_sets)) {</span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>  rows <span class="ot">&lt;-</span> <span class="fu">which</span>(steps<span class="sc">$</span>step_id <span class="sc">==</span> s)</span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a>  steps<span class="sc">$</span>case_[<span class="fu">sample</span>(rows, <span class="dv">1</span>, <span class="at">prob =</span> score[rows])] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a>}</span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a><span class="fu">head</span>(steps, <span class="dv">5</span>)</span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="co">#&gt;   step_id         x        y      sl_km case_</span></span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a><span class="co">#&gt; 1       1  796.5978 1407.895 0.40284437     0</span></span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a><span class="co">#&gt; 2       1 1111.5662 1191.215 0.35312305     0</span></span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a><span class="co">#&gt; 3       1 1135.6157 1525.462 0.04405726     1</span></span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a><span class="co">#&gt; 4       1 1461.6048 1562.778 0.28484673     0</span></span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a><span class="co">#&gt; 5       1 1214.1488 1594.263 0.06691232     0</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> Each row is one candidate
+end point, and the five rows shown are one choice set.
+<code>case_</code> is 1 for the step the animal took and 0 for the four
+it did not. Keep three true values in mind for later. Sigma is 150 m,
+the forest effect is 1 per standard deviation, and the step-length
+effect is -3 per km.</p>
+<p>Your own data need the same layout, and the backend stops with an
+error when it is not met.</p>
+<ul>
+<li><strong>One row per step end point</strong>, used and available
+together, in the order of the points you pass to
+<code>kernel_prep()</code>.</li>
+<li><strong>A 0/1 column</strong> that marks the used step, with no
+missing rows.</li>
+<li><strong>A choice-set ID column.</strong> Every set holds exactly one
+used step and at least one available step. IDs must be unique across
+animals and movement bursts.</li>
+</ul>
+</div>
+<div id="prepare-the-inputs-and-fit-the-model" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Prepare the inputs and
+fit the model</h1>
+<p><code>kernel_prep()</code> extracts the forest cells within
+<code>max_D</code> of every step end point. Leave <code>bin</code> at
+its default of <code>TRUE</code>, because the
+<code>conditional_logit</code> backend works from the distance-binned
+summaries that setting stores. Then fit a starting model with
+<code>survival::clogit()</code>. Use one <code>strata()</code> term that
+names the choice-set ID column, and set <code>model = TRUE</code> so the
+fitted object keeps its data. If the formula transforms a covariate with
+<code>scale()</code>, <code>poly()</code>, or a spline, also set
+<code>na.action = stats::na.fail</code>. Recent versions of
+<code>survival</code> otherwise drop the stored center, spread, or
+knots, even when no row is missing, and predictions cannot recover the
+original units.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co"># Step end points as a terra SpatVector, in the row order of `steps`</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>pts <span class="ot">&lt;-</span> <span class="fu">vect</span>(steps, <span class="at">geom =</span> <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">crs =</span> <span class="st">&quot;EPSG:32617&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co"># max_D is the largest distance (m) considered around a point</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> forest, <span class="at">max_D =</span> <span class="dv">600</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co"># Add the standardized, kernel-weighted forest covariate to the step table</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(steps, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co"># Conditional logistic regression: compare steps only within a choice set</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">clogit</span>(case_ <span class="sc">~</span> forest <span class="sc">+</span> sl_km <span class="sc">+</span> <span class="fu">strata</span>(step_id),</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>              <span class="at">data =</span> df, <span class="at">model =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co"># Estimate sigma and the selection coefficients in one likelihood</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>opt <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(<span class="at">fitted_mod =</span> mod, <span class="at">kernel_inputs =</span> inputs,</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>                        <span class="at">backend =</span> <span class="st">&quot;conditional_logit&quot;</span>,</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>                        <span class="at">n_cores =</span> <span class="dv">1</span>)            <span class="co"># this backend runs serially</span></span></code></pre></div>
+<p>By default the search starts from six sigma values, and the backend
+keeps the best fit that passes its numerical checks.
+<code>opt$profile_fit$start_results</code> lists every start. An
+<code>amt::fit_clogit()</code> or <code>amt::fit_issf()</code> object
+fitted with <code>model = TRUE</code> works in place of
+<code>mod</code>, and the optimized model comes back in the same
+<code>amt</code> wrapper.</p>
+</div>
+<div id="read-the-scale-and-the-selection-coefficients" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Read the scale and the
+selection coefficients</h1>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>opt<span class="sc">$</span>scale_est               <span class="co"># sigma in meters. This backend reports no SE</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt;            Mean SE</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; forest 150.9002 NA</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="fu">kernel_dist</span>(opt)            <span class="co"># radius holding 90% of the kernel weight (m)</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;          Mean 2.5% 97.5%</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; forest 323.83   NA    NA</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">coef</span>(opt<span class="sc">$</span>opt_mod)      <span class="co"># selection coefficients on the log scale</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">cbind</span>(<span class="at">estimate =</span> b, <span class="fu">confint</span>(opt<span class="sc">$</span>opt_mod)), <span class="dv">2</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;        estimate 2.5 % 97.5 %</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; forest     0.95  0.76   1.14</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; sl_km     -2.35 -3.31  -1.39</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">exp</span>(b), <span class="dv">2</span>)            <span class="co"># relative selection strength</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; forest  sl_km </span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;   2.58   0.10</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>opt<span class="sc">$</span>scl_params<span class="sc">$</span>sd           <span class="co"># one standard deviation of kernel-weighted forest</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;    forest </span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 0.2045779</span></span></code></pre></div>
+<p><strong>How to read the output:</strong></p>
+<ul>
+<li><strong>Scale of effect.</strong> The estimated sigma is 151 m,
+against a true value of 150 m. A Gaussian kernel of that width holds 90%
+of its weight within 324 m, so forest within roughly that distance of a
+step’s end point shapes the choice. The <code>SE</code> column is
+<code>NA</code> because this backend does not provide a standard error
+or interval for sigma. <code>summary(opt)</code> prints the same values
+with the full model table.</li>
+<li><strong>Selection coefficients.</strong> The estimates are 0.95 for
+forest (truth 1) and -2.35 for step length (truth -3). Their intervals
+treat sigma as known.</li>
+<li><strong>Relative selection strength.</strong> Exponentiate a
+coefficient to compare two steps in the same choice set. A step that
+ends where kernel-weighted forest is one standard deviation higher (0.2
+on the 0 to 1 forest scale, or 20 percentage points of forest cover) is
+2.58 times as likely to be chosen as an otherwise identical step. For
+step length, a candidate 100 m longer is 0.79 times as likely to be
+chosen.</li>
+</ul>
+<blockquote>
+<p><strong>What this means for your study.</strong> A relative selection
+strength is a ratio between two candidate steps. It is not a probability
+that the animal uses a location, and it says nothing about how often a
+habitat is used overall. Report it as “times as likely to be chosen,
+given that both steps were available.”</p>
+</blockquote>
+</div>
+<div id="plot-the-kernel-and-the-selection-curves" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> Plot the kernel and the
+selection curves</h1>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">plot</span>(opt)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Kernel weight against distance from a step’s end point." src="data:image/png;base64,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" alt="Kernel weight against distance from a step’s end point." />
+<div class="figcaption"><strong><em>Kernel weight against distance from
+a step’s end point.</em></strong></div>
+</div>
+<p><strong>How to read this plot:</strong> The curve shows how the
+weight given to a forest cell declines with its distance from the end of
+a step. The dashed line marks the radius that holds 90% of the kernel
+weight. No confidence band appears, because the backend reports no
+interval for sigma.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># link = TRUE exponentiates the curves, giving ratios in place of log ratios</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">plot_marginal_effects</span>(opt, <span class="at">link =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="figure">
+<img role="img" aria-label="***Relative selection strength across each covariate.***" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYAAAAFZCAMAAACmKAhqAAAA21BMVEUAAAAAADoAAGYAOjoAOmYAOpAAZpAAZrYNDQ06AAA6ADo6AGY6Ojo6OmY6ZmY6ZpA6ZrY6kJA6kLY6kNtmAABmOgBmOjpmOmZmZjpmZmZmZpBmkGZmkLZmkNtmtttmtv+QOgCQOjqQZjqQZmaQZraQkGaQkNuQtraQttuQ2/+2ZgC2Zjq2kGa2tpC2tra2ttu227a229u22/+2/7a2/9u2///MzMzbkDrbkGbbtmbbtpDbtrbbttvb27bb29vb2//b/9vb////tmb/25D/27b/29v//7b//9v///8mBQFWAAAACXBIWXMAAA7DAAAOwwHHb6hkAAANSklEQVR4nO2dDXfbthWGKSeewyWO3VnJ1myL1XTdZqbNlmyRGmdOajmW+P9/0QiSskASIHFBgJci3uecnoqyA9HvQwD8vIpSwErEvQKhAwHMQAAzEMAMBDADAcxAADMQwIwzATBpBwQwAwHMQAAzEMAMBDADAcxAADMQwAwEMAMBzEAAMxDADAQwAwHMQAAzEMAMBDADAcxAwDAsdT+AgGHoJ+Du6Ufxv3UUza5271UWTBsKl14CNvMjIWCdBb7ehV5ZMG0oYPoIyLZ1IWC7uMgWkpP8vcqCaUMh00PAOrpYCwF38WW2tMo7Q3XBsKGg6TcHFAJ+f7V7WVswbyhYlg4EFCN+Oe5XFqIcF+s5WfwKMG8oWFwIwBDUAycCMAlbs3QhALuh9jgRgAMxe9wISFfF2Yft4mS/QGsoVPoKMAEC9CwhgBcIYAYCeFlCAC8QwAwEMAMBvCwhgBcIYAYCmIEAXpYQwAsEMAMBvCwhgBcIYAYCmIEAXpYQwAsEMAMBvCwhgBcIYAYCeFlCAC8QwAwEMAMBzEAAL0sI4AUCmIEAZiCAGQjgZQkBvEAAMxDADATwsoQAXiCAGQjgZQkBvEAAMxDAyxICeIEAZiCAl3r+EDAwHgSsi/Kg0WW+tJmL16gZp8NXD9jMy8yLupX2DU2cRv6uBDwUqpRLhto0NHF8CbiLL8pXq5PajyBAxpeA5GG7T55lU0BpA7Wj6zTzdyNgM794eHV8m1m42P8MAiTsBWz+Xr64/uPHxu9WK7WmqB2tpYeAYhvfvo3qk6wgEZu9RFFBWtlQ0CjyNx6CEjGwf4qj4w/N392PQCXyvigE7OkjIDNw9iKavVb9rrTBFy8xBKnpJSB9G0Xnt4rfrE4BeeF0TMJKVPlT9oLeRhfNNwXlUVhRvDt5OCuhbShUbAUUp3d2qCbhNiBghzJ/IwEvn0mcQoAl1gL6AQE7IIAZBwKuX54pDgPagYASdf7GAraLo4/i0kvtpEM3EFDSU0ASHf+2iC7WUf10cxcQUNJPwHYxu7qLZ1flN9gSgICSfgJE8OvsGAACbNHkTxGwyoafu/hYfTpCCwQU9BSQzQGncXSZ/Q9zgB19BWwXUXSedYTHxBEIAgp0+ROOA+6zsWf7hfzJEJCjy/+J7h/gSNgtWgG6fCpnQ8XeD86G9kE7ApkI2P746nb74/clr7AXZIE2fxMBOZ+/Wn40BKRtHeCJ7p8ojgPsPhsCUghgp7+AdB3/zm4QgoDW/I1PRbyMsRdkjV6A+dlQ7AX1oKUD4JLkALR1AAgYgLYOAAH+ae0AEOCf1g4AAf5p7QAQ4J32DgAB3mnvABQBn3969dv/yJ8fuoCODmAu4FN2KHz0nzn1mjwEtHcAYwHr6PG/50cfE90zAloCF9DVASg3ZokzorgthUhXB6DcF7T7j7YGYQvo7AAQ4JfODkC4MeuyuD0RN2YR6O4AxgLu4tnzePbnGLenU+jO33w39O6FuBzzmJp/0AIMOgDlQGx7897iqiQEOBNgBwQo8qcL2Mwf/9NuJSCgtQMYH4i9jaPo7L3FSgQswGQEIgxBN2+iaHZOngUgwJWAjOtsT+gYB2KmmORPnIRvfsB9QcYY5U8R8O1NbDEGQUBdQHVR96/rud3/nM3CpxazcLACzDqA+W5o9Og19VqMqqFwMOsAxgL+ph96quWi17VyBqEKMOwALo6EK+WiRfmyShVLCGjN36xiVvszYnKJvu1CXLJMUD3dcAAyEtD1jJhcLrqomrhC1UTTDuBiCJLLRRfDUdknAq4dbdwBzB/QOC0rIzaGoEq56GL4lycBCGjtAGYCvny5mR+9/5JxHWuOhMuNHgJyzPM3ElCpW6m5LaWsnlsZghoNBYPxAGTYA769+yWe/eOd4F+ao7FyXxSTsIDQAcyfEdM+G1YpF43dUAGhAzjZC5LLReNAjNYBCAK+5EPQL6+ak3BZLrqoHb3CqQhKByDcF4TnhA0hdQBSybLZ85eoG9qJOmddBzA/HT27SrLwV7g9vQtaB6BVTbxE1cRuaPnT6oZeWFRNCU0AbQAizAGicq6oGwoB7RA7AOERpaP/LqLvFrg9vR1qByA8pPf0o7hBGnVD26F2AOKR8D399uiwBJDzx93RbiHnj29Rcoq6A7Tlb3ZN+HsJVMzSo86/t4B+hC6gI38IcIjL/FGswwKlAMv8UayDjkUHaGkNxTqouM0fxTrIuM0ftSKoKDuAff4QQESZv9UhcAmKdZBQRtwnfxTroOG8A6BYBwn3HQDFOkiQO0B3kzgVQcBD/vXcHq7EXD/FXlAdH/lXc/s1jqLZ6+zF9g2uBzTxkX8lt1U0e/4ncfvnpzgiV62ZvgBl/hZXgavIF2QW4tbbVXTyKYrOyQ9rhyjAQf71x1SLu3PpO6EBCCAOQKbNNgRs5rqnk4wbmiZ+8lcJIB8E1xuaJJ7yVwmw+y69iQvwlT8EmKEI2U3+NQHv908Ko2CThCp/+n24SnBjlgEe868cB3x+J6F7UNigoanhM3+cjDNAlT/5SRgdENCJ1/whoBO/+UNAF57zh4AuPOcPAR0Q8rf7AAhoxXv+ENCO9/whoBX/+UNAGwPkDwEtGOff50MIuW0X+7qhtULStIYOhEHyJ+QmHh0Ql+yLpUohaVpDB8Iw+RNyqxZKXNdPV09NwED5k3PbFepb1W9fn5gA0/x7fxA1t6Tc8uVC0lYNjZvB8qfmti5DrxSSnl7x7mb8pGKsFGi51R6cmWrp4gHzp+W2rj28WhaSpjc0aoaMn5Zbo5SivC86VQGe86fkJqop7qgUkqY2NG4aHUAVv7P8SccB8vZfKSRNa2jcDJw/IbdVsbMzuypqR5eFpC0aGjVG+bv8QJyMk2nE7z1/CJBp5q8Q4PgzIWCPSfyu84eAPQybfwoBe7rj9/KxEFBgsPn7+WAIyGEZfXIgQMCXPwQI6vkPFz8EpIrhf7j0Uwio5v9ENfz4/fjQBTTir+fvewUCF9A1+fpfg6AFdMU/QP5BC+Df/NOQBXTEP9RqhCqgMfmypJ8GK6B98x9yTYIU0Lr1Dxp/iALq6fONPjnBCajHz5p+GpyAtqGfZ42CEtASP9s6hSRAP/gwrlQ4ArQzL+9qBSJgpOmnYQio7fiMKP00BAHVmXdc6aeTF1Db73kytvinLaA28O/z514xmckKWDbiH2H66VQFaPf4uVesyRQFjHefU8G0BNTn3LGOOxITEnAoo36VyQjQpT/u+Cch4CD2NrUctABpyD+scUfigAUc6qBT5SAFNAedw9vydxyUANWIc7jRFxyIgPboDzT7nPELmOJmLzFaAZrcp7HZS4xOgD74MntHnzMWxiGgNfWpbfNVGAV0pD6hcb6NQQV0Rx5I6hI+BRjlHWTqEhQBa1EvS7nQaKgr8JAjr0IQIKoW7yoXVxeaDanzdrC+k4NSPV2U6EtOmgvEhoCMZfX0ail1WkNAhiAgr9JalgqtLEyvdvSAmOdWjPjluF9ZIDYEZCCAGRdDELEhIINJmBnshjLj6UAMmEL7/oD87ENRvHvVeioCmDKO6wEBAwHMQAAz7gQACu4FuMDtyjj+0zwlBQFMzXlu1g4IYAYCwOBAADMQwAwEMAMBzEAAM8wC5Pvrtouo+Jb0zVwcrNe/tJ7Y2r6R+j18Ns2tyzMIl/Yrp4FXgHxZZ7vIXqzEnyZ/TbFta/tGGpeOrJoTbOY9Vk4Hq4DKhc39ZWb5Wr9taw+NNC+eWjWXlutmu3JaWAU0L+3nm9zKroNXW9s1ovgMy5UrvlDZcuW08Apo3NySJtlC8qycDPq0tmtE8RmWK5fkLy1XTgurgObtXevsb9vMj2+r39Zt0dpDI83PsFy5zfxCbtcV4xKw3u9e0LdZRdRZI84EVLYTdxPBqIagtdS3iyG4T2tFI86GoERs+tYrp2VMk/BKHlvpu3uK6TZrxNUkXIxA1iunZTy7oVn+xWZV/OX0bVaxU5s14mo3tNzobVdOy3gOxIq9PEH+R1vMc5Ujp4dGHB2I7V7ZrpwO5lMR0s12q+JgXywm+UF/r9akRur38Nk19zAW2a6cBpyMYwYCmIEAZiCAGQhgBgKYgQBmIICZyQjYvDA/Prr3uiY0JiMgMT/e/fWp26uKvZiKgO3C/PxY4viybi+mI0A6Xd8BBLhnXd6s8+1NHEVnH/IzaKvo6EP2RjY0/UW42b7NfnT6obj9yPGV9R5MS8BdnJ9Rzbbw7eJRHB3flm/szo6KeQICvFAMQUl0fptt6lm+Wcz59ZToD/kbl+XV9E/iXQxBHsgFFCHnE3IxKd/FJ8UPT7Kfzc7efc1/FwI8kAvYXVRbiYFGuChHoCgbjIoLPvl0AAEe6BAgIr95U6qAAA80h6BCQPXi7f31i+xoDQI80JyExfJ2MfurmHpjsYN0ks0A38Qt2IndJWI/TEtAOeRkAZcHZvs3yt1QsQO6wm6oe8rA8+Ou86/7I2PxRn5klm5/zmQ8ep3m5+3MD5t9MxUBBwsEMAMBzEAAMxDADAQwAwHMQAAzEMAMBDADAcxAADMQwMz/AWeYALGYgMVJAAAAAElFTkSuQmCC" alt="***Relative selection strength across each covariate.***" width="48%" /><img role="img" aria-label="***Relative selection strength across each covariate.***" src="data:image/png;base64,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" alt="***Relative selection strength across each covariate.***" width="48%" />
+<p class="caption">
+<strong><em>Relative selection strength across each
+covariate.</em></strong>
+</p>
+</div>
+<p><strong>How to read these plots:</strong> Each panel shows the
+relative selection score across the observed range of one covariate,
+with the other held fixed. The horizontal axis is in the covariate’s own
+units, the kernel-weighted proportion of forest in the first panel and
+kilometers in the second. The vertical axis is a ratio, labeled
+“Relative risk” after the survival model that fits it. Only comparisons
+along a curve carry meaning, and the shaded bands hold sigma at its
+estimate.</p>
+</div>
+<div id="predict-choice-probabilities-and-relative-scores" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Predict choice
+probabilities and relative scores</h1>
+<p><code>predict()</code> on a step-selection fit offers three
+quantities, and they answer different questions.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>p_set  <span class="ot">&lt;-</span> <span class="fu">predict</span>(opt)                   <span class="co"># probability within each choice set</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>p_risk <span class="ot">&lt;-</span> <span class="fu">predict</span>(opt, <span class="at">type =</span> <span class="st">&quot;risk&quot;</span>)    <span class="co"># relative selection score, exp(link)</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co"># The first choice set, with standardized forest at the estimated sigma</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>first <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(steps[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="fu">c</span>(<span class="st">&quot;step_id&quot;</span>, <span class="st">&quot;case_&quot;</span>, <span class="st">&quot;sl_km&quot;</span>)],</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>                    <span class="at">forest      =</span> <span class="fu">round</span>(<span class="fu">model.frame</span>(opt<span class="sc">$</span>opt_mod)<span class="sc">$</span>forest[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>),</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>                    <span class="at">probability =</span> <span class="fu">round</span>(p_set[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">3</span>),</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>                    <span class="at">score       =</span> <span class="fu">round</span>(p_risk[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>))</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>first</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;   step_id case_      sl_km forest probability score</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; 1       1     0 0.40284437   2.24       0.345  3.25</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; 2       1     0 0.35312305   1.16       0.139  1.31</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; 3       1     1 0.04405726   1.01       0.249  2.34</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; 4       1     0 0.28484673   0.37       0.077  0.72</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; 5       1     0 0.06691232   0.78       0.189  1.78</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>probability</code> is
+the fitted chance that each candidate was the one taken, given that the
+animal took exactly one of these five. It depends on which alternatives
+are in the set, so it is neither a probability of occurrence nor a map
+of space use. <code>score</code> is the unnormalized value, and only
+ratios between rows carry meaning. <code>type = &quot;link&quot;</code> returns
+its logarithm. Standard errors are available with
+<code>se.fit = TRUE, uncertainty = &quot;conditional&quot;</code>. They hold sigma
+fixed.</p>
+<p>A raster has no choice sets, so a map can show the link or the
+relative score only.</p>
+</div>
+<div id="score-the-model-on-held-out-choice-sets" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> Score the model on
+held-out choice sets</h1>
+<p>Cross-validation asks whether the model predicts steps it did not
+see. <code>grouped_cv_folds()</code> assigns whole choice sets to folds,
+and <code>cross_validate_clogit()</code> refits sigma and the
+coefficients on the training sets in each fold before scoring the
+held-out sets. With several animals, group the folds by animal to test
+transfer to new individuals.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Four folds. All rows of a choice set stay together</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>folds <span class="ot">&lt;-</span> <span class="fu">grouped_cv_folds</span>(df<span class="sc">$</span>step_id, <span class="at">k =</span> <span class="dv">4</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co"># Reference model: step length only, no landscape covariate</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>cv_move <span class="ot">&lt;-</span> <span class="fu">cross_validate_clogit</span>(case_ <span class="sc">~</span> sl_km <span class="sc">+</span> <span class="fu">strata</span>(step_id),</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>                                 <span class="at">data =</span> df, <span class="at">folds =</span> folds)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co"># Forest model: sigma is estimated again within every training fold</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>cv_forest <span class="ot">&lt;-</span> <span class="fu">cross_validate_clogit</span>(case_ <span class="sc">~</span> forest <span class="sc">+</span> sl_km <span class="sc">+</span> <span class="fu">strata</span>(step_id),</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>                                   <span class="at">data =</span> df, <span class="at">folds =</span> folds,</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>                                   <span class="at">kernel_inputs =</span> inputs)</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="fu">cv_tab</span>(<span class="fu">list</span>(<span class="at">movement =</span> cv_move, <span class="at">forest =</span> cv_forest),</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>       <span class="at">metric =</span> <span class="st">&quot;neg_log_score&quot;</span>)[, <span class="fu">c</span>(<span class="st">&quot;Modnames&quot;</span>, <span class="st">&quot;Score&quot;</span>, <span class="st">&quot;Delta&quot;</span>, <span class="st">&quot;N_scored&quot;</span>)]</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt;   Modnames    Score     Delta N_scored</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; 1   forest 1.465993 0.0000000      400</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; 2 movement 1.601803 0.1358104      400</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co"># Sigma (m) estimated in each training fold</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">sapply</span>(cv_forest<span class="sc">$</span>training, <span class="cf">function</span>(fold) fold<span class="sc">$</span>scale_est<span class="sc">$</span>Mean))</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; fold1 fold2 fold3 fold4 </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt;   153   151   156   143</span></span></code></pre></div>
+<p><strong>How to read the output:</strong> <code>Score</code> is the
+average negative log probability that the model gave to the step the
+animal took, over the 400 held-out choice sets. Lower is better. A model
+that picked among five candidates at random would score
+<code>log(5)</code>, or 1.61. The forest model scores 1.47 and the
+movement-only model 1.60, so the kernel-weighted forest covariate
+improves prediction of new steps. Because the backend offers no interval
+for sigma, the fold-specific values are a useful check. They show how
+far the estimate moves when a quarter of the data is withheld.
+<code>vignette(&quot;v08-cross-validation&quot;, package = &quot;multiScaleR&quot;)</code>
+covers fold construction and model comparison in general.</p>
+</div>
+<div id="current-restrictions" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Current
+restrictions</h1>
+<p>The <code>conditional_logit</code> backend is experimental, and it
+stops with an error when a model falls outside the cases below.</p>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Feature</th>
+<th align="left">Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Choice sets</td>
+<td align="left">Exactly one used step and at least one available step
+per set</td>
+</tr>
+<tr class="even">
+<td align="left">Strata</td>
+<td align="left">One <code>strata()</code> term naming a single
+column</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>cluster()</code>, <code>frailty()</code>,
+<code>tt()</code>, <code>pspline()</code>, penalized fits</td>
+<td align="left">Not supported</td>
+</tr>
+<tr class="even">
+<td align="left"><code>weights</code>, <code>subset</code>, rows dropped
+for missing values, robust variance</td>
+<td align="left">Not supported</td>
+</tr>
+<tr class="odd">
+<td align="left">Offsets</td>
+<td align="left"><code>offset()</code> inside the formula only. No
+kernel covariate in an offset</td>
+</tr>
+<tr class="even">
+<td align="left">Kernels</td>
+<td align="left"><code>&quot;gaussian&quot;</code> and <code>&quot;exp&quot;</code>,
+prepared with <code>bin = TRUE</code> (the default)</td>
+</tr>
+<tr class="odd">
+<td align="left">Spline terms</td>
+<td align="left"><code>ns()</code> or <code>bs()</code> with literal
+<code>knots</code> and <code>Boundary.knots</code> only. Adaptive
+<code>df</code> is not supported</td>
+</tr>
+<tr class="even">
+<td align="left">Parallel fitting, <code>join_by</code>,
+<code>refit_fn</code></td>
+<td align="left">Not supported. Use <code>n_cores = 1</code></td>
+</tr>
+<tr class="odd">
+<td align="left">Standard error and interval for sigma</td>
+<td align="left">Not available.
+<code>summary(opt, profile = TRUE)</code> stops with an error.
+<code>profile_sigma(opt)</code> draws the log-likelihood across
+sigma</td>
+</tr>
+<tr class="even">
+<td align="left">Prediction intervals</td>
+<td align="left">Not available. Standard errors are conditional on
+sigma</td>
+</tr>
+<tr class="odd">
+<td align="left">Raster prediction</td>
+<td align="left"><code>type = &quot;link&quot;</code> or
+<code>type = &quot;risk&quot;</code> only</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="quick-reference" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Quick reference</h1>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">library</span>(multiScaleR); <span class="fu">library</span>(terra); <span class="fu">library</span>(survival)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># 1. Prepare kernel inputs at every step end point (used and available)</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>pts    <span class="ot">&lt;-</span> <span class="fu">vect</span>(steps, <span class="at">geom =</span> <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>), <span class="at">crs =</span> <span class="st">&quot;EPSG:32617&quot;</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">kernel_prep</span>(<span class="at">pts =</span> pts, <span class="at">raster_stack =</span> forest, <span class="at">max_D =</span> <span class="dv">600</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>                      <span class="at">kernel =</span> <span class="st">&quot;gaussian&quot;</span>, <span class="at">bin =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>df     <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(steps, inputs<span class="sc">$</span>kernel_dat)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co"># 2. Fit the starting model, then estimate the scale of effect</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">clogit</span>(case_ <span class="sc">~</span> forest <span class="sc">+</span> sl_km <span class="sc">+</span> <span class="fu">strata</span>(step_id), <span class="at">data =</span> df, <span class="at">model =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>opt <span class="ot">&lt;-</span> <span class="fu">multiScale_optim</span>(<span class="at">fitted_mod =</span> mod, <span class="at">kernel_inputs =</span> inputs,</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>                        <span class="at">backend =</span> <span class="st">&quot;conditional_logit&quot;</span>, <span class="at">n_cores =</span> <span class="dv">1</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co"># 3. Read, plot, and predict</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>opt<span class="sc">$</span>scale_est                            <span class="co"># sigma (m), no SE from this backend</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="fu">kernel_dist</span>(opt)                         <span class="co"># radius holding 90% of kernel weight</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="fu">exp</span>(<span class="fu">coef</span>(opt<span class="sc">$</span>opt_mod))                   <span class="co"># relative selection strength</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="fu">plot</span>(opt)                                <span class="co"># kernel weight against distance</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="fu">plot_marginal_effects</span>(opt, <span class="at">link =</span> <span class="cn">TRUE</span>)  <span class="co"># relative selection curves</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="fu">predict</span>(opt)                             <span class="co"># probability within each choice set</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="fu">predict</span>(opt, <span class="at">type =</span> <span class="st">&quot;risk&quot;</span>)              <span class="co"># relative selection score</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co"># 4. Score on held-out choice sets</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a>folds     <span class="ot">&lt;-</span> <span class="fu">grouped_cv_folds</span>(df<span class="sc">$</span>step_id, <span class="at">k =</span> <span class="dv">4</span>)</span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a>cv_move   <span class="ot">&lt;-</span> <span class="fu">cross_validate_clogit</span>(case_ <span class="sc">~</span> sl_km <span class="sc">+</span> <span class="fu">strata</span>(step_id),</span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a>                                   <span class="at">data =</span> df, <span class="at">folds =</span> folds)</span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a>cv_forest <span class="ot">&lt;-</span> <span class="fu">cross_validate_clogit</span>(case_ <span class="sc">~</span> forest <span class="sc">+</span> sl_km <span class="sc">+</span> <span class="fu">strata</span>(step_id),</span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a>                                   <span class="at">data =</span> df, <span class="at">folds =</span> folds,</span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a>                                   <span class="at">kernel_inputs =</span> inputs)</span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="fu">cv_tab</span>(<span class="fu">list</span>(<span class="at">movement =</span> cv_move, <span class="at">forest =</span> cv_forest), <span class="at">metric =</span> <span class="st">&quot;neg_log_score&quot;</span>)</span></code></pre></div>
+<div id="summary-of-key-functions" class="section level2" number="9.1">
+<h2><span class="header-section-number">9.1</span> Summary of key
+functions</h2>
+<table>
+<colgroup>
+<col width="52%" />
+<col width="47%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>kernel_prep()</code></td>
+<td align="left">Extract raster values around every step end point. Keep
+<code>bin = TRUE</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>multiScale_optim()</code></td>
+<td align="left">Estimate sigma and the selection coefficients with
+<code>backend = &quot;conditional_logit&quot;</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>plot()</code>,
+<code>plot_marginal_effects()</code></td>
+<td align="left">Draw the kernel and the selection curves</td>
+</tr>
+<tr class="even">
+<td align="left"><code>predict()</code></td>
+<td align="left">Choice-set probabilities, relative selection scores, or
+the linear predictor</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>grouped_cv_folds()</code></td>
+<td align="left">Build folds that keep choice sets, or animals,
+together</td>
+</tr>
+<tr class="even">
+<td align="left"><code>cross_validate_clogit()</code></td>
+<td align="left">Score a step-selection model on held-out choice
+sets</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>cv_tab()</code></td>
+<td align="left">Compare cross-validation scores among models</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="see-also" class="section level2" number="9.2">
+<h2><span class="header-section-number">9.2</span> See also</h2>
+<ul>
+<li><strong><code>vignette(&quot;v01-quickstart&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+the core workflow and how to read a fitted model.</li>
+<li><strong><code>vignette(&quot;v09-estimates-and-intervals&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+what a conditional interval includes and what it leaves out.</li>
+<li><strong><code>vignette(&quot;v08-cross-validation&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+building folds and comparing models by held-out prediction.</li>
+<li><strong><code>vignette(&quot;v07-fitting-methods&quot;, package = &quot;multiScaleR&quot;)</code></strong>,
+which covariate types each fitting route accepts.</li>
+<li>The help page <code>?&quot;multiScaleR-glossary&quot;</code> defines the terms
+used in these vignettes.</li>
+</ul>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

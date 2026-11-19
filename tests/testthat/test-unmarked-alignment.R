@@ -1,3 +1,7 @@
+# Skipped on CRAN to keep the package check within CRAN's time limit. CI sets
+# NOT_CRAN and runs this file.
+skip_on_cran()
+
 test_that("unmarked site keys preserve detection-history row order", {
   fix <- make_unmarked_fixture()
   n <- nrow(fix$site_covs)
@@ -87,6 +91,12 @@ test_that("unmarked open-population models use component formulas and static sit
   mod <- unmarked::pcountOpen(~x, ~1, ~1, ~1, data = umf, K = 20,
                               se = FALSE)
   expect_equal(multiScaleR:::.unmarked_model_predictors(mod), "x")
+  # The default prediction type is the model's own state process: "lambda"
+  # here, where unmarked rejects "state"; "state" for pcount().
+  expect_identical(multiScaleR:::.msr_unmarked_default_type(mod), "lambda")
+  pc <- unmarked::pcount(~1 ~ x, data = unmarked::unmarkedFramePCount(y = y,
+    siteCovs = site_covs), K = 20, se = FALSE)
+  expect_identical(multiScaleR:::.msr_unmarked_default_type(pc), "state")
   nested <- mod
   nested@formlist <- list(state = list(lambda = ~x), detection = list(~1))
   expect_equal(multiScaleR:::.unmarked_model_predictors(nested), "x")
@@ -158,6 +168,7 @@ test_that("site covariates must contain the optimized unmarked predictor", {
 })
 
 test_that("multiScale_optim completes an open-population unmarked workflow", {
+  skip_on_cran()
   fix <- make_unmarked_fixture()
   set.seed(2)
   y <- matrix(stats::rpois(90, 3), nrow = 15)

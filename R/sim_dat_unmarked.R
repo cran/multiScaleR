@@ -43,9 +43,9 @@
 #'   exponential power kernel.
 #' @param max_D Positive numeric. Maximum buffer radius for
 #'   \code{\link{kernel_prep}} during simulation. If \code{NULL} (default),
-#'   set automatically to 110\% of the one-dimensional distance enclosing
-#'   99\% of kernel weight along a line at \code{max(sigma)}. Supply a larger
-#'   \code{max_D} if the radius enclosing 99\% of weight on a plane is needed.
+#'   set automatically to 110% of the one-dimensional distance enclosing
+#'   99% of kernel weight along a line at \code{max(sigma)}. Supply a larger
+#'   \code{max_D} if the radius enclosing 99% of weight on a plane is needed.
 #' @param user_seed Optional integer seed for reproducibility. Default:
 #'   \code{NULL}.
 #' @param ... Additional arguments. Not currently used.
@@ -67,7 +67,7 @@
 #'
 #' @details
 #' Sites are distributed on a hexagonal grid across the interior of the raster
-#' extent (85\% of the x/y range) and then randomly subsampled. The true
+#' extent (85% of the x/y range) and then randomly subsampled. The true
 #' abundance or occupancy at each site is a function of the kernel-weighted
 #' landscape covariates at the specified scale. Repeated surveys introduce
 #' imperfect detection controlled by \code{det}.
@@ -92,8 +92,11 @@
 #'                           raster_stack = rs,
 #'                           max_D = 220,
 #'                           user_seed = 123)
+#' # True abundance rises with bin1 (beta = 0.75) and falls with cont1 (-0.75)
 #' plot(s_dat$df$y ~ s_dat$df$bin1)
 #' plot(s_dat$df$y ~ s_dat$df$cont1)
+#' # Observed counts: one row per site, one column per repeated survey
+#' head(s_dat$y)
 #' ## unmarked analysis
 #' kernel_inputs <- kernel_prep(pts = s_dat$pts,
 #'                              raster_stack = rs,
@@ -202,6 +205,7 @@ sim_dat_unmarked <- function(alpha = 1,
 
   if(is.null(max_D)){
     max_D <- kernel_dist(kernel = kernel,
+                         dimension = "1d",
                          prob = 0.99,
                          sigma = max(sigma)) * 1.1
   } else {

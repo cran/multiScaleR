@@ -368,7 +368,7 @@ test_that("kernel_scale.raster and site-covariate helpers cover validation and f
     weird_out <- multiScaleR:::.add_site_covariate_rasters(
       smooth_stack = base_r,
       multiScaleR = structure(
-        list(opt_mod = structure(list(), class = "fakeListSite")),
+        list(opt_mod = structure(list(formula = ~weird), class = "fakeListSite")),
         class = "multiScaleR"
       ),
       raster_covs = "x"
@@ -390,7 +390,7 @@ test_that("kernel_dist, summary, print, and plotting helpers cover alternate bra
   expect_error(kernel_dist(sigma = NULL, kernel = "gaussian"), "sigma")
   expect_error(kernel_dist(sigma = 1, kernel = NULL), "kernel")
   expect_error(kernel_dist(sigma = 1, kernel = "expow"), "shape")
-  expect_error(kernel_dist(sigma = 1, kernel = "expow", beta = -1), "beta")
+  expect_error(kernel_dist(sigma = 1, kernel = "expow", shape = -1), "shape")
 
   gls_mod <- nlme::gls(y ~ cont1 + site, data = fix$df)
   gls_obj <- structure(
@@ -446,7 +446,8 @@ test_that("kernel_dist, summary, print, and plotting helpers cover alternate bra
     },
     .package = "multiScaleR"
   )
-  expect_true(is.nan(nan_dist["bin1", "Estimate"]))
+  expect_true(is.finite(nan_dist["bin1", "Estimate"]))
+  expect_true(all(is.na(nan_dist["bin1", -1L])))
 
   gls_summary <- summary(gls_obj, prob = 0.8)
   um_summary <- summary(um_obj, prob = 0.7)
@@ -470,7 +471,7 @@ test_that("kernel_dist, summary, print, and plotting helpers cover alternate bra
   expect_length(no_scale_plots, 1)
   expect_s3_class(low_prob_kernel, "ggplot")
   expect_s3_class(no_scale_kernel, "ggplot")
-  expect_error(plot(fix$opt, prob = 2), "decimal between 0 and 1")
+  expect_error(plot(fix$opt, prob = 2), "within \\(0, 1\\)")
   expect_error(plot_kernel(sigma = NULL, kernel = "gaussian"), "sigma")
   expect_error(plot_kernel(sigma = 1, kernel = NULL), "kernel")
 })
